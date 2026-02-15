@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 15
+nickname = "星街すいせい"
+base_icons = ["VOCAL", "TRICKSTER"]
+base_suits = ["COOL"]

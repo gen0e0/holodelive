@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 69
+nickname = "轟はじめ"
+base_icons = ["DUELIST"]
+base_suits = ["LOVELY"]

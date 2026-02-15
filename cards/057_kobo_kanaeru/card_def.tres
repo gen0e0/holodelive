@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 57
+nickname = "こぼ・かなえる"
+base_icons = ["KUSOGAKI", "CHARISMA"]
+base_suits = ["STAFF"]

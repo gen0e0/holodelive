@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 5
+nickname = "さくらみこ"
+base_icons = ["ENJOY"]
+base_suits = ["LOVELY"]

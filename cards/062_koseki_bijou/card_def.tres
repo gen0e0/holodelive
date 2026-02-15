@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 62
+nickname = "古石ビジュー"
+base_icons = ["KUSOGAKI", "TRICKSTER"]
+base_suits = ["ENGLISH"]

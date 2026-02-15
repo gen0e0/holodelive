@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 44
+nickname = "小鳥遊キアラ"
+base_icons = ["REACTION"]
+base_suits = ["ENGLISH"]

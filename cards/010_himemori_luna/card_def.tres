@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 10
+nickname = "姫森ルーナ"
+base_icons = ["ALCOHOL", "SEISO"]
+base_suits = ["LOVELY"]

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 16
+nickname = "獅白ぼたん"
+base_icons = ["ENJOY", "OTAKU"]
+base_suits = ["COOL"]

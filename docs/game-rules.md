@@ -33,7 +33,7 @@
 | プロパティ | 説明 |
 |---|---|
 | **名前 (nickname)** | キャラクター名 |
-| **アイコン (icons)** | キャラクターの性質を表す印。複数所持。11種: SEISO, CHARISMA, OTAKU, VOCAL, ENJOY, REACTION, DUELIST, KUSOGAKI, INTEL, SEXY, ALCOHOL |
+| **アイコン (icons)** | キャラクターの性質を表す印。複数所持。12種: SEISO, CHARISMA, OTAKU, VOCAL, ENJOY, REACTION, DUELIST, KUSOGAKI, INTEL, SEXY, ALCOHOL, TRICKSTER |
 | **スート (suits)** | キャラクターのカラー。複数設定。6種: LOVELY, COOL, HOT, ENGLISH, INDONESIA, STAFF |
 | **スキル (skills)** | カード固有の効果。下記3種類に大別される |
 
@@ -42,7 +42,7 @@
 | 種類 | 発動タイミング |
 |---|---|
 | **プレイスキル (Play Skill)** | カードをステージにプレイした時、またはオープンした時に発動 |
-| **アクションスキル (Action Skill)** | アクションフェーズに任意で発動（1カードにつき1回/ターン） |
+| **アクションスキル (Action Skill)** | アクションフェーズに任意で発動（各スキルにつき1回/ターン） |
 | **常時スキル (Passive Skill)** | 常時効果を発揮 |
 
 ### スキルの特性

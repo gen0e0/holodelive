@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 4
+nickname = "百鬼あやめ"
+base_icons = ["VOCAL", "DUELIST"]
+base_suits = ["LOVELY"]

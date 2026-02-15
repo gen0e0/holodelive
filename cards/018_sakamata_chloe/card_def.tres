@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 18
+nickname = "沙花叉クロヱ"
+base_icons = ["DUELIST", "SEXY"]
+base_suits = ["COOL"]

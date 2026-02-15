@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 21
+nickname = "雪花ラミィ"
+base_icons = ["ALCOHOL", "REACTION"]
+base_suits = ["COOL"]

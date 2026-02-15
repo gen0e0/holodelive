@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 52
+nickname = "アユンダ・リス"
+base_icons = ["ENJOY"]
+base_suits = ["INDONESIA"]

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 48
+nickname = "七詩ムメイ"
+base_icons = ["TRICKSTER", "ALCOHOL", "VOCAL"]
+base_suits = ["INDONESIA"]

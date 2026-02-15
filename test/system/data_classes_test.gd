@@ -42,7 +42,7 @@ func test_card_instance_default() -> void:
 	assert_int(ci.instance_id).is_equal(0)
 	assert_int(ci.card_id).is_equal(0)
 	assert_bool(ci.face_down).is_false()
-	assert_bool(ci.action_skill_used).is_false()
+	assert_array(ci.action_skills_used).is_empty()
 	assert_array(ci.modifiers).is_empty()
 
 func test_card_instance_with_id() -> void:

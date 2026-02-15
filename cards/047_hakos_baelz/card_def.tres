@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 47
+nickname = "ハコス・ベールズ"
+base_icons = ["KUSOGAKI"]
+base_suits = ["INDONESIA"]

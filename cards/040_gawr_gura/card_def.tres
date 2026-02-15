@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 40
+nickname = "がうる・ぐら"
+base_icons = ["CHARISMA", "VOCAL", "KUSOGAKI"]
+base_suits = ["ENGLISH"]

@@ -4,7 +4,7 @@ extends RefCounted
 var instance_id: int = 0
 var card_id: int = 0
 var face_down: bool = false
-var action_skill_used: bool = false
+var action_skills_used: Array[int] = []  # 使用済みアクションスキルのインデックス
 var modifiers: Array = []  # Array[Modifier]
 
 func _init(p_instance_id: int = 0, p_card_id: int = 0) -> void:

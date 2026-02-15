@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 56
+nickname = "ベスティア・ゼータ"
+base_icons = ["TRICKSTER", "ENJOY"]
+base_suits = ["STAFF"]

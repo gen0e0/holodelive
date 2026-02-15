@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 63
+nickname = "フワワ・アビスガード"
+base_icons = ["ENJOY", "KUSOGAKI"]
+base_suits = ["ENGLISH"]

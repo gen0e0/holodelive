@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 64
+nickname = "モココ・アビスガード"
+base_icons = ["REACTION", "DUELIST"]
+base_suits = ["ENGLISH"]

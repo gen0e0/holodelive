@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 41
+nickname = "一伊那尓栖"
+base_icons = ["OTAKU"]
+base_suits = ["ENGLISH"]

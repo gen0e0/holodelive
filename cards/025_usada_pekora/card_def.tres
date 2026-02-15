@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 25
+nickname = "兎田ぺこら"
+base_icons = ["CHARISMA", "REACTION"]
+base_suits = ["HOT"]

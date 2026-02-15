@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 35
+nickname = "尾丸ポルカ"
+base_icons = ["TRICKSTER"]
+base_suits = ["HOT"]

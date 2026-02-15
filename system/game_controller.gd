@@ -118,7 +118,7 @@ func end_turn() -> void:
 
 	# アクションスキル使用済みフラグをリセット
 	for inst_id in state.instances:
-		state.instances[inst_id].action_skill_used = false
+		state.instances[inst_id].action_skills_used.clear()
 
 
 ## ライブ発動。

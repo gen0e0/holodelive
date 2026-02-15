@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 65
+nickname = "火威青"
+base_icons = ["SEXY"]
+base_suits = ["COOL"]

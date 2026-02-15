@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 68
+nickname = "儒烏風亭らでん"
+base_icons = ["OTAKU", "ALCOHOL", "INTEL"]
+base_suits = ["COOL"]

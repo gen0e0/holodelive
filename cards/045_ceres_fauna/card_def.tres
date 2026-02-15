@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 45
+nickname = "セレス・ファウナ"
+base_icons = ["INTEL", "SEISO"]
+base_suits = ["ENGLISH"]

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 31
+nickname = "鷹嶺ルイ"
+base_icons = ["INTEL", "SEXY", "ALCOHOL"]
+base_suits = ["HOT"]

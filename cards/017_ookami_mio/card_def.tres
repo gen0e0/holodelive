@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 17
+nickname = "大神ミオ"
+base_icons = ["REACTION", "INTEL"]
+base_suits = ["COOL"]

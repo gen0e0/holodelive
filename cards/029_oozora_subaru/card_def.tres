@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 29
+nickname = "大空スバル"
+base_icons = ["REACTION"]
+base_suits = ["HOT"]

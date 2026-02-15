@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 53
+nickname = "アーニャ・メルフィッサ"
+base_icons = ["DUELIST", "REACTION"]
+base_suits = ["INDONESIA"]

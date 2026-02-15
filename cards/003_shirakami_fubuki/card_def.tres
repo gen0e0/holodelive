@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 3
+nickname = "白上フブキ"
+base_icons = ["OTAKU", "CHARISMA"]
+base_suits = ["LOVELY"]

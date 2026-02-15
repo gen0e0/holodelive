@@ -35,7 +35,7 @@ CardInstance
 ├── instance_id: int              # ゲーム内で一意（自動採番）
 ├── card_id: int                  # 参照先の CardDef
 ├── face_down: bool               # 裏向きかどうか
-├── action_skill_used: bool       # このターンにアクションスキルを使用済みか（ターン毎リセット）
+├── action_skills_used: Array[int] # このターンに使用済みのアクションスキルのインデックス（ターン毎リセット）
 ├── modifiers: Array[Modifier]    # 適用中のバフ/デバフ
 ```
 

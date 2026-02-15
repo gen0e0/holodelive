@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 50
+nickname = "クレイジー・オリー"
+base_icons = ["OTAKU", "INTEL"]
+base_suits = ["INDONESIA"]

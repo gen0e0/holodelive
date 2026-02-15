@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[resource]
+card_id = 1
+nickname = "ときのそら"
+base_icons = ["SEISO"]
+base_suits = ["LOVELY"]
