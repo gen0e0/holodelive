@@ -6,6 +6,17 @@
 
 - `docs/game-rules.md` - ゲームルール詳細
 - `docs/game-architecture.md` - データ構造・アーキテクチャ設計
+- `test/` - ユニットテスト（GdUnit4）
+- `addons/gdUnit4/` - テストフレームワーク
+
+## テスト
+
+- フレームワーク: [GdUnit4](https://github.com/godot-gdunit-labs/gdUnit4) v6.1.1
+- テストファイルは `test/` 以下に、テスト対象と対応するディレクトリ構造で配置する
+  - 例: `system/game_state.gd` → `test/system/game_state_test.gd`
+- テストクラスは `GdUnitTestSuite` を継承し、テストメソッドは `test_` プレフィックスを付ける
+- CLI実行: `GODOT_BIN=/usr/local/bin/godot ./addons/gdUnit4/runtest.sh -a test/`
+- 新規コード追加時は対応するテストも作成すること
 
 ## 設計上の重要事項
 

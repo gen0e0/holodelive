@@ -2,5 +2,8 @@
 .godot/
 /android/
 
+# Test reports
+reports/
+
 # Claude Code local settings
 .claude/settings.local.json
