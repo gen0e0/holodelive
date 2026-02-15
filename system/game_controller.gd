@@ -140,28 +140,30 @@ func _trigger_live() -> void:
 		_do_round_cleanup()
 
 
-## ショウダウン解決。MVP: アイコン数の合計で比較。
-## 同点なら live_ready_turn が早い方が勝ち。
+## ショウダウン解決。ランク比較で勝者を決定。
+## 同ランクなら live_ready_turn が早い方が勝ち。
 func _resolve_showdown() -> int:
-	var scores: Array[int] = [0, 0]
+	var ranks: Array[int] = [0, 0]
 	for p in range(2):
-		scores[p] = _count_unit_icons(p)
+		var unit := _get_unit_card_defs(p)
+		ranks[p] = ShowdownCalculator.evaluate_rank(unit)
 
-	if scores[0] > scores[1]:
+	# ランクは値が小さいほど強い
+	if ranks[0] < ranks[1]:
 		return 0
-	elif scores[1] > scores[0]:
+	elif ranks[1] < ranks[0]:
 		return 1
 	else:
-		# 同点 → ライブ準備が早い方
+		# 同ランク → ライブ準備が早い方
 		if state.live_ready_turn[0] <= state.live_ready_turn[1]:
 			return 0
 		else:
 			return 1
 
 
-## プレイヤーのユニット（ステージ + 表向き楽屋）のアイコン数合計。
-func _count_unit_icons(player: int) -> int:
-	var count := 0
+## プレイヤーのユニット（ステージ + 表向き楽屋）の CardDef リストを返す。
+func _get_unit_card_defs(player: int) -> Array:
+	var cards: Array = []
 	# ステージ
 	for s in range(3):
 		var id: int = state.stages[player][s]
@@ -169,7 +171,7 @@ func _count_unit_icons(player: int) -> int:
 			var inst: CardInstance = state.instances[id]
 			var card_def := registry.get_card(inst.card_id)
 			if card_def:
-				count += card_def.base_icons.size()
+				cards.append(card_def)
 	# 楽屋（表向きのみ参加）
 	var bs_id: int = state.backstages[player]
 	if bs_id != -1:
@@ -177,8 +179,8 @@ func _count_unit_icons(player: int) -> int:
 		if not bs_inst.face_down:
 			var card_def := registry.get_card(bs_inst.card_id)
 			if card_def:
-				count += card_def.base_icons.size()
-	return count
+				cards.append(card_def)
+	return cards
 
 
 ## ラウンド勝利を記録。

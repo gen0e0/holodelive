@@ -17,3 +17,6 @@ enum ModifierType { ICON_ADD, ICON_REMOVE, SUIT_ADD, SUIT_REMOVE }
 enum ChoiceType { SELECT_CARD, SELECT_ZONE }
 
 enum SkillState { PENDING, RESOLVING, RESOLVED, COUNTERED }
+
+## ショウダウンのランク（値が小さいほど強い）
+enum ShowdownRank { MIRACLE, TRIO, FLASH, DUO, CASUAL }
