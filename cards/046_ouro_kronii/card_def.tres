@@ -5,3 +5,4 @@ card_id = 46
 nickname = "オーロ・クロニー"
 base_icons = ["ALCOHOL", "SEXY"]
 base_suits = ["INDONESIA"]
+skills = [{"name": "タイムリープ", "type": "action", "description": "このカードを帰宅させる：相手の場にあるカードを２枚選んで手札に戻す。"}]

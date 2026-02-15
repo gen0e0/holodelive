@@ -5,3 +5,4 @@ card_id = 8
 nickname = "博衣こより"
 base_icons = ["INTEL"]
 base_suits = ["LOVELY"]
+skills = [{"name": "それこよの！", "type": "play", "description": "相手の場にあるカードを１枚選び、そのプレイ時能力を使用する。"}]

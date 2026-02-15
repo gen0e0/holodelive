@@ -5,3 +5,4 @@ card_id = 58
 nickname = "桐生ココ"
 base_icons = []
 base_suits = []
+skills = [{"name": "伝説のドラゴン", "type": "passive", "description": "このカードが場に出た時、両ステージのカードを全て帰宅させる（ゲスト含む）。その後、このカードをゲームから取り除く。"}]

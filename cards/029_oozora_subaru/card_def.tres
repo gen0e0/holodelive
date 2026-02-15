@@ -5,3 +5,4 @@ card_id = 29
 nickname = "大空スバル"
 base_icons = ["REACTION"]
 base_suits = ["HOT"]
+skills = [{"name": "大空警察", "type": "play", "description": "相手の場にあるSEXY、KUSOGAKI、TRICKSTERの中から１枚選び、帰宅させる。"}]

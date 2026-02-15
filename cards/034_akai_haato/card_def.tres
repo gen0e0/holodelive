@@ -5,3 +5,4 @@ card_id = 34
 nickname = "赤井はあと"
 base_icons = ["KUSOGAKI", "ENJOY", "INTEL"]
 base_suits = ["HOT"]
+skills = [{"name": "はあちゃまっちゃま～", "type": "action", "description": "自宅にあるカードを１枚選んでこのカードと入れ替え、そのプレイ能力を発動させる。"}]

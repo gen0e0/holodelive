@@ -5,3 +5,4 @@ card_id = 10
 nickname = "姫森ルーナ"
 base_icons = ["ALCOHOL", "SEISO"]
 base_suits = ["LOVELY"]
+skills = [{"name": "くせえのら", "type": "play", "description": "相手の手札をランダムに１枚、帰宅させる。"}]

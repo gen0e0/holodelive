@@ -5,3 +5,4 @@ card_id = 39
 nickname = "IRyS"
 base_icons = ["SEISO"]
 base_suits = ["ENGLISH"]
+skills = [{"name": "ネフィリム", "type": "passive", "description": "ライブ準備時、好きなアイコンとして扱うことができる。"}]

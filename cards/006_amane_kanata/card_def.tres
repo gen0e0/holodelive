@@ -5,3 +5,4 @@ card_id = 6
 nickname = "天音かなた"
 base_icons = ["REACTION"]
 base_suits = ["LOVELY"]
+skills = [{"name": "ぎゅむっ", "type": "play", "description": "相手の場のカードを１枚、山札の一番上に置く。"}]

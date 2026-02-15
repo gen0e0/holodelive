@@ -5,3 +5,4 @@ card_id = 59
 nickname = "ぺこらマミー"
 base_icons = []
 base_suits = []
+skills = [{"name": "ごはんよー", "type": "passive", "description": "このカードが場に出た時、相手と３回じゃんけんをし、勝利した数だけ相手ステージのカードを１stから順に帰宅させる（あいこは負け扱いとする） その後、このカードをゲームから取り除く。"}]

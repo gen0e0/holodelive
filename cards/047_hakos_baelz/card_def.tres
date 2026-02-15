@@ -5,3 +5,4 @@ card_id = 47
 nickname = "ハコス・ベールズ"
 base_icons = ["KUSOGAKI"]
 base_suits = ["INDONESIA"]
+skills = [{"name": "カオスそのもの", "type": "play", "description": "相手の場にあるカードを１枚選び、このカードと場所を入れ替える。"}]

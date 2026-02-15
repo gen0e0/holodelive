@@ -5,3 +5,4 @@ card_id = 30
 nickname = "白銀ノエル"
 base_icons = ["DUELIST", "SEXY"]
 base_suits = ["HOT"]
+skills = [{"name": "入口の女", "type": "play", "description": "山札から２枚引いて手札に加え、その後、手札から２枚選び好きな順番で山札に戻す。"}]

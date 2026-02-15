@@ -5,3 +5,4 @@ card_id = 17
 nickname = "大神ミオ"
 base_icons = ["REACTION", "INTEL"]
 base_suits = ["COOL"]
+skills = [{"name": "Big God Mio-n", "type": "play", "description": "相手は手札を全て帰宅させ、２枚ドローする。"}]

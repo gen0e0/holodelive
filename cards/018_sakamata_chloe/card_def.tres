@@ -5,3 +5,4 @@ card_id = 18
 nickname = "沙花叉クロヱ"
 base_icons = ["DUELIST", "SEXY"]
 base_suits = ["COOL"]
+skills = [{"name": "人生リセットボタンぽちー", "type": "play", "description": "あなたは手札を全て帰宅させ、３枚ドローする。"}]

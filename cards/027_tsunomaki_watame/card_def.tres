@@ -5,3 +5,4 @@ card_id = 27
 nickname = "角巻わため"
 base_icons = ["VOCAL"]
 base_suits = ["HOT"]
+skills = [{"name": "わるくないよねぇ", "type": "play", "description": "相手は次のターン、ステージにプレイする事ができない。角巻わためが場を離れた時、この効果は消失する。"}]

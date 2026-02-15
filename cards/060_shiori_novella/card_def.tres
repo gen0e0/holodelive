@@ -5,3 +5,4 @@ card_id = 60
 nickname = "シオリ・ノヴェラ"
 base_icons = ["INTEL"]
 base_suits = ["ENGLISH"]
+skills = [{"name": "知識の収集家", "type": "play", "description": "場、自宅のINTELの中から１枚選んで、手札に加える。"}]

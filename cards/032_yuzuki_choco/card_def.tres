@@ -5,3 +5,4 @@ card_id = 32
 nickname = "癒月ちょこ"
 base_icons = ["SEXY", "ALCOHOL"]
 base_suits = ["HOT"]
+skills = [{"name": "身体測定", "type": "play", "description": "相手の場にあるゲストを１枚、オープンする。その際、プレイ時能力が発動しない。"}]

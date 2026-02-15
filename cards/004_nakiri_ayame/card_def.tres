@@ -5,3 +5,4 @@ card_id = 4
 nickname = "百鬼あやめ"
 base_icons = ["VOCAL", "DUELIST"]
 base_suits = ["LOVELY"]
+skills = [{"name": "なんも聞いとらんかった", "type": "passive", "description": "このカードを役に含むと、先にライブ準備をしたとして扱う。"}]

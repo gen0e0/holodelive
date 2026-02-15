@@ -5,3 +5,4 @@ card_id = 9
 nickname = "ロボ子さん"
 base_icons = ["SEXY"]
 base_suits = ["LOVELY"]
+skills = [{"name": "こーせーのー", "type": "play", "description": "山札の上から１枚引いて手札に加える。"}]

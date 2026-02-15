@@ -5,3 +5,4 @@ card_id = 28
 nickname = "戌神ころね"
 base_icons = ["ENJOY"]
 base_suits = ["HOT"]
+skills = [{"name": "おらよ", "type": "play", "description": "相手の場のカードを２枚選んで、手札に戻す。"}]

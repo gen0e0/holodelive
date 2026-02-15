@@ -5,3 +5,4 @@ card_id = 3
 nickname = "白上フブキ"
 base_icons = ["OTAKU", "CHARISMA"]
 base_suits = ["LOVELY"]
+skills = [{"name": "フブキングダム", "type": "play", "description": "手札からJP♥or◆のカードを１枚、プレイする。楽屋に伏せてゲストとしてもよい。"}]

@@ -5,3 +5,4 @@ card_id = 15
 nickname = "星街すいせい"
 base_icons = ["VOCAL", "TRICKSTER"]
 base_suits = ["COOL"]
+skills = [{"name": "Hoshimatic Project", "type": "passive", "description": "このカードの前後に接しているカードに、このラウンド中、一時的にVOCALを加える。"}]

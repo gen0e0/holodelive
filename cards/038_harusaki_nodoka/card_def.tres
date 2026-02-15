@@ -5,3 +5,4 @@ card_id = 38
 nickname = "春先のどか"
 base_icons = []
 base_suits = ["ENGLISH"]
+skills = [{"name": "大丈夫ですか？？", "type": "play", "description": "自宅にあるカードを１枚選んで、ステージにプレイする。"}]

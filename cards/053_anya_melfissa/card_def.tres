@@ -5,3 +5,4 @@ card_id = 53
 nickname = "アーニャ・メルフィッサ"
 base_icons = ["DUELIST", "REACTION"]
 base_suits = ["INDONESIA"]
+skills = [{"name": "スーパー通訳", "type": "play", "description": "手札からJP☀かID☽のカードを１枚、プレイする。"}]

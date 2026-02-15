@@ -5,3 +5,4 @@ card_id = 55
 nickname = "パヴォリア・レイネ"
 base_icons = ["SEXY"]
 base_suits = ["STAFF"]
+skills = [{"name": "レイネの教室", "type": "passive", "description": "このカードの前後に接しているカードに、一時的にID☽を加える。"}]

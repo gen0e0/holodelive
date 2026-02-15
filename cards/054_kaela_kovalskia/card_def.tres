@@ -5,3 +5,4 @@ card_id = 54
 nickname = "カエラ・コヴァルスキア"
 base_icons = ["INTEL"]
 base_suits = ["INDONESIA"]
+skills = [{"name": "メンテナンス", "type": "play", "description": "相手の場にあるDUELISTを１枚選び、帰宅させる。"}]

@@ -5,3 +5,4 @@ card_id = 16
 nickname = "獅白ぼたん"
 base_icons = ["ENJOY", "OTAKU"]
 base_suits = ["COOL"]
+skills = [{"name": "なんとかしてくれる獅白ぼたん", "type": "action", "description": "自宅のカードを２枚手札に加える：このカードを帰宅させる。"}]

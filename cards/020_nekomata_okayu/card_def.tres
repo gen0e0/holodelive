@@ -5,3 +5,4 @@ card_id = 20
 nickname = "猫又おかゆ"
 base_icons = ["SEXY", "VOCAL"]
 base_suits = ["COOL"]
+skills = [{"name": "全ホロメン妹化計画", "type": "action", "description": "相手と互いにサイコロを振り、相手の出目以上の場合、相手の１ｓｔのカードをこちらのステージに移動する。未満の場合、帰宅する。（21,15/36=58％くらい）"}]

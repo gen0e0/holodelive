@@ -5,3 +5,4 @@ card_id = 33
 nickname = "アキ・ローゼンタール"
 base_icons = ["ALCOHOL", "DUELIST"]
 base_suits = ["HOT"]
+skills = [{"name": "あらあらぁ", "type": "play", "description": "自分の楽屋にあるカードを、ゲストにする。"}]

@@ -5,3 +5,4 @@ card_id = 64
 nickname = "モココ・アビスガード"
 base_icons = ["REACTION", "DUELIST"]
 base_suits = ["ENGLISH"]
+skills = [{"name": "忠犬", "type": "play", "description": "このカードがステージに出たとき、山札、自宅、場、自分の手札からフワワ・アビスガードをステージに出す。（フワワの効果は発動しません）"}]

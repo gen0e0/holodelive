@@ -5,3 +5,4 @@ card_id = 21
 nickname = "雪花ラミィ"
 base_icons = ["ALCOHOL", "REACTION"]
 base_suits = ["COOL"]
+skills = [{"name": "やめなー", "type": "play", "description": "相手は次のターン、アクション＆ゲストフェイズをスキップする。"}]

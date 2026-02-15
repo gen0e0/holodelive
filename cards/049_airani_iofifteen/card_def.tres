@@ -5,3 +5,4 @@ card_id = 49
 nickname = "アイラニ・イオフィフティーン"
 base_icons = ["SEISO"]
 base_suits = ["INDONESIA"]
+skills = [{"name": "Iofi", "type": "passive", "description": "ライブ準備時、好きなアイコンとして扱うことができる。"}, {"name": "Erofi", "type": "passive", "description": "このカードは夏色まつりの効果の対象にならない。"}]
