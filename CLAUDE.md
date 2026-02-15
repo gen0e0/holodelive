@@ -16,6 +16,9 @@
   - 例: `system/game_state.gd` → `test/system/game_state_test.gd`
 - テストクラスは `GdUnitTestSuite` を継承し、テストメソッドは `test_` プレフィックスを付ける
 - CLI実行: `GODOT_BIN=/usr/local/bin/godot ./addons/gdUnit4/runtest.sh -a test/`
+- 新しい `class_name` を持つファイルを追加・削除した後は、テスト前にクラスキャッシュの再構築が必要:
+  - `godot --headless --editor --quit`
+  - `--headless --quit` だけでは `global_script_class_cache.cfg` が更新されないので注意
 - 新規コード追加時は対応するテストも作成すること
 
 ## 設計上の重要事項
