@@ -1,9 +1,9 @@
 class_name ShowdownCalculatorTest
 extends GdUnitTestSuite
 
-## ヘルパー: CardDef を手軽に作る
-func _card(icons: Array[String], suits: Array[String]) -> CardDef:
-	return CardDef.new(0, "", icons, suits)
+## ヘルパー: icons/suits の Dictionary を手軽に作る
+func _card(icons: Array[String], suits: Array[String]) -> Dictionary:
+	return {"icons": icons, "suits": suits}
 
 # --- ミラクル: 同一アイコン×同一スートが3枚 ---
 

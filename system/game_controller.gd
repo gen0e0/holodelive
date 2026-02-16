@@ -201,6 +201,7 @@ func end_turn() -> void:
 	while state.home.size() > 5:
 		var oldest: int = state.home[0]
 		ZoneOps.remove_card(state, oldest, _recorder)
+		_fire_trigger(Enums.TriggerEvent.CARD_LEFT_ZONE, {"instance_id": oldest})
 
 	# ライブレディチェック: ステージ3枚埋まっている → ライブ準備
 	if state.stage_count(p) == 3 and not state.live_ready[p]:
@@ -242,7 +243,7 @@ func _trigger_live() -> void:
 func _resolve_showdown() -> int:
 	var ranks: Array[int] = [0, 0]
 	for p in range(2):
-		var unit := _get_unit_card_defs(p)
+		var unit := _get_unit_data(p)
 		ranks[p] = ShowdownCalculator.evaluate_rank(unit)
 
 	# ランクは値が小さいほど強い
@@ -258,9 +259,10 @@ func _resolve_showdown() -> int:
 			return 1
 
 
-## プレイヤーのユニット（ステージ + 表向き楽屋）の CardDef リストを返す。
-func _get_unit_card_defs(player: int) -> Array:
-	var cards: Array = []
+## プレイヤーのユニット（ステージ + 表向き楽屋）の実効値リストを返す。
+## 戻り値: Array of {"icons": Array[String], "suits": Array[String]}
+func _get_unit_data(player: int) -> Array:
+	var unit: Array = []
 	# ステージ
 	for s in range(3):
 		var id: int = state.stages[player][s]
@@ -268,7 +270,7 @@ func _get_unit_card_defs(player: int) -> Array:
 			var inst: CardInstance = state.instances[id]
 			var card_def := registry.get_card(inst.card_id)
 			if card_def:
-				cards.append(card_def)
+				unit.append({"icons": inst.effective_icons(card_def), "suits": inst.effective_suits(card_def)})
 	# 楽屋（表向きのみ参加）
 	var bs_id: int = state.backstages[player]
 	if bs_id != -1:
@@ -276,8 +278,8 @@ func _get_unit_card_defs(player: int) -> Array:
 		if not bs_inst.face_down:
 			var card_def := registry.get_card(bs_inst.card_id)
 			if card_def:
-				cards.append(card_def)
-	return cards
+				unit.append({"icons": bs_inst.effective_icons(card_def), "suits": bs_inst.effective_suits(card_def)})
+	return unit
 
 
 ## ラウンド勝利を記録。
@@ -297,6 +299,7 @@ func _do_round_cleanup() -> void:
 			if id != -1:
 				state.stages[p][s] = -1
 				state.removed.append(id)
+				_fire_trigger(Enums.TriggerEvent.CARD_LEFT_ZONE, {"instance_id": id})
 
 		# 楽屋のカードをステージに移動（裏向きのまま維持）
 		var bs_id: int = state.backstages[p]
@@ -449,8 +452,24 @@ func _fire_trigger(event: Enums.TriggerEvent, details: Dictionary) -> void:
 	match event:
 		Enums.TriggerEvent.SKILL_ACTIVATED:
 			_check_counter(details)
+		Enums.TriggerEvent.CARD_LEFT_ZONE:
+			_cleanup_modifiers(details["instance_id"])
 		_:
 			pass  # 将来拡張
+
+
+## 非永続 Modifier のクリーンアップ。
+## source_instance_id が一致し persistent == false の Modifier を全 CardInstance から除去する。
+func _cleanup_modifiers(source_id: int) -> void:
+	for inst_id in state.instances:
+		var inst: CardInstance = state.instances[inst_id]
+		var i := inst.modifiers.size() - 1
+		while i >= 0:
+			var mod: Modifier = inst.modifiers[i]
+			if mod.source_instance_id == source_id and not mod.persistent:
+				inst.modifiers.remove_at(i)
+				_recorder.record_modifier_remove(inst_id, mod)
+			i -= 1
 
 
 ## カウンター候補をチェックし、選択肢を提示する。

@@ -1,10 +1,10 @@
 class_name ShowdownCalculator
 extends RefCounted
 
-## ユニット（3〜4枚）のカード定義リストから最高ランクを算出する。
-## cards: Array[CardDef] — ユニットを構成するカードの定義
-static func evaluate_rank(cards: Array) -> Enums.ShowdownRank:
-	if cards.size() < 2:
+## ユニット（3〜4枚）のカードデータリストから最高ランクを算出する。
+## unit: Array of {"icons": Array[String], "suits": Array[String]}
+static func evaluate_rank(unit: Array) -> Enums.ShowdownRank:
+	if unit.size() < 2:
 		return Enums.ShowdownRank.CASUAL
 
 	# 各アイコンが何枚のカードに出現するかカウント
@@ -14,14 +14,15 @@ static func evaluate_rank(cards: Array) -> Enums.ShowdownRank:
 	# 各 (アイコン, スート) ペアが何枚のカードに出現するかカウント
 	var pair_counts: Dictionary = {}
 
-	for card in cards:
-		var card_def: CardDef = card
-		for icon in card_def.base_icons:
+	for entry in unit:
+		var icons: Array = entry["icons"]
+		var suits: Array = entry["suits"]
+		for icon: String in icons:
 			icon_counts[icon] = icon_counts.get(icon, 0) + 1
-			for suit in card_def.base_suits:
-				var key := icon + ":" + suit
+			for suit: String in suits:
+				var key: String = icon + ":" + suit
 				pair_counts[key] = pair_counts.get(key, 0) + 1
-		for suit in card_def.base_suits:
+		for suit: String in suits:
 			suit_counts[suit] = suit_counts.get(suit, 0) + 1
 
 	# ミラクル: 同一アイコン×同一スートが3枚以上
