@@ -12,3 +12,9 @@ func execute_skill(ctx: SkillContext, skill_index: int) -> SkillResult:
 		var result: SkillResult = call(method_name, ctx)
 		return result
 	return SkillResult.done()
+
+
+## カウンター可能かどうかを判定する（パッシブスキル用）。
+## オーバーライドして true を返すとカウンター候補になる。
+func _can_counter(_ctx: SkillContext) -> bool:
+	return false

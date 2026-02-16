@@ -3,6 +3,7 @@ extends RefCounted
 
 var state: GameState
 var registry: CardRegistry
+var recorder: DiffRecorder
 var source_instance_id: int = -1
 var player: int = 0
 var phase: int = 0
@@ -16,7 +17,8 @@ func _init(
 	p_source_instance_id: int = -1,
 	p_player: int = 0,
 	p_phase: int = 0,
-	p_choice_result: Variant = null
+	p_choice_result: Variant = null,
+	p_recorder: DiffRecorder = null
 ) -> void:
 	state = p_state
 	registry = p_registry
@@ -24,3 +26,4 @@ func _init(
 	player = p_player
 	phase = p_phase
 	choice_result = p_choice_result
+	recorder = p_recorder

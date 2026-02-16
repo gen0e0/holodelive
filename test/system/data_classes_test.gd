@@ -107,6 +107,77 @@ func test_skill_stack_entry_default() -> void:
 
 # --- PendingChoice ---
 
+# --- TriggerEvent ---
+
+func test_trigger_event_enum() -> void:
+	assert_int(Enums.TriggerEvent.SKILL_ACTIVATED).is_equal(0)
+	assert_int(Enums.TriggerEvent.TURN_END).is_equal(5)
+
+# --- CardDef.skills ---
+
+func test_card_def_skills_default_empty() -> void:
+	var cd := CardDef.new()
+	assert_array(cd.skills).is_empty()
+
+func test_card_def_with_skills() -> void:
+	var icons: Array[String] = ["VOCAL"]
+	var suits: Array[String] = ["COOL"]
+	var skills := [{"name": "TestSkill", "type": Enums.SkillType.PLAY, "description": "test"}]
+	var cd := CardDef.new(1, "Test", icons, suits, skills)
+	assert_array(cd.skills).has_size(1)
+	assert_str(cd.skills[0]["name"]).is_equal("TestSkill")
+
+# --- SkillContext.recorder ---
+
+func test_skill_context_recorder_default_null() -> void:
+	var ctx := SkillContext.new()
+	assert_that(ctx.recorder).is_null()
+
+func test_skill_context_with_recorder() -> void:
+	var rec := DiffRecorder.new()
+	var ctx := SkillContext.new(null, null, -1, 0, 0, null, rec)
+	assert_that(ctx.recorder).is_not_null()
+
+# --- DiffRecorder helpers ---
+
+func test_diff_recorder_modifier_add() -> void:
+	var rec := DiffRecorder.new()
+	var mod := Modifier.new(Enums.ModifierType.ICON_ADD, "VOCAL", 10, false)
+	var diff := rec.record_modifier_add(5, mod)
+	assert_int(diff.type).is_equal(Enums.DiffType.MODIFIER_ADD)
+	assert_int(diff.details["instance_id"]).is_equal(5)
+	assert_str(diff.details["value"]).is_equal("VOCAL")
+
+func test_diff_recorder_modifier_remove() -> void:
+	var rec := DiffRecorder.new()
+	var mod := Modifier.new(Enums.ModifierType.SUIT_REMOVE, "HOT", 3, true)
+	var diff := rec.record_modifier_remove(7, mod)
+	assert_int(diff.type).is_equal(Enums.DiffType.MODIFIER_REMOVE)
+	assert_int(diff.details["instance_id"]).is_equal(7)
+	assert_bool(diff.details["persistent"]).is_true()
+
+func test_diff_recorder_instance_create() -> void:
+	var rec := DiffRecorder.new()
+	var diff := rec.record_instance_create(100, 5)
+	assert_int(diff.type).is_equal(Enums.DiffType.INSTANCE_CREATE)
+	assert_int(diff.details["instance_id"]).is_equal(100)
+	assert_int(diff.details["card_id"]).is_equal(5)
+
+func test_diff_recorder_instance_destroy() -> void:
+	var rec := DiffRecorder.new()
+	var diff := rec.record_instance_destroy(100, 5)
+	assert_int(diff.type).is_equal(Enums.DiffType.INSTANCE_DESTROY)
+	assert_int(diff.details["instance_id"]).is_equal(100)
+
+# --- BaseCardSkill._can_counter ---
+
+func test_base_card_skill_can_counter_default_false() -> void:
+	var skill := BaseCardSkill.new()
+	var ctx := SkillContext.new()
+	assert_bool(skill._can_counter(ctx)).is_false()
+
+# --- PendingChoice ---
+
 func test_pending_choice_default() -> void:
 	var pc := PendingChoice.new()
 	assert_int(pc.stack_index).is_equal(-1)

@@ -20,5 +20,10 @@ enum SkillType { PLAY, ACTION, PASSIVE }
 
 enum SkillState { PENDING, RESOLVING, RESOLVED, COUNTERED }
 
+enum TriggerEvent {
+	SKILL_ACTIVATED, CARD_ENTERED_ZONE, CARD_LEFT_ZONE,
+	CARD_FLIPPED, TURN_START, TURN_END
+}
+
 ## ショウダウンのランク（値が小さいほど強い）
 enum ShowdownRank { MIRACLE, TRIO, FLASH, DUO, CASUAL }

@@ -36,5 +36,39 @@ func record_property_change(property_name: String, before: Variant, after: Varia
 	})
 
 
+func record_modifier_add(instance_id: int, modifier: Modifier) -> StateDiff:
+	return record(Enums.DiffType.MODIFIER_ADD, {
+		"instance_id": instance_id,
+		"type": modifier.type,
+		"value": modifier.value,
+		"source_instance_id": modifier.source_instance_id,
+		"persistent": modifier.persistent,
+	})
+
+
+func record_modifier_remove(instance_id: int, modifier: Modifier) -> StateDiff:
+	return record(Enums.DiffType.MODIFIER_REMOVE, {
+		"instance_id": instance_id,
+		"type": modifier.type,
+		"value": modifier.value,
+		"source_instance_id": modifier.source_instance_id,
+		"persistent": modifier.persistent,
+	})
+
+
+func record_instance_create(instance_id: int, card_id: int) -> StateDiff:
+	return record(Enums.DiffType.INSTANCE_CREATE, {
+		"instance_id": instance_id,
+		"card_id": card_id,
+	})
+
+
+func record_instance_destroy(instance_id: int, card_id: int) -> StateDiff:
+	return record(Enums.DiffType.INSTANCE_DESTROY, {
+		"instance_id": instance_id,
+		"card_id": card_id,
+	})
+
+
 func clear() -> void:
 	diffs.clear()
