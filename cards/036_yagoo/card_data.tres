@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 36
+nickname = "YAGOO"
+base_icons = []
+base_suits = ["ENGLISH"]
+skills = [{"name": "お茶会", "type": "play", "description": "相手の手札からランダムに２枚引き、手札に加える。（１枚は残す）"}]

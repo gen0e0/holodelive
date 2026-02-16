@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 3
+nickname = "白上フブキ"
+base_icons = ["OTAKU", "CHARISMA"]
+base_suits = ["LOVELY"]
+skills = [{"name": "フブキングダム", "type": "play", "description": "手札からJP♥or◆のカードを１枚、プレイする。楽屋に伏せてゲストとしてもよい。"}]

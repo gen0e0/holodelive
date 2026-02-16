@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 36
-nickname = "YAGOO"
-base_icons = []
-base_suits = ["ENGLISH"]
-skills = [{"name": "お茶会", "type": "play", "description": "相手の手札からランダムに２枚引き、手札に加える。（１枚は残す）"}]

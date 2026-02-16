@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 11
+nickname = "桃鈴ねね"
+base_icons = ["KUSOGAKI", "TRICKSTER"]
+base_suits = ["LOVELY"]
+skills = [{"name": "見て見て！ギラファ！", "type": "play", "description": "自分の場にあるこのカード以外のカードを１枚、手札に戻す。"}]

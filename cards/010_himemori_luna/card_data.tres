@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 10
+nickname = "姫森ルーナ"
+base_icons = ["ALCOHOL", "SEISO"]
+base_suits = ["LOVELY"]
+skills = [{"name": "くせえのら", "type": "play", "description": "相手の手札をランダムに１枚、帰宅させる。"}]

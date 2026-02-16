@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 69
-nickname = "轟はじめ"
-base_icons = ["DUELIST"]
-base_suits = ["LOVELY"]
-skills = [{"name": "タイマンだじぇ", "type": "play", "description": "あなたのステージの1stカードと、相手ステージの1stカードを共に帰宅させる。（このカードを含んでも良い）"}]

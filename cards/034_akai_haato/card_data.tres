@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 34
+nickname = "赤井はあと"
+base_icons = ["KUSOGAKI", "ENJOY", "INTEL"]
+base_suits = ["HOT"]
+skills = [{"name": "はあちゃまっちゃま～", "type": "action", "description": "自宅にあるカードを１枚選んでこのカードと入れ替え、そのプレイ能力を発動させる。"}]

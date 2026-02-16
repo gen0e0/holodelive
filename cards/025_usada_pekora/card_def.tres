@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 25
-nickname = "兎田ぺこら"
-base_icons = ["CHARISMA", "REACTION"]
-base_suits = ["HOT"]
-skills = [{"name": "豪運うさぎってわーけ！", "type": "play", "description": "手札から１枚選び、山札の一番上のカードと交換する。交換してきたカードを場にプレイする。楽屋に伏せてゲストとしてもよい。"}]

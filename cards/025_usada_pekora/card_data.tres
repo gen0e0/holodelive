@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 25
+nickname = "兎田ぺこら"
+base_icons = ["CHARISMA", "REACTION"]
+base_suits = ["HOT"]
+skills = [{"name": "豪運うさぎってわーけ！", "type": "play", "description": "手札から１枚選び、山札の一番上のカードと交換する。交換してきたカードを場にプレイする。楽屋に伏せてゲストとしてもよい。"}]

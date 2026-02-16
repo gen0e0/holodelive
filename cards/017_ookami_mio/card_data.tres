@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 17
+nickname = "大神ミオ"
+base_icons = ["REACTION", "INTEL"]
+base_suits = ["COOL"]
+skills = [{"name": "Big God Mio-n", "type": "play", "description": "相手は手札を全て帰宅させ、２枚ドローする。"}]

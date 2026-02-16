@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 68
-nickname = "儒烏風亭らでん"
-base_icons = ["OTAKU", "ALCOHOL", "INTEL"]
-base_suits = ["COOL"]
-skills = [{"name": "おあとがよろしいようで", "type": "play", "description": "山札の上から３枚を見て、その後好きな順番で山札の上に置く。"}]

@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 24
-nickname = "夏色まつり"
-base_icons = ["SEISO"]
-base_suits = ["HOT"]
-skills = [{"name": "まつりライン", "type": "play", "description": "場にあるこのカード以外のSEISOアイコンを持つカードを全て帰宅させる。１枚でも帰宅させた場合、以下の能力を得る。・ライブ準備時、好きなアイコンとして扱うことができる。（常時）"}]

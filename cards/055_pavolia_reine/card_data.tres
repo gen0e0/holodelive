@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 55
+nickname = "パヴォリア・レイネ"
+base_icons = ["SEXY"]
+base_suits = ["STAFF"]
+skills = [{"name": "レイネの教室", "type": "passive", "description": "このカードの前後に接しているカードに、一時的にID☽を加える。"}]

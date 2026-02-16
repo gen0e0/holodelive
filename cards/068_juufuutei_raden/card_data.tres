@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 68
+nickname = "儒烏風亭らでん"
+base_icons = ["OTAKU", "ALCOHOL", "INTEL"]
+base_suits = ["COOL"]
+skills = [{"name": "おあとがよろしいようで", "type": "play", "description": "山札の上から３枚を見て、その後好きな順番で山札の上に置く。"}]

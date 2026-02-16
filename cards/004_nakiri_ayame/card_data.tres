@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 4
+nickname = "百鬼あやめ"
+base_icons = ["VOCAL", "DUELIST"]
+base_suits = ["LOVELY"]
+skills = [{"name": "なんも聞いとらんかった", "type": "passive", "description": "このカードを役に含むと、先にライブ準備をしたとして扱う。"}]

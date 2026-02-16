@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 62
+nickname = "古石ビジュー"
+base_icons = ["KUSOGAKI", "TRICKSTER"]
+base_suits = ["ENGLISH"]
+skills = [{"name": "産んじゃう…！", "type": "play", "description": "このカードが１stまたは楽屋に出た時、対面ステージの1stカードを、こちらのステージに移動する。（ゲスト不可）"}]

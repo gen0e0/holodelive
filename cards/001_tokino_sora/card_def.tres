@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 1
-nickname = "ときのそら"
-base_icons = ["SEISO"]
-base_suits = ["LOVELY"]
-skills = [{"name": "ぬんぬん", "type": "passive", "description": "ライブ準備時、好きなアイコンとして扱うことができる。"}, {"name": "始祖", "type": "passive", "description": "このカードを役に含むと、成立役を１つ上の役にする。"}]

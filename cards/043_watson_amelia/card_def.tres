@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 43
-nickname = "ワトソン・アメリア"
-base_icons = ["ENJOY", "TRICKSTER"]
-base_suits = ["ENGLISH"]
-skills = [{"name": "グレムリンノイズ", "type": "play", "description": "あなたと相手の手札を、交換する。"}]

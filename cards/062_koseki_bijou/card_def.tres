@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 62
-nickname = "古石ビジュー"
-base_icons = ["KUSOGAKI", "TRICKSTER"]
-base_suits = ["ENGLISH"]
-skills = [{"name": "産んじゃう…！", "type": "play", "description": "このカードが１stまたは楽屋に出た時、対面ステージの1stカードを、こちらのステージに移動する。（ゲスト不可）"}]

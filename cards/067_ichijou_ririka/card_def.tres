@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 67
-nickname = "一条莉々華"
-base_icons = ["TRICKSTER", "ALCOHOL"]
-base_suits = ["HOT"]
-skills = [{"name": "酒持ってこーい", "type": "play", "description": "山札の上から４枚をめくり、最初に出たALCOHOLのカードを１枚、プレイする。それ以外のカードや、出なかった場合は残ったカードを全て帰宅させる。"}]

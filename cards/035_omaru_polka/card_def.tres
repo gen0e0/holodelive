@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 35
-nickname = "尾丸ポルカ"
-base_icons = ["TRICKSTER"]
-base_suits = ["HOT"]
-skills = [{"name": "ポルカおるか？", "type": "play", "description": "山札から１枚カードを引き、手札に加える。その後、手札から１枚山札の上に置く。"}, {"name": "ポルカおらんか？", "type": "action", "description": "このカードを山札の一番下のカードと入れ替え、同じ場所にプレイする。"}]

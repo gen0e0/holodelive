@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 40
+nickname = "がうる・ぐら"
+base_icons = ["CHARISMA", "VOCAL", "KUSOGAKI"]
+base_suits = ["ENGLISH"]
+skills = [{"name": "a", "type": "play", "description": "手札からEN★のカードを１枚、プレイする。"}]

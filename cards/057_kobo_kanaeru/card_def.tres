@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 57
-nickname = "こぼ・かなえる"
-base_icons = ["KUSOGAKI", "CHARISMA"]
-base_suits = ["STAFF"]
-skills = [{"name": "クソガキング KUSOGAKing", "type": "play", "description": "あなたの場にあるKUSOGAKIの枚数分、相手の場のカードを手札に戻す。"}]

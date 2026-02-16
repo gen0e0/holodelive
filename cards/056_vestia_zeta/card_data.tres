@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 56
+nickname = "ベスティア・ゼータ"
+base_icons = ["TRICKSTER", "ENJOY"]
+base_suits = ["STAFF"]
+skills = [{"name": "潜入捜査 Infiltration", "type": "action", "description": "このカードを相手の手札に加える：相手の手札をランダムに１枚引き、あなたの場にプレイする。これは手札からプレイした扱いとなり、楽屋に伏せてゲストとしてもよい。場に出せない場合は帰宅する。"}]

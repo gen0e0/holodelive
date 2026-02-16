@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 48
-nickname = "七詩ムメイ"
-base_icons = ["TRICKSTER", "ALCOHOL", "VOCAL"]
-base_suits = ["INDONESIA"]
-skills = [{"name": "Mumei Berries", "type": "action", "description": "手札を１枚選び、山札の一番下に置く：山札から１枚引いて手札に加える。"}]

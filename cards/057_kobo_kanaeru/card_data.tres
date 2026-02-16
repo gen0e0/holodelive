@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 57
+nickname = "こぼ・かなえる"
+base_icons = ["KUSOGAKI", "CHARISMA"]
+base_suits = ["STAFF"]
+skills = [{"name": "クソガキング KUSOGAKing", "type": "play", "description": "あなたの場にあるKUSOGAKIの枚数分、相手の場のカードを手札に戻す。"}]

@@ -31,7 +31,7 @@ func test_size() -> void:
 
 func test_lazy_load_from_path() -> void:
 	var sr := SkillRegistry.new()
-	sr.register_path(1, "res://cards/001_tokino_sora/skills.gd")
+	sr.register_path(1, "res://cards/001_tokino_sora/card_skills.gd")
 	assert_bool(sr.has_skill(1)).is_true()
 	var skill := sr.get_skill(1)
 	assert_that(skill).is_not_null()
@@ -43,8 +43,8 @@ func test_lazy_load_from_path() -> void:
 func test_size_with_mixed_registration() -> void:
 	var sr := SkillRegistry.new()
 	sr.register(1, BaseCardSkill.new())
-	sr.register_path(2, "res://cards/001_tokino_sora/skills.gd")
+	sr.register_path(2, "res://cards/001_tokino_sora/card_skills.gd")
 	assert_int(sr.size()).is_equal(2)
 	# Same card_id in both → counted once
-	sr.register_path(1, "res://cards/001_tokino_sora/skills.gd")
+	sr.register_path(1, "res://cards/001_tokino_sora/card_skills.gd")
 	assert_int(sr.size()).is_equal(2)

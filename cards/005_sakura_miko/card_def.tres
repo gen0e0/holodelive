@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 5
-nickname = "さくらみこ"
-base_icons = ["ENJOY"]
-base_suits = ["LOVELY"]
-skills = [{"name": "サクラカゼ", "type": "passive", "description": "このカードを役に含んで勝利した場合、２勝する"}]

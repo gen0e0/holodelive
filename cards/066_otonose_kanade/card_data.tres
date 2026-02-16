@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 66
+nickname = "音乃瀬奏"
+base_icons = ["KUSOGAKI"]
+base_suits = ["LOVELY"]
+skills = [{"name": "尻を揉むために生まれてきた女", "type": "play", "description": "このカードの１つ前にあるカードのプレイ時能力を使用する。"}]

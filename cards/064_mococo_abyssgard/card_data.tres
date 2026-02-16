@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 64
+nickname = "モココ・アビスガード"
+base_icons = ["REACTION", "DUELIST"]
+base_suits = ["ENGLISH"]
+skills = [{"name": "忠犬", "type": "play", "description": "このカードがステージに出たとき、山札、自宅、場、自分の手札からフワワ・アビスガードをステージに出す。（フワワの効果は発動しません）"}]

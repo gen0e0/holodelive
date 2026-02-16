@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 19
-nickname = "不知火フレア"
-base_icons = ["INTEL"]
-base_suits = ["COOL"]
-skills = [{"name": "俺のイナ！", "type": "play", "description": "自宅から１枚選んで手札に加える。その後、相手は自宅から１枚選んで手札に加える。"}]

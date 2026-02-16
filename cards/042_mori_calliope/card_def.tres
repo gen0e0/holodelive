@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 42
-nickname = "森カリオペ"
-base_icons = ["VOCAL", "DUELIST", "ALCOHOL"]
-base_suits = ["ENGLISH"]
-skills = [{"name": "メメント・モリ", "type": "play", "description": "相手の場のカードを1枚、山札の1番下に置く。"}]

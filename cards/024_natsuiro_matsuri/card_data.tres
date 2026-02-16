@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 24
+nickname = "夏色まつり"
+base_icons = ["SEISO"]
+base_suits = ["HOT"]
+skills = [{"name": "まつりライン", "type": "play", "description": "場にあるこのカード以外のSEISOアイコンを持つカードを全て帰宅させる。１枚でも帰宅させた場合、以下の能力を得る。・ライブ準備時、好きなアイコンとして扱うことができる。（常時）"}]

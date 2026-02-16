@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 13
-nickname = "常闇トワ"
-base_icons = ["CHARISMA"]
-base_suits = ["COOL"]
-skills = [{"name": "ドーム炊くよ！", "type": "play", "description": "相手は次のターン、あなたの場のカードをプレイ時能力の対象にできない。"}]

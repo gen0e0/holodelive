@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 63
-nickname = "フワワ・アビスガード"
-base_icons = ["ENJOY", "KUSOGAKI"]
-base_suits = ["ENGLISH"]
-skills = [{"name": "番犬", "type": "play", "description": "このカードがステージに出たとき、山札、自宅、場、自分の手札からモココ・アビスガードをステージに出す。（モココの効果は発動しません）"}]

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 65
+nickname = "火威青"
+base_icons = ["SEXY"]
+base_suits = ["COOL"]
+skills = [{"name": "じゃじゃーん！青くんでした！", "type": "action", "description": "このカードは直ちに相手のステージに移動する。その後、あなたは山札から１枚引いて手札に加える。"}]

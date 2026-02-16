@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 52
-nickname = "アユンダ・リス"
-base_icons = ["ENJOY"]
-base_suits = ["INDONESIA"]
-skills = [{"name": "ALiCE&u", "type": "play", "description": "山札の上から２枚を見て、好きな１枚を手札に加える。選ばなかったカードを相手の手札に加える。"}]

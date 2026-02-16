@@ -77,7 +77,7 @@ func test_base_card_skill_invalid_index_returns_done() -> void:
 # --- Mock Skill Script Loading & Execution ---
 
 func test_load_and_execute_tokino_sora() -> void:
-	var script = load("res://cards/001_tokino_sora/skills.gd")
+	var script = load("res://cards/001_tokino_sora/card_skills.gd")
 	assert_that(script).is_not_null()
 	var skill = script.new()
 	var ctx := SkillContext.new()
@@ -89,7 +89,7 @@ func test_load_and_execute_tokino_sora() -> void:
 	assert_int(r1.status).is_equal(SkillResult.Status.DONE)
 
 func test_load_and_execute_omaru_polka() -> void:
-	var script = load("res://cards/035_omaru_polka/skills.gd")
+	var script = load("res://cards/035_omaru_polka/card_skills.gd")
 	var skill = script.new()
 	var ctx := SkillContext.new()
 	# skill_0: ポルカおるか？ (play)
@@ -100,14 +100,14 @@ func test_load_and_execute_omaru_polka() -> void:
 	assert_int(r1.status).is_equal(SkillResult.Status.DONE)
 
 func test_execute_invalid_skill_index_returns_done() -> void:
-	var script = load("res://cards/001_tokino_sora/skills.gd")
+	var script = load("res://cards/001_tokino_sora/card_skills.gd")
 	var skill = script.new()
 	var ctx := SkillContext.new()
 	var result: SkillResult = skill.execute_skill(ctx, 99)
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
 
 func test_load_and_execute_kiryu_coco() -> void:
-	var script = load("res://cards/058_kiryu_coco/skills.gd")
+	var script = load("res://cards/058_kiryu_coco/card_skills.gd")
 	var skill = script.new()
 	var ctx := SkillContext.new()
 	# skill_0: 伝説のドラゴン (passive)
@@ -115,7 +115,7 @@ func test_load_and_execute_kiryu_coco() -> void:
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
 
 func test_load_and_execute_ninomae_inanis() -> void:
-	var script = load("res://cards/041_ninomae_inanis/skills.gd")
+	var script = load("res://cards/041_ninomae_inanis/card_skills.gd")
 	var skill = script.new()
 	var ctx := SkillContext.new()
 	# skill_0: ネクロノミコン (passive)

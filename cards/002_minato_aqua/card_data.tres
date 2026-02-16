@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 2
+nickname = "湊あくあ"
+base_icons = ["CHARISMA", "OTAKU"]
+base_suits = ["LOVELY"]
+skills = [{"name": "あてぃしのこと好きすぎぃ！", "type": "play", "description": "自宅にあるJP(♥、◆、☀)のカードを１枚選んで、ステージにプレイする。"}]

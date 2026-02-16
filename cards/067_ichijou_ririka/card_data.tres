@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 67
+nickname = "一条莉々華"
+base_icons = ["TRICKSTER", "ALCOHOL"]
+base_suits = ["HOT"]
+skills = [{"name": "酒持ってこーい", "type": "play", "description": "山札の上から４枚をめくり、最初に出たALCOHOLのカードを１枚、プレイする。それ以外のカードや、出なかった場合は残ったカードを全て帰宅させる。"}]

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://cards/_base/card_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+card_id = 5
+nickname = "さくらみこ"
+base_icons = ["ENJOY"]
+base_suits = ["LOVELY"]
+skills = [{"name": "サクラカゼ", "type": "passive", "description": "このカードを役に含んで勝利した場合、２勝する"}]

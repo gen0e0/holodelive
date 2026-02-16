@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 7
-nickname = "風真いろは"
-base_icons = ["DUELIST", "KUSOGAKI"]
-base_suits = ["LOVELY"]
-skills = [{"name": "うーばーござる", "type": "play", "description": "自宅にあるJP(♥、◆、☀)のカードを１枚、手札に加える。"}]

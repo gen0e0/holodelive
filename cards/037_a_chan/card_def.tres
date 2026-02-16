@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 37
-nickname = "えーちゃん"
-base_icons = []
-base_suits = ["ENGLISH"]
-skills = [{"name": "休むのも仕事です！", "type": "play", "description": "相手の場にあるカードを１枚選んで、帰宅させる。"}]

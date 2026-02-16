@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[resource]
-card_id = 14
-nickname = "ラプラス・ダークネス"
-base_icons = ["OTAKU", "KUSOGAKI"]
-base_suits = ["COOL"]
-skills = [{"name": "かつもーく", "type": "play", "description": "山札をめくって一番最初に出た鷹嶺ルイ、博衣こより、沙花叉クロヱ、風真いろはのうち１枚をプレイする。"}]
