@@ -128,15 +128,18 @@ func _build_ui() -> void:
 # =============================================================================
 
 func _on_init_pressed() -> void:
-	registry = CardFactory.create_test_registry(20)
+	var loaded := CardLoader.load_all()
+	registry = loaded["card_registry"]
+	var skill_registry: SkillRegistry = loaded["skill_registry"]
 	state = GameSetup.setup_game(registry)
-	controller = GameController.new(state, registry)
+	controller = GameController.new(state, registry, skill_registry)
 	_last_action_log_size = 0
 	_current_actions = []
 	_waiting_choice = false
 
+	var card_count: int = registry.get_all_ids().size()
 	_log_display.clear()
-	_log("[color=yellow]--- Game Initialized (20 test cards) ---[/color]")
+	_log("[color=yellow]--- Game Initialized (%d cards) ---[/color]" % card_count)
 	_log("P0 hand: %s" % _format_id_list(state.hands[0]))
 	_log("P1 hand: %s" % _format_id_list(state.hands[1]))
 	_log("Deck: %d cards" % state.deck.size())
@@ -280,7 +283,7 @@ func _show_available_actions() -> void:
 	_waiting_choice = false
 	_btn_send.disabled = false
 
-	_log("[color=green]Available actions:[/color]")
+	_log("[color=green]Available actions (%s):[/color]" % _phase_name())
 	for i in range(_current_actions.size()):
 		_log("  %d. %s" % [i + 1, _format_action(_current_actions[i])])
 
@@ -406,14 +409,20 @@ func _log_recent_actions() -> void:
 
 func _format_card(inst_id: int) -> String:
 	if not state.instances.has(inst_id):
-		return "#%d (unknown)" % inst_id
+		return "<#%d ?>" % inst_id
 	var inst: CardInstance = state.instances[inst_id]
 	var card_def: CardDef = registry.get_card(inst.card_id)
 	if not card_def:
-		return "#%d cid=%d" % [inst_id, inst.card_id]
+		return "<#%d ?>" % inst_id
 	var icons := inst.effective_icons(card_def)
 	var suits := inst.effective_suits(card_def)
-	return "#%d %s (%s|%s)" % [inst_id, card_def.nickname, ",".join(icons), ",".join(suits)]
+	var icon_abbrs: Array[String] = []
+	for ic in icons:
+		icon_abbrs.append(ic.left(3))
+	var suit_abbrs: Array[String] = []
+	for su in suits:
+		suit_abbrs.append(su.left(3))
+	return "<#%d %s %s-%s>" % [inst_id, card_def.nickname.left(3), ",".join(icon_abbrs), ",".join(suit_abbrs)]
 
 
 func _format_id_list(ids: Array) -> String:
