@@ -87,6 +87,7 @@ func _build_ui() -> void:
 	_state_display.bbcode_enabled = true
 	_state_display.scroll_following = false
 	_state_display.selection_enabled = true
+	_state_display.focus_mode = Control.FOCUS_NONE
 	state_panel.add_child(_state_display)
 
 	# 下: ログ + 入力
@@ -102,6 +103,7 @@ func _build_ui() -> void:
 	_log_display.bbcode_enabled = true
 	_log_display.scroll_following = true
 	_log_display.selection_enabled = true
+	_log_display.focus_mode = Control.FOCUS_NONE
 	log_panel.add_child(_log_display)
 
 	var input_row := HBoxContainer.new()
@@ -111,6 +113,7 @@ func _build_ui() -> void:
 	_input_line.placeholder_text = "Enter number..."
 	_input_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_input_line.text_submitted.connect(_on_text_submitted)
+	_input_line.focus_mode = Control.FOCUS_ALL
 	input_row.add_child(_input_line)
 
 	_btn_send = Button.new()
@@ -154,7 +157,7 @@ func _on_send_pressed() -> void:
 	var text := _input_line.text.strip_edges()
 	_input_line.clear()
 	if text.is_empty():
-		return
+		text = "1"
 
 	if not text.is_valid_int():
 		_log("[color=red]Invalid input: enter a number.[/color]")
@@ -281,7 +284,7 @@ func _show_available_actions() -> void:
 	for i in range(_current_actions.size()):
 		_log("  %d. %s" % [i + 1, _format_action(_current_actions[i])])
 
-	_input_line.grab_focus()
+	_input_line.call_deferred("grab_focus")
 
 
 func _show_choices(pc: PendingChoice) -> void:
@@ -298,7 +301,7 @@ func _show_choices(pc: PendingChoice) -> void:
 		else:
 			_log("  %d. %s" % [i + 1, str(target)])
 
-	_input_line.grab_focus()
+	_input_line.call_deferred("grab_focus")
 
 
 func _show_game_over() -> void:

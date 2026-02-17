@@ -15,8 +15,8 @@ static func create_test_card(card_id: int, nickname: String = "", icons: Array[S
 ## テスト用レジストリを生成する（指定枚数のダミーカード）。
 static func create_test_registry(count: int) -> CardRegistry:
 	var registry := CardRegistry.new()
-	var icon_pool: Array[String] = ["VOCAL", "DANCE", "VISUAL", "SEXY", "CUTE"]
-	var suit_pool: Array[String] = ["COOL", "HOT", "POP"]
+	var icon_pool: Array[String] = Enums.icon_names()
+	var suit_pool: Array[String] = Enums.suit_names()
 	for i in range(count):
 		var icons: Array[String] = [icon_pool[i % icon_pool.size()]]
 		var suits: Array[String] = [suit_pool[i % suit_pool.size()]]

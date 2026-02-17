@@ -25,5 +25,23 @@ enum TriggerEvent {
 	CARD_FLIPPED, TURN_START, TURN_END
 }
 
+enum Icon {
+	SEISO, CHARISMA, OTAKU, VOCAL, ENJOY, REACTION,
+	DUELIST, KUSOGAKI, INTEL, SEXY, ALCOHOL, TRICKSTER
+}
+
+enum Suit { LOVELY, COOL, HOT, ENGLISH, INDONESIA, STAFF }
+
 ## ショウダウンのランク（値が小さいほど強い）
 enum ShowdownRank { MIRACLE, TRIO, FLASH, DUO, CASUAL }
+
+
+static func icon_names() -> Array[String]:
+	return [
+		"SEISO", "CHARISMA", "OTAKU", "VOCAL", "ENJOY", "REACTION",
+		"DUELIST", "KUSOGAKI", "INTEL", "SEXY", "ALCOHOL", "TRICKSTER",
+	]
+
+
+static func suit_names() -> Array[String]:
+	return ["LOVELY", "COOL", "HOT", "ENGLISH", "INDONESIA", "STAFF"]
