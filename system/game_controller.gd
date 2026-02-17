@@ -243,8 +243,8 @@ func _trigger_live() -> void:
 func _resolve_showdown() -> int:
 	var ranks: Array[int] = [0, 0]
 	for p in range(2):
-		var unit := _get_unit_data(p)
-		ranks[p] = ShowdownCalculator.evaluate_rank(unit)
+		var instances := _get_unit_instances(p)
+		ranks[p] = ShowdownCalculator.get_rank(instances, registry)
 
 	# ランクは値が小さいほど強い
 	if ranks[0] < ranks[1]:
@@ -259,27 +259,21 @@ func _resolve_showdown() -> int:
 			return 1
 
 
-## プレイヤーのユニット（ステージ + 表向き楽屋）の実効値リストを返す。
-## 戻り値: Array of {"icons": Array[String], "suits": Array[String]}
-func _get_unit_data(player: int) -> Array:
-	var unit: Array = []
+## プレイヤーのユニット（ステージ + 表向き楽屋）の CardInstance リストを返す。
+func _get_unit_instances(player: int) -> Array:
+	var instances: Array = []
 	# ステージ
 	for s in range(3):
 		var id: int = state.stages[player][s]
 		if id != -1:
-			var inst: CardInstance = state.instances[id]
-			var card_def := registry.get_card(inst.card_id)
-			if card_def:
-				unit.append({"icons": inst.effective_icons(card_def), "suits": inst.effective_suits(card_def)})
+			instances.append(state.instances[id])
 	# 楽屋（表向きのみ参加）
 	var bs_id: int = state.backstages[player]
 	if bs_id != -1:
 		var bs_inst: CardInstance = state.instances[bs_id]
 		if not bs_inst.face_down:
-			var card_def := registry.get_card(bs_inst.card_id)
-			if card_def:
-				unit.append({"icons": bs_inst.effective_icons(card_def), "suits": bs_inst.effective_suits(card_def)})
-	return unit
+			instances.append(bs_inst)
+	return instances
 
 
 ## ラウンド勝利を記録。

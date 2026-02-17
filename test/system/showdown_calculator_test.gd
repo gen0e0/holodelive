@@ -162,3 +162,40 @@ func test_trio_and_flash_separate_sets() -> void:
 	# VOCAL は3枚だがスートはバラバラ → トリオ
 	# COOL は2枚なのでフラッシュにならない
 	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.TRIO)
+
+# --- get_rank: CardInstance + Registry 経由 ---
+
+func test_get_rank_with_instances() -> void:
+	var registry := CardRegistry.new()
+	registry.register(CardDef.new(1, "A", ["VOCAL"] as Array[String], ["COOL"] as Array[String]))
+	registry.register(CardDef.new(2, "B", ["VOCAL"] as Array[String], ["HOT"] as Array[String]))
+	registry.register(CardDef.new(3, "C", ["VOCAL"] as Array[String], ["LOVELY"] as Array[String]))
+	var instances: Array = [
+		CardInstance.new(10, 1),
+		CardInstance.new(11, 2),
+		CardInstance.new(12, 3),
+	]
+	assert_int(ShowdownCalculator.get_rank(instances, registry)).is_equal(Enums.ShowdownRank.TRIO)
+
+func test_get_rank_with_modifiers() -> void:
+	var registry := CardRegistry.new()
+	registry.register(CardDef.new(1, "A", ["VOCAL"] as Array[String], ["COOL"] as Array[String]))
+	registry.register(CardDef.new(2, "B", ["DANCE"] as Array[String], ["HOT"] as Array[String]))
+	registry.register(CardDef.new(3, "C", ["SEISO"] as Array[String], ["LOVELY"] as Array[String]))
+	var inst_b := CardInstance.new(11, 2)
+	# DANCE → VOCAL に変える（REMOVE + ADD）
+	inst_b.modifiers.append(Modifier.new(Enums.ModifierType.ICON_REMOVE, "DANCE", 99))
+	inst_b.modifiers.append(Modifier.new(Enums.ModifierType.ICON_ADD, "VOCAL", 99))
+	var instances: Array = [
+		CardInstance.new(10, 1),
+		inst_b,
+		CardInstance.new(12, 3),
+	]
+	# VOCAL が2枚 → DUO
+	assert_int(ShowdownCalculator.get_rank(instances, registry)).is_equal(Enums.ShowdownRank.DUO)
+
+func test_get_rank_single_instance_is_casual() -> void:
+	var registry := CardRegistry.new()
+	registry.register(CardDef.new(1, "A", ["VOCAL"] as Array[String], ["COOL"] as Array[String]))
+	var instances: Array = [CardInstance.new(10, 1)]
+	assert_int(ShowdownCalculator.get_rank(instances, registry)).is_equal(Enums.ShowdownRank.CASUAL)

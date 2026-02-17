@@ -46,3 +46,14 @@ static func evaluate_rank(unit: Array) -> Enums.ShowdownRank:
 			return Enums.ShowdownRank.DUO
 
 	return Enums.ShowdownRank.CASUAL
+
+
+## CardInstance 配列から直接ランクを算出する便利メソッド。
+## instances: Array[CardInstance], registry: CardRegistry
+static func get_rank(instances: Array, registry: CardRegistry) -> Enums.ShowdownRank:
+	var unit: Array = []
+	for inst: CardInstance in instances:
+		var card_def: CardDef = registry.get_card(inst.card_id)
+		if card_def:
+			unit.append({"icons": inst.effective_icons(card_def), "suits": inst.effective_suits(card_def)})
+	return evaluate_rank(unit)
