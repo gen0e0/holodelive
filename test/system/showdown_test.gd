@@ -11,7 +11,7 @@ func _make_ctrl(deck_size: int = 20) -> GameController:
 func _fill_stage(state: GameState, player: int, card_ids: Array) -> void:
 	for i in range(card_ids.size()):
 		var id := state.create_instance(card_ids[i])
-		state.stages[player][i] = id
+		state.stages[player].append(id)
 
 # --- _trigger_live: 自動勝利 ---
 

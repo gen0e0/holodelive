@@ -92,9 +92,7 @@ func test_full_game_card_consistency() -> void:
 		var zone_count: int = state.deck.size() + state.home.size() + state.removed.size()
 		for p in range(2):
 			zone_count += state.hands[p].size()
-			for s in range(3):
-				if state.stages[p][s] != -1:
-					zone_count += 1
+			zone_count += state.stages[p].size()
 			if state.backstages[p] != -1:
 				zone_count += 1
 		assert_int(zone_count).is_less_equal(state.instances.size())

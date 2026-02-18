@@ -38,33 +38,34 @@ func test_draw_card_empty_deck() -> void:
 func test_play_to_stage() -> void:
 	var state := _create_state_with_hand(0, 3)
 	var rec := DiffRecorder.new()
-	var ok := ZoneOps.play_to_stage(state, 0, 0, 0, rec)
+	var ok := ZoneOps.play_to_stage(state, 0, 0, rec)
 	assert_bool(ok).is_true()
-	assert_int(state.stages[0][0]).is_equal(0)
+	assert_bool(state.stages[0].has(0)).is_true()
 	assert_int(state.hands[0].size()).is_equal(2)
 	assert_bool(state.instances[0].face_down).is_false()
 
-func test_play_to_stage_auto_slot() -> void:
+func test_play_to_stage_appends() -> void:
 	var state := _create_state_with_hand(0, 2)
 	var rec := DiffRecorder.new()
-	state.stages[0][0] = 100  # fill slot 0
-	var ok := ZoneOps.play_to_stage(state, 0, 0, -1, rec)
+	state.stages[0].append(100)  # 1枚配置済み
+	var ok := ZoneOps.play_to_stage(state, 0, 0, rec)
 	assert_bool(ok).is_true()
+	assert_int(state.stages[0].size()).is_equal(2)
 	assert_int(state.stages[0][1]).is_equal(0)
 
 func test_play_to_stage_full() -> void:
 	var state := _create_state_with_hand(0, 1)
 	var rec := DiffRecorder.new()
-	state.stages[0][0] = 100
-	state.stages[0][1] = 101
-	state.stages[0][2] = 102
-	var ok := ZoneOps.play_to_stage(state, 0, 0, -1, rec)
+	state.stages[0].append(100)
+	state.stages[0].append(101)
+	state.stages[0].append(102)
+	var ok := ZoneOps.play_to_stage(state, 0, 0, rec)
 	assert_bool(ok).is_false()
 
 func test_play_to_stage_not_in_hand() -> void:
 	var state := _create_state_with_hand(0, 1)
 	var rec := DiffRecorder.new()
-	var ok := ZoneOps.play_to_stage(state, 0, 999, 0, rec)
+	var ok := ZoneOps.play_to_stage(state, 0, 999, rec)
 	assert_bool(ok).is_false()
 
 # --- play_to_backstage ---
@@ -118,10 +119,10 @@ func test_open_backstage_already_open() -> void:
 func test_move_to_home_from_stage() -> void:
 	var state := GameState.new()
 	var id := state.create_instance(1)
-	state.stages[0][1] = id
+	state.stages[0].append(id)
 	var rec := DiffRecorder.new()
 	ZoneOps.move_to_home(state, id, rec)
-	assert_int(state.stages[0][1]).is_equal(-1)
+	assert_bool(state.stages[0].has(id)).is_false()
 	assert_bool(state.home.has(id)).is_true()
 	assert_array(rec.diffs).has_size(1)
 

@@ -78,8 +78,8 @@ func test_play_card_to_stage() -> void:
 	# Now in PLAY phase, play first card to stage slot 0
 	var hand: Array = ctrl.state.hands[0]
 	var card_to_play: int = hand[0]
-	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_to_play, "target": "stage", "slot": 0})
-	assert_int(ctrl.state.stages[0][0]).is_equal(card_to_play)
+	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_to_play, "target": "stage"})
+	assert_bool(ctrl.state.stages[0].has(card_to_play)).is_true()
 
 func test_play_card_to_backstage() -> void:
 	var ctrl := _setup_game()
@@ -99,7 +99,7 @@ func test_end_turn_switches_player() -> void:
 	ctrl.apply_action({"type": Enums.ActionType.PASS})
 	var hand: Array = ctrl.state.hands[0]
 	var card_to_play: int = hand[0]
-	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_to_play, "target": "stage", "slot": 0})
+	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_to_play, "target": "stage"})
 	# After play, turn should end and switch to player 1
 	assert_int(ctrl.state.current_player).is_equal(1)
 
@@ -109,7 +109,7 @@ func test_turn_increments() -> void:
 	ctrl.start_turn()
 	ctrl.apply_action({"type": Enums.ActionType.PASS})
 	var hand: Array = ctrl.state.hands[0]
-	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": hand[0], "target": "stage", "slot": 0})
+	ctrl.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": hand[0], "target": "stage"})
 	assert_int(ctrl.state.turn_number).is_equal(2)
 
 # --- live ready ---
@@ -119,7 +119,7 @@ func test_live_ready_when_stage_full() -> void:
 	# Manually fill stage for player 0
 	for i in range(3):
 		var id := ctrl.state.create_instance(100 + i)
-		ctrl.state.stages[0][i] = id
+		ctrl.state.stages[0].append(id)
 	ctrl.state.turn_number = 5
 	# Trigger end_turn to check live ready
 	ctrl.end_turn()

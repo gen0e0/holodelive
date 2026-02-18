@@ -19,9 +19,10 @@ func test_initial_zones() -> void:
 	assert_int(state.hands.size()).is_equal(2)
 	assert_array(state.hands[0]).is_empty()
 	assert_array(state.hands[1]).is_empty()
-	# stages: 2 players x 3 slots, all -1
-	assert_int(state.stages[0][0]).is_equal(-1)
-	assert_int(state.stages[1][2]).is_equal(-1)
+	# stages: 2 empty arrays
+	assert_int(state.stages.size()).is_equal(2)
+	assert_array(state.stages[0]).is_empty()
+	assert_array(state.stages[1]).is_empty()
 	# backstages: 2 slots, both -1
 	assert_int(state.backstages[0]).is_equal(-1)
 	assert_int(state.backstages[1]).is_equal(-1)
@@ -84,11 +85,11 @@ func test_find_zone_hand() -> void:
 func test_find_zone_stage() -> void:
 	var state := GameState.new()
 	var id := state.create_instance(1)
-	state.stages[0][2] = id
+	state.stages[0].append(id)
 	var zone := state.find_zone(id)
 	assert_str(zone["zone"]).is_equal("stage")
 	assert_int(zone["player"]).is_equal(0)
-	assert_int(zone["index"]).is_equal(2)
+	assert_int(zone["index"]).is_equal(0)
 
 func test_find_zone_backstage() -> void:
 	var state := GameState.new()
@@ -117,7 +118,7 @@ func test_find_zone_not_found() -> void:
 	var zone := state.find_zone(999)
 	assert_dict(zone).is_empty()
 
-# --- stage_count / first_empty_stage_slot ---
+# --- stage_count ---
 
 func test_stage_count_empty() -> void:
 	var state := GameState.new()
@@ -125,27 +126,12 @@ func test_stage_count_empty() -> void:
 
 func test_stage_count_partial() -> void:
 	var state := GameState.new()
-	state.stages[0][0] = state.create_instance(1)
-	state.stages[0][2] = state.create_instance(2)
+	state.stages[0].append(state.create_instance(1))
+	state.stages[0].append(state.create_instance(2))
 	assert_int(state.stage_count(0)).is_equal(2)
 
 func test_stage_count_full() -> void:
 	var state := GameState.new()
 	for i in range(3):
-		state.stages[1][i] = state.create_instance(i)
+		state.stages[1].append(state.create_instance(i))
 	assert_int(state.stage_count(1)).is_equal(3)
-
-func test_first_empty_stage_slot_empty() -> void:
-	var state := GameState.new()
-	assert_int(state.first_empty_stage_slot(0)).is_equal(0)
-
-func test_first_empty_stage_slot_partial() -> void:
-	var state := GameState.new()
-	state.stages[0][0] = state.create_instance(1)
-	assert_int(state.first_empty_stage_slot(0)).is_equal(1)
-
-func test_first_empty_stage_slot_full() -> void:
-	var state := GameState.new()
-	for i in range(3):
-		state.stages[0][i] = state.create_instance(i)
-	assert_int(state.first_empty_stage_slot(0)).is_equal(-1)

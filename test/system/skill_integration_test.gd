@@ -72,7 +72,7 @@ func _setup_counter_scenario() -> Dictionary:
 
 	# 相手ステージにカウンターカード配置
 	var counter_inst_id := gs.create_instance(1)
-	gs.stages[1][0] = counter_inst_id
+	gs.stages[1].append(counter_inst_id)
 	gs.instances[counter_inst_id].face_down = false
 
 	# プレイヤー0の手札にプレイカード
@@ -93,7 +93,7 @@ func test_play_to_stage_triggers_play_skill() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 	var inst_id := _prepare_hand_and_stage(gc)
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage"})
 
 	assert_int(gc.state.current_player).is_equal(1)
 	assert_bool(gc.state.skill_stack.is_empty()).is_true()
@@ -148,7 +148,7 @@ func test_skill_with_choice_pauses_resolution() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 	var inst_id := _prepare_hand_and_stage(gc)
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage"})
 
 	assert_bool(gc.is_waiting_for_choice()).is_true()
 	assert_int(gc.state.pending_choices.size()).is_equal(1)
@@ -161,7 +161,7 @@ func test_submit_choice_resumes_and_ends_turn() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 	var inst_id := _prepare_hand_and_stage(gc)
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage"})
 	assert_bool(gc.is_waiting_for_choice()).is_true()
 
 	gc.submit_choice(0, 10)
@@ -182,7 +182,7 @@ func test_action_skill_in_available_actions() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 
 	var inst_id := gc.state.create_instance(0)
-	gc.state.stages[0][0] = inst_id
+	gc.state.stages[0].append(inst_id)
 	gc.state.instances[inst_id].face_down = false
 	gc.state.phase = Enums.Phase.ACTION
 	gc.state.current_player = 0
@@ -205,7 +205,7 @@ func test_action_skill_once_per_turn() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 
 	var inst_id := gc.state.create_instance(0)
-	gc.state.stages[0][0] = inst_id
+	gc.state.stages[0].append(inst_id)
 	gc.state.instances[inst_id].face_down = false
 	gc.state.phase = Enums.Phase.ACTION
 	gc.state.current_player = 0
@@ -226,7 +226,7 @@ func test_activate_skill_stays_in_action_phase() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 
 	var inst_id := gc.state.create_instance(0)
-	gc.state.stages[0][0] = inst_id
+	gc.state.stages[0].append(inst_id)
 	gc.state.instances[inst_id].face_down = false
 	gc.state.phase = Enums.Phase.ACTION
 	gc.state.current_player = 0
@@ -247,7 +247,7 @@ func test_counter_choice_offered() -> void:
 	var play_inst_id: int = d["play_inst_id"]
 	var counter_inst_id: int = d["counter_inst_id"]
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage"})
 
 	assert_bool(gc.is_waiting_for_choice()).is_true()
 	assert_int(gs.pending_choices.size()).is_equal(1)
@@ -262,7 +262,7 @@ func test_counter_pass() -> void:
 	var gs: GameState = d["gs"]
 	var play_inst_id: int = d["play_inst_id"]
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage"})
 	assert_bool(gc.is_waiting_for_choice()).is_true()
 
 	gc.submit_choice(0, -1)
@@ -278,7 +278,7 @@ func test_counter_accepted() -> void:
 	var play_inst_id: int = d["play_inst_id"]
 	var counter_inst_id: int = d["counter_inst_id"]
 
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": play_inst_id, "target": "stage"})
 	assert_bool(gc.is_waiting_for_choice()).is_true()
 
 	gc.submit_choice(0, counter_inst_id)
@@ -293,11 +293,11 @@ func test_no_counter_when_no_passive() -> void:
 	var gc := _setup_with_skills(skills_meta, mock)
 
 	var dummy_inst_id := gc.state.create_instance(1)
-	gc.state.stages[1][0] = dummy_inst_id
+	gc.state.stages[1].append(dummy_inst_id)
 	gc.state.instances[dummy_inst_id].face_down = false
 
 	var inst_id := _prepare_hand_and_stage(gc)
-	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage", "slot": 0})
+	gc.apply_action({"type": Enums.ActionType.PLAY_CARD, "instance_id": inst_id, "target": "stage"})
 
 	assert_bool(gc.is_waiting_for_choice()).is_false()
 	assert_int(gc.state.current_player).is_equal(1)

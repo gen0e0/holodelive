@@ -8,7 +8,7 @@ var instances: Dictionary = {}  # int → CardInstance
 # --- ゾーン（全て instance_id を格納）---
 var deck: Array[int] = []
 var hands: Array = [[], []]  # [Array[int], Array[int]]
-var stages: Array = [[-1, -1, -1], [-1, -1, -1]]  # 各プレイヤー3スロット、空=-1
+var stages: Array = [[], []]  # 各プレイヤー動的配列（先頭詰め、最大3枚）
 var backstages: Array = [-1, -1]  # 各プレイヤー1枠、空=-1
 var home: Array[int] = []
 var removed: Array[int] = []
@@ -58,9 +58,9 @@ func find_zone(instance_id: int) -> Dictionary:
 
 	# stages
 	for p in range(2):
-		for s in range(3):
-			if stages[p][s] == instance_id:
-				return {"zone": "stage", "player": p, "index": s}
+		idx = stages[p].find(instance_id)
+		if idx != -1:
+			return {"zone": "stage", "player": p, "index": idx}
 
 	# backstages
 	for p in range(2):
@@ -82,16 +82,4 @@ func find_zone(instance_id: int) -> Dictionary:
 
 ## プレイヤーのステージに配置されているカード数を返す。
 func stage_count(player: int) -> int:
-	var count := 0
-	for s in range(3):
-		if stages[player][s] != -1:
-			count += 1
-	return count
-
-
-## プレイヤーのステージで最初の空きスロットを返す。なければ -1。
-func first_empty_stage_slot(player: int) -> int:
-	for s in range(3):
-		if stages[player][s] == -1:
-			return s
-	return -1
+	return stages[player].size()

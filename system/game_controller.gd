@@ -71,11 +71,10 @@ func get_available_actions() -> Array:
 				# 手札がない場合はスキップ扱い
 				actions.append({"type": Enums.ActionType.PASS})
 			else:
-				# ステージの空きスロットにプレイ
-				for slot in range(3):
-					if state.stages[p][slot] == -1:
-						for card_id in hand:
-							actions.append({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_id, "target": "stage", "slot": slot})
+				# ステージに空きがあればプレイ
+				if state.stages[p].size() < 3:
+					for card_id in hand:
+						actions.append({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_id, "target": "stage"})
 				# 楽屋にプレイ
 				if state.backstages[p] == -1:
 					for card_id in hand:
@@ -109,8 +108,7 @@ func apply_action(action: Dictionary) -> void:
 			var inst_id: int = action["instance_id"]
 			var target: String = action["target"]
 			if target == "stage":
-				var slot: int = action.get("slot", -1)
-				ZoneOps.play_to_stage(state, p, inst_id, slot, _recorder)
+				ZoneOps.play_to_stage(state, p, inst_id, _recorder)
 				_log_action(Enums.ActionType.PLAY_CARD, p, action)
 				_pending_end_turn = true
 				_try_trigger_play_skill(inst_id, p)
@@ -263,10 +261,8 @@ func _resolve_showdown() -> int:
 func _get_unit_instances(player: int) -> Array:
 	var instances: Array = []
 	# ステージ
-	for s in range(3):
-		var id: int = state.stages[player][s]
-		if id != -1:
-			instances.append(state.instances[id])
+	for id in state.stages[player]:
+		instances.append(state.instances[id])
 	# 楽屋（表向きのみ参加）
 	var bs_id: int = state.backstages[player]
 	if bs_id != -1:
@@ -288,18 +284,17 @@ func _do_round_cleanup() -> void:
 	_recorder.clear()
 	for p in range(2):
 		# ステージのカードを除外
-		for s in range(3):
-			var id: int = state.stages[p][s]
-			if id != -1:
-				state.stages[p][s] = -1
-				state.removed.append(id)
-				_fire_trigger(Enums.TriggerEvent.CARD_LEFT_ZONE, {"instance_id": id})
+		var stage_ids: Array = state.stages[p].duplicate()
+		state.stages[p].clear()
+		for id in stage_ids:
+			state.removed.append(id)
+			_fire_trigger(Enums.TriggerEvent.CARD_LEFT_ZONE, {"instance_id": id})
 
 		# 楽屋のカードをステージに移動（裏向きのまま維持）
 		var bs_id: int = state.backstages[p]
 		if bs_id != -1:
 			state.backstages[p] = -1
-			state.stages[p][0] = bs_id
+			state.stages[p].append(bs_id)
 
 	# ライブレディリセット
 	state.live_ready[0] = false
@@ -508,12 +503,10 @@ func _check_counter(details: Dictionary) -> void:
 ## プレイヤーの表向きフィールドカード（ステージ + 表向き楽屋）の instance_id リスト。
 func _get_face_up_field_ids(player: int) -> Array:
 	var ids: Array = []
-	for s in range(3):
-		var id: int = state.stages[player][s]
-		if id != -1:
-			var inst: CardInstance = state.instances[id]
-			if not inst.face_down:
-				ids.append(id)
+	for id in state.stages[player]:
+		var inst: CardInstance = state.instances[id]
+		if not inst.face_down:
+			ids.append(id)
 	var bs_id: int = state.backstages[player]
 	if bs_id != -1:
 		var bs_inst: CardInstance = state.instances[bs_id]

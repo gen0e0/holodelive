@@ -13,14 +13,9 @@ static func draw_card(state: GameState, player: int, recorder: DiffRecorder) -> 
 
 
 ## 手札からカードをステージにプレイする（表向き）。
-## slot が -1 の場合、最初の空きスロットを使う。
 ## 成功時は true。
-static func play_to_stage(state: GameState, player: int, instance_id: int, slot: int, recorder: DiffRecorder) -> bool:
-	if slot == -1:
-		slot = state.first_empty_stage_slot(player)
-	if slot == -1 or slot >= 3:
-		return false
-	if state.stages[player][slot] != -1:
+static func play_to_stage(state: GameState, player: int, instance_id: int, recorder: DiffRecorder) -> bool:
+	if state.stages[player].size() >= 3:
 		return false
 
 	var hand_idx: int = state.hands[player].find(instance_id)
@@ -28,9 +23,9 @@ static func play_to_stage(state: GameState, player: int, instance_id: int, slot:
 		return false
 
 	state.hands[player].remove_at(hand_idx)
-	state.stages[player][slot] = instance_id
+	state.stages[player].append(instance_id)
 	state.instances[instance_id].face_down = false
-	recorder.record_card_move(instance_id, "hand", hand_idx, "stage", slot)
+	recorder.record_card_move(instance_id, "hand", hand_idx, "stage", state.stages[player].size() - 1)
 	recorder.record_card_flip(instance_id, false, false)
 	return true
 
@@ -94,7 +89,7 @@ static func _remove_from_zone(state: GameState, instance_id: int, zone: Dictiona
 		"hand":
 			state.hands[zone["player"]].erase(instance_id)
 		"stage":
-			state.stages[zone["player"]][zone["index"]] = -1
+			state.stages[zone["player"]].erase(instance_id)
 		"backstage":
 			state.backstages[zone["player"]] = -1
 		"home":

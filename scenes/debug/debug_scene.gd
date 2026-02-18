@@ -358,12 +358,11 @@ func _update_state_display() -> void:
 
 		# Stage
 		var stage_parts: Array[String] = []
-		for s in range(3):
-			var slot_id: int = state.stages[p][s]
-			if slot_id == -1:
-				stage_parts.append("[%d: empty]" % s)
-			else:
-				stage_parts.append("[%d: %s]" % [s, _format_card(slot_id)])
+		for i in range(state.stages[p].size()):
+			stage_parts.append("[%s]" % _format_card(state.stages[p][i]))
+		var empty_count: int = 3 - state.stages[p].size()
+		for i in range(empty_count):
+			stage_parts.append("[empty]")
 		lines.append("  Stage: %s" % " ".join(stage_parts))
 
 		# Backstage
@@ -443,7 +442,7 @@ func _format_action(action: Dictionary) -> String:
 			var target: String = action["target"]
 			var card_str := _format_card(action["instance_id"])
 			if target == "stage":
-				return "Play %s -> Stage[%d]" % [card_str, action["slot"]]
+				return "Play %s -> Stage" % card_str
 			else:
 				return "Play %s -> Backstage" % card_str
 		Enums.ActionType.ACTIVATE_SKILL:
@@ -469,7 +468,7 @@ func _format_game_action(ga: GameAction) -> String:
 			var target: String = ga.params.get("target", "")
 			var card_str := _format_card(ga.params.get("instance_id", -1))
 			if target == "stage":
-				return prefix + "Played %s -> Stage[%d]" % [card_str, ga.params.get("slot", -1)]
+				return prefix + "Played %s -> Stage" % card_str
 			else:
 				return prefix + "Played %s -> Backstage" % card_str
 		Enums.ActionType.ACTIVATE_SKILL:

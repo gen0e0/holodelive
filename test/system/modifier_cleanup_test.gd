@@ -73,13 +73,13 @@ func test_round_cleanup_triggers_modifier_cleanup() -> void:
 	var ctrl := _setup_game_with_modifiers()
 
 	# Player 0 のステージにカード配置
-	ctrl.state.stages[0][0] = 0
-	ctrl.state.stages[0][1] = 1
-	ctrl.state.stages[0][2] = 2
+	ctrl.state.stages[0].append(0)
+	ctrl.state.stages[0].append(1)
+	ctrl.state.stages[0].append(2)
 	# Player 1 のステージにカード配置
-	ctrl.state.stages[1][0] = 3
-	ctrl.state.stages[1][1] = 4
-	ctrl.state.stages[1][2] = 5
+	ctrl.state.stages[1].append(3)
+	ctrl.state.stages[1].append(4)
+	ctrl.state.stages[1].append(5)
 
 	# instance=0 (ステージ上) からの非永続 Modifier を instance=3 に付与
 	# instance=3 もステージ上なのでラウンドクリーンアップで両方離脱

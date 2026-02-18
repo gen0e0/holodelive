@@ -11,7 +11,7 @@ func _make_ctrl(deck_size: int = 20) -> GameController:
 func _fill_stage(state: GameState, player: int, card_ids: Array) -> void:
 	for i in range(card_ids.size()):
 		var id := state.create_instance(card_ids[i])
-		state.stages[player][i] = id
+		state.stages[player].append(id)
 
 # --- round cleanup ---
 
@@ -23,17 +23,12 @@ func test_round_cleanup_removes_stage_cards() -> void:
 	ctrl.state.live_ready_turn[0] = 1
 	ctrl.state.current_player = 0
 
-	var old_stage_ids: Array = []
-	for s in range(3):
-		old_stage_ids.append(ctrl.state.stages[0][s])
+	var old_stage_ids: Array = ctrl.state.stages[0].duplicate()
 
 	ctrl.start_turn()  # triggers live → auto win → cleanup
 
 	# Stage should be cleared
-	for s in range(3):
-		# Old cards are removed, backstage cards may have moved to slot 0
-		if s > 0:
-			assert_int(ctrl.state.stages[0][s]).is_equal(-1)
+	assert_array(ctrl.state.stages[0]).is_empty()
 
 	# Old stage cards should be in removed
 	for id in old_stage_ids:
@@ -52,8 +47,8 @@ func test_round_cleanup_moves_backstage_to_stage() -> void:
 
 	ctrl.start_turn()
 
-	# Player 1's backstage should have moved to stage slot 0
-	assert_int(ctrl.state.stages[1][0]).is_equal(bs_id)
+	# Player 1's backstage should have moved to stage
+	assert_bool(ctrl.state.stages[1].has(bs_id)).is_true()
 	assert_int(ctrl.state.backstages[1]).is_equal(-1)
 
 func test_round_cleanup_resets_live_ready() -> void:
