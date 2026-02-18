@@ -21,6 +21,30 @@
   - `--headless --quit` だけでは `global_script_class_cache.cfg` が更新されないので注意
 - 新規コード追加時は対応するテストも作成すること
 
+## コーディング規約
+
+### 変数宣言: `:=` 推論を避け、型を明示する
+
+GDScript の `:=` は型なし `Array` / `Dictionary` のメソッド戻り値（`.duplicate()`, `.find()`, `.size()` 等）で `Variant` 推論エラーを起こしやすい。**原則として型を明示宣言する。**
+
+```gdscript
+# Good
+var ids: Array = state.stages[p].duplicate()
+var idx: int = deck.find(instance_id)
+var count: int = hands[p].size()
+
+# Bad — Variant 推論エラーの原因
+var ids := state.stages[p].duplicate()
+var idx := deck.find(instance_id)
+```
+
+`:=` を使ってよいケース: 右辺の型が明確なリテラル・コンストラクタ・型付きメソッド呼び出し。
+```gdscript
+var state := GameState.new()      # OK: コンストラクタ
+var name := "test"                # OK: String リテラル
+var count := 0                    # OK: int リテラル
+```
+
 ## 設計上の重要事項
 
 ### カード設計: CardDef / CardInstance の分離
