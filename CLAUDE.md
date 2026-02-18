@@ -6,6 +6,7 @@
 
 - `docs/game-rules.md` - ゲームルール詳細
 - `docs/game-architecture.md` - データ構造・アーキテクチャ設計
+- `docs/session-and-multiplayer.md` - GameSession & マルチプレイ設計
 - `test/` - ユニットテスト（GdUnit4）
 - `addons/gdUnit4/` - テストフレームワーク
 
