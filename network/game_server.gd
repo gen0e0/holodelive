@@ -1,6 +1,9 @@
 class_name GameServer
 extends Node
 
+## Server-authoritative game logic. Only exists on the host.
+## All communication with clients goes through GameClient's RPC layer.
+
 var state: GameState
 var controller: GameController
 var registry: CardRegistry
@@ -16,20 +19,14 @@ func start_game() -> void:
 	controller = GameController.new(state, registry, skill_registry)
 	_last_log_index = 0
 
-	# Notify all clients that game started
 	_broadcast_to_clients("_on_receive_game_started", [])
-
 	_do_start_turn()
 
 
-@rpc("any_peer", "reliable")
-func request_action(action: Dictionary) -> void:
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	# sender_id == 0 means local call (host)
-	var player_index: int = _resolve_player(sender_id)
-
+## Called by GameClient when a player submits an action.
+func receive_action(action: Dictionary, player_index: int) -> void:
 	if player_index < 0:
-		push_warning("[GameServer] Unknown peer: %d" % sender_id)
+		push_warning("[GameServer] Unknown player index: %d" % player_index)
 		return
 
 	if state.current_player != player_index:
@@ -47,16 +44,12 @@ func request_action(action: Dictionary) -> void:
 	_advance(prev_turn)
 
 
-@rpc("any_peer", "reliable")
-func request_choice(choice_idx: int, value: int) -> void:
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	var player_index: int = _resolve_player(sender_id)
-
+## Called by GameClient when a player submits a choice.
+func receive_choice(choice_idx: int, value: int, player_index: int) -> void:
 	if player_index < 0:
-		push_warning("[GameServer] Unknown peer: %d" % sender_id)
+		push_warning("[GameServer] Unknown player index: %d" % player_index)
 		return
 
-	# Validate that the choice is expected for this player
 	var pc: PendingChoice = _get_active_pending_choice()
 	if pc == null:
 		push_warning("[GameServer] No pending choice")
@@ -77,16 +70,8 @@ func request_choice(choice_idx: int, value: int) -> void:
 
 
 # =============================================================================
-# Internal
+# Internal game flow
 # =============================================================================
-
-func _resolve_player(sender_id: int) -> int:
-	if sender_id == 0:
-		# Local call from host → player 0
-		return 0
-	var nm: Node = get_parent()
-	return nm.get_player_index(sender_id)
-
 
 func _do_start_turn(depth: int = 0) -> void:
 	if depth > 10:
@@ -94,8 +79,7 @@ func _do_start_turn(depth: int = 0) -> void:
 
 	if controller.is_game_over():
 		_flush_and_send()
-		var winner: int = controller.get_winner()
-		_broadcast_to_clients("_on_receive_game_over", [winner])
+		_broadcast_to_clients("_on_receive_game_over", [controller.get_winner()])
 		return
 
 	var live_happened: bool = controller.start_turn()
@@ -103,13 +87,11 @@ func _do_start_turn(depth: int = 0) -> void:
 
 	if live_happened:
 		if controller.is_game_over():
-			var winner: int = controller.get_winner()
-			_broadcast_to_clients("_on_receive_game_over", [winner])
+			_broadcast_to_clients("_on_receive_game_over", [controller.get_winner()])
 			return
 		_do_start_turn(depth + 1)
 		return
 
-	# Send available actions to current player
 	_send_actions_to_current_player()
 
 
@@ -120,18 +102,15 @@ func _flush_and_send() -> void:
 		new_actions.append(state.action_log[i])
 	_last_log_index = log_size
 
-	var nm: Node = get_parent()
 	for player in range(2):
 		var events: Array = EventSerializer.serialize_events(new_actions, player, state, registry)
 		var cs: ClientState = StateSerializer.serialize_for_player(state, player, registry)
 		var state_dict: Dictionary = cs.to_dict()
-
 		_send_to_player(player, "_on_receive_update", [state_dict, events])
 
 
 func _send_actions_to_current_player() -> void:
 	var actions: Array = controller.get_available_actions()
-	# Serialize actions to plain dictionaries for RPC
 	var serialized: Array = []
 	for a in actions:
 		var d: Dictionary = {}
@@ -149,8 +128,7 @@ func _send_actions_to_current_player() -> void:
 
 func _advance(prev_turn: int) -> void:
 	if controller.is_game_over():
-		var winner: int = controller.get_winner()
-		_broadcast_to_clients("_on_receive_game_over", [winner])
+		_broadcast_to_clients("_on_receive_game_over", [controller.get_winner()])
 		return
 
 	if controller.is_waiting_for_choice():
@@ -167,11 +145,14 @@ func _advance(prev_turn: int) -> void:
 	_send_actions_to_current_player()
 
 
+# =============================================================================
+# Validation helpers
+# =============================================================================
+
 func _is_valid_action(action: Dictionary, available: Array) -> bool:
 	var atype: int = int(action.get("type", -1))
 	for a in available:
-		var match_type: bool = int(a["type"]) == atype
-		if not match_type:
+		if int(a["type"]) != atype:
 			continue
 
 		if atype == Enums.ActionType.PASS:
@@ -179,15 +160,12 @@ func _is_valid_action(action: Dictionary, available: Array) -> bool:
 
 		if a.has("instance_id") and action.get("instance_id", -1) != a["instance_id"]:
 			continue
-
 		if a.has("target") and action.get("target", "") != a["target"]:
 			continue
-
 		if a.has("skill_index") and action.get("skill_index", -1) != a["skill_index"]:
 			continue
 
 		return true
-
 	return false
 
 
@@ -216,7 +194,7 @@ func _make_choice_data(pc: PendingChoice) -> Dictionary:
 
 
 # =============================================================================
-# RPC helpers
+# Client communication — delegates to GameClient for RPC
 # =============================================================================
 
 func _send_to_player(player: int, method: String, args: Array) -> void:
@@ -230,7 +208,7 @@ func _send_to_player(player: int, method: String, args: Array) -> void:
 		# Host: call directly on local GameClient
 		client.callv(method, args)
 	else:
-		# Remote peer: send via RPC (explicit dispatch by arg count)
+		# Remote peer: send via RPC through GameClient
 		match args.size():
 			0: client.rpc_id(peer_id, method)
 			1: client.rpc_id(peer_id, method, args[0])

@@ -57,12 +57,6 @@ func join_game(address: String, port: int = 7000) -> Error:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
-	# RPC routing stub — Godot matches RPC calls by node path,
-	# so the guest needs a GameServer node at the same path as the host's.
-	_server = GameServer.new()
-	_server.name = "GameServer"
-	add_child(_server)
-
 	_client = GameClient.new()
 	_client.name = "GameClient"
 	add_child(_client)

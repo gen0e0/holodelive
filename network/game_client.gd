@@ -12,29 +12,63 @@ var _current_actions: Array = []
 
 
 # =============================================================================
-# Send to server
+# Send to server (called by UI / NetworkGameSession)
 # =============================================================================
 
 func send_action(action: Dictionary) -> void:
 	var nm: Node = get_parent()
 	if nm.is_host:
-		# Host: call server directly (rpc_id to self doesn't trigger without call_local)
-		nm.get_node("GameServer").request_action(action)
+		# Host: forward directly to local GameServer
+		_deliver_action(action, 0)
 	else:
-		# Guest: send via RPC to host's GameServer
-		nm.get_node("GameServer").request_action.rpc_id(1, action)
+		# Guest: send via RPC → host's GameClient receives it
+		_request_action.rpc_id(1, action)
 
 
 func send_choice(choice_idx: int, value: int) -> void:
 	var nm: Node = get_parent()
 	if nm.is_host:
-		nm.get_node("GameServer").request_choice(choice_idx, value)
+		_deliver_choice(choice_idx, value, 0)
 	else:
-		nm.get_node("GameServer").request_choice.rpc_id(1, choice_idx, value)
+		_request_choice.rpc_id(1, choice_idx, value)
 
 
 # =============================================================================
-# RPC receive from server
+# RPC: client → server direction (received on host's GameClient)
+# =============================================================================
+
+@rpc("any_peer", "reliable")
+func _request_action(action: Dictionary) -> void:
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var nm: Node = get_parent()
+	var player_index: int = nm.get_player_index(sender_id)
+	_deliver_action(action, player_index)
+
+
+@rpc("any_peer", "reliable")
+func _request_choice(choice_idx: int, value: int) -> void:
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var nm: Node = get_parent()
+	var player_index: int = nm.get_player_index(sender_id)
+	_deliver_choice(choice_idx, value, player_index)
+
+
+func _deliver_action(action: Dictionary, player_index: int) -> void:
+	var nm: Node = get_parent()
+	var server: GameServer = nm.get_server()
+	if server:
+		server.receive_action(action, player_index)
+
+
+func _deliver_choice(choice_idx: int, value: int, player_index: int) -> void:
+	var nm: Node = get_parent()
+	var server: GameServer = nm.get_server()
+	if server:
+		server.receive_choice(choice_idx, value, player_index)
+
+
+# =============================================================================
+# RPC: server → client direction (received from host's GameServer via helpers)
 # =============================================================================
 
 @rpc("authority", "reliable")
