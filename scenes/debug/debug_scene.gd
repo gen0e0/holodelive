@@ -1,9 +1,7 @@
 extends Control
 
-# --- 参照 ---
-var registry: CardRegistry
-var state: GameState
-var controller: GameController
+# --- セッション ---
+var session: LocalGameSession
 
 # --- UI ノード ---
 var _btn_init: Button
@@ -14,9 +12,9 @@ var _input_line: LineEdit
 var _btn_send: Button
 
 # --- 内部状態 ---
-var _last_action_log_size: int = 0
 var _current_actions: Array = []
 var _waiting_choice: bool = false
+var _choice_data: Dictionary = {}
 
 
 func _ready() -> void:
@@ -128,32 +126,28 @@ func _build_ui() -> void:
 # =============================================================================
 
 func _on_init_pressed() -> void:
-	var loaded := CardLoader.load_all()
-	registry = loaded["card_registry"]
-	var skill_registry: SkillRegistry = loaded["skill_registry"]
-	state = GameSetup.setup_game(registry)
-	controller = GameController.new(state, registry, skill_registry)
-	_last_action_log_size = 0
+	session = LocalGameSession.new()
+	session.state_updated.connect(_on_state_updated)
+	session.actions_received.connect(_on_actions_received)
+	session.choice_requested.connect(_on_choice_requested)
+	session.game_started.connect(_on_game_started)
+	session.game_over.connect(_on_game_over)
+
 	_current_actions = []
 	_waiting_choice = false
+	_choice_data = {}
 
-	var card_count: int = registry.get_all_ids().size()
 	_log_display.clear()
-	_log("[color=yellow]--- Game Initialized (%d cards) ---[/color]" % card_count)
-	_log("P0 hand: %s" % _format_id_list(state.hands[0]))
-	_log("P1 hand: %s" % _format_id_list(state.hands[1]))
-	_log("Deck: %d cards" % state.deck.size())
-
+	_log("[color=yellow]--- Session Created ---[/color]")
 	_btn_start.disabled = false
 	_btn_send.disabled = true
-	_update_state_display()
+	_state_display.text = ""
 
 
 func _on_start_pressed() -> void:
 	_btn_start.disabled = true
-	_log("")
-	_log("[color=yellow]--- Game Started ---[/color]")
-	_do_start_turn()
+	_btn_init.disabled = true
+	session.start_game()
 
 
 func _on_send_pressed() -> void:
@@ -179,39 +173,72 @@ func _on_text_submitted(_text: String) -> void:
 
 
 # =============================================================================
-# ゲームフロー
+# セッションシグナルハンドラ
 # =============================================================================
 
-func _do_start_turn(depth: int = 0) -> void:
-	if depth > 10:
-		_log("[color=red]Turn recursion limit reached![/color]")
-		return
+func _on_game_started() -> void:
+	_log("[color=yellow]--- Game Started ---[/color]")
 
-	if controller.is_game_over():
-		_show_game_over()
-		return
 
-	var prev_turn := state.turn_number
+func _on_state_updated(client_state: ClientState, events: Array) -> void:
+	_update_state_display(client_state)
+	for event in events:
+		var text := _format_event(event)
+		if not text.is_empty():
+			_log(text)
+
+
+func _on_actions_received(actions: Array) -> void:
+	_current_actions = actions
+	_waiting_choice = false
+	_btn_send.disabled = false
+
+	var phase_name := _get_phase_name_from_session()
+	_log("[color=green]Available actions (%s):[/color]" % phase_name)
+	for i in range(_current_actions.size()):
+		_log("  %d. %s" % [i + 1, _format_action(_current_actions[i])])
+
+	_input_line.call_deferred("grab_focus")
+
+
+func _on_choice_requested(choice_data_arg: Dictionary) -> void:
+	_waiting_choice = true
+	_choice_data = choice_data_arg
+	_btn_send.disabled = false
+
+	var target_player: int = choice_data_arg.get("target_player", 0)
+	_log("[color=green]Choose (for P%d):[/color]" % target_player)
+
+	var valid_targets: Array = choice_data_arg.get("valid_targets", [])
+	var details: Array = choice_data_arg.get("valid_target_details", [])
+	for i in range(valid_targets.size()):
+		var target: Variant = valid_targets[i]
+		if target is int and target == -1:
+			_log("  %d. Pass (decline)" % [i + 1])
+		elif i < details.size() and details[i] != null:
+			var d: Dictionary = details[i]
+			_log("  %d. %s" % [i + 1, _format_card_dict(d)])
+		else:
+			_log("  %d. %s" % [i + 1, str(target)])
+
+	_input_line.call_deferred("grab_focus")
+
+
+func _on_game_over(winner: int) -> void:
+	var cs: ClientState = session.get_client_state()
 	_log("")
-	_log("[color=cyan][T%d] P%d: Turn Start[/color]" % [state.turn_number, state.current_player])
+	_log("[color=yellow]========================================[/color]")
+	_log("[color=yellow]  GAME OVER — Player %d Wins!  [/color]" % winner)
+	if cs:
+		_log("[color=yellow]  Rounds: P0=%d  P1=%d[/color]" % [cs.round_wins[0], cs.round_wins[1]])
+	_log("[color=yellow]========================================[/color]")
+	_btn_send.disabled = true
+	_btn_init.disabled = false
 
-	var live_happened := controller.start_turn()
 
-	_log_recent_actions()
-
-	if live_happened:
-		# ライブ発動 → ラウンド終了処理済み
-		if controller.is_game_over():
-			_show_game_over()
-			return
-		# 次ターン自動開始
-		_update_state_display()
-		_do_start_turn(depth + 1)
-		return
-
-	_update_state_display()
-	_show_available_actions()
-
+# =============================================================================
+# アクション処理
+# =============================================================================
 
 func _handle_action_input(num: int) -> void:
 	if num < 1 or num > _current_actions.size():
@@ -219,113 +246,35 @@ func _handle_action_input(num: int) -> void:
 		return
 
 	var action: Dictionary = _current_actions[num - 1]
-	var prev_turn := state.turn_number
 	_log("> %d" % num)
-
-	controller.apply_action(action)
-	_log_recent_actions()
-	_advance_game_after(prev_turn)
+	session.send_action(action)
 
 
 func _handle_choice_input(num: int) -> void:
-	# PendingChoice の選択肢をインデックスで選ぶ
-	var pc: PendingChoice = _get_active_pending_choice()
-	if pc == null:
-		_log("[color=red]No pending choice.[/color]")
-		_waiting_choice = false
+	var valid_targets: Array = _choice_data.get("valid_targets", [])
+	var choice_index: int = _choice_data.get("choice_index", 0)
+
+	if num < 1 or num > valid_targets.size():
+		_log("[color=red]Invalid choice: pick 1-%d[/color]" % valid_targets.size())
 		return
 
-	if num < 1 or num > pc.valid_targets.size():
-		_log("[color=red]Invalid choice: pick 1-%d[/color]" % pc.valid_targets.size())
-		return
-
-	var chosen_value: Variant = pc.valid_targets[num - 1]
-	var prev_turn := state.turn_number
+	var chosen_value: Variant = valid_targets[num - 1]
 	_log("> %d" % num)
-
-	var choice_idx := state.pending_choices.find(pc)
-	controller.submit_choice(choice_idx, chosen_value)
 	_waiting_choice = false
-	_log_recent_actions()
-	_advance_game_after(prev_turn)
-
-
-func _advance_game_after(prev_turn: int) -> void:
-	if controller.is_game_over():
-		_update_state_display()
-		_show_game_over()
-		return
-
-	if controller.is_waiting_for_choice():
-		_update_state_display()
-		var pc := _get_active_pending_choice()
-		if pc:
-			_show_choices(pc)
-		return
-
-	if state.turn_number != prev_turn:
-		# ターンが進んだ → 自動でターン開始
-		_update_state_display()
-		_do_start_turn()
-		return
-
-	# 同一ターン継続
-	_update_state_display()
-	_show_available_actions()
+	session.send_choice(choice_index, chosen_value)
 
 
 # =============================================================================
 # 表示
 # =============================================================================
 
-func _show_available_actions() -> void:
-	_current_actions = controller.get_available_actions()
-	_waiting_choice = false
-	_btn_send.disabled = false
-
-	_log("[color=green]Available actions (%s):[/color]" % _phase_name())
-	for i in range(_current_actions.size()):
-		_log("  %d. %s" % [i + 1, _format_action(_current_actions[i])])
-
-	_input_line.call_deferred("grab_focus")
-
-
-func _show_choices(pc: PendingChoice) -> void:
-	_waiting_choice = true
-	_btn_send.disabled = false
-
-	_log("[color=green]Choose (for P%d):[/color]" % pc.target_player)
-	for i in range(pc.valid_targets.size()):
-		var target: Variant = pc.valid_targets[i]
-		if target is int and target == -1:
-			_log("  %d. Pass (decline)" % [i + 1])
-		elif target is int:
-			_log("  %d. %s" % [i + 1, _format_card(target)])
-		else:
-			_log("  %d. %s" % [i + 1, str(target)])
-
-	_input_line.call_deferred("grab_focus")
-
-
-func _show_game_over() -> void:
-	var winner := controller.get_winner()
-	_log("")
-	_log("[color=yellow]========================================[/color]")
-	_log("[color=yellow]  GAME OVER — Player %d Wins!  [/color]" % winner)
-	_log("[color=yellow]  Rounds: P0=%d  P1=%d[/color]" % [state.round_wins[0], state.round_wins[1]])
-	_log("[color=yellow]========================================[/color]")
-	_btn_send.disabled = true
-	_btn_init.disabled = false
-	_update_state_display()
-
-
-func _update_state_display() -> void:
-	if state == null:
+func _update_state_display(cs: ClientState) -> void:
+	if cs == null:
 		_state_display.text = ""
 		return
 
 	var phase_name := ""
-	match state.phase:
+	match cs.phase:
 		Enums.Phase.ACTION: phase_name = "ACTION"
 		Enums.Phase.PLAY: phase_name = "PLAY"
 		Enums.Phase.LIVE: phase_name = "LIVE"
@@ -333,51 +282,59 @@ func _update_state_display() -> void:
 
 	var lines: Array[String] = []
 	lines.append("[color=cyan]=== Round %d | Turn %d | P%d | Phase: %s ===[/color]" % [
-		state.round_number, state.turn_number, state.current_player, phase_name
+		cs.round_number, cs.turn_number, cs.current_player, phase_name
 	])
 	lines.append("Wins: P0=%d P1=%d | Deck: %d | Home: %d | Removed: %d" % [
-		state.round_wins[0], state.round_wins[1],
-		state.deck.size(), state.home.size(), state.removed.size()
+		cs.round_wins[0], cs.round_wins[1],
+		cs.deck_count, cs.home.size(), cs.removed.size()
 	])
 	lines.append("")
 
 	for p in range(2):
-		var color := "white" if p != state.current_player else "green"
+		var color := "white" if p != cs.current_player else "green"
 		lines.append("[color=%s]--- Player %d ---[/color]" % [color, p])
 
 		# Hand
-		var hand_str := ""
-		if state.hands[p].is_empty():
-			hand_str = "(empty)"
+		if p == cs.my_player:
+			var hand_str := ""
+			if cs.my_hand.is_empty():
+				hand_str = "(empty)"
+			else:
+				var parts: Array[String] = []
+				for d in cs.my_hand:
+					parts.append("[%s]" % _format_card_dict(d))
+				hand_str = " ".join(parts)
+			lines.append("  Hand: %s" % hand_str)
 		else:
-			var parts: Array[String] = []
-			for inst_id in state.hands[p]:
-				parts.append("[%s]" % _format_card(inst_id))
-			hand_str = " ".join(parts)
-		lines.append("  Hand: %s" % hand_str)
+			lines.append("  Hand: (%d cards)" % cs.opponent_hand_count)
 
 		# Stage
 		var stage_parts: Array[String] = []
-		for i in range(state.stages[p].size()):
-			stage_parts.append("[%s]" % _format_card(state.stages[p][i]))
-		var empty_count: int = 3 - state.stages[p].size()
+		var stage_cards: Array = cs.stages[p]
+		for d in stage_cards:
+			var dict: Dictionary = d
+			if dict.get("hidden", false):
+				stage_parts.append("[face down]")
+			else:
+				stage_parts.append("[%s]" % _format_card_dict(dict))
+		var empty_count: int = 3 - stage_cards.size()
 		for i in range(empty_count):
 			stage_parts.append("[empty]")
 		lines.append("  Stage: %s" % " ".join(stage_parts))
 
 		# Backstage
-		var bs_id: int = state.backstages[p]
-		if bs_id == -1:
+		var bs: Variant = cs.backstages[p]
+		if bs == null:
 			lines.append("  Backstage: empty")
 		else:
-			var bs_inst: CardInstance = state.instances[bs_id]
-			if bs_inst.face_down:
-				lines.append("  Backstage: #%d (face down)" % bs_id)
+			var bs_dict: Dictionary = bs
+			if bs_dict.get("hidden", false):
+				lines.append("  Backstage: (face down)")
 			else:
-				lines.append("  Backstage: %s" % _format_card(bs_id))
+				lines.append("  Backstage: %s" % _format_card_dict(bs_dict))
 
 		# Live ready
-		var live_str := "Yes (turn %d)" % state.live_ready_turn[p] if state.live_ready[p] else "No"
+		var live_str := "Yes (turn %d)" % cs.live_ready_turn[p] if cs.live_ready[p] else "No"
 		lines.append("  Live Ready: %s" % live_str)
 		lines.append("")
 
@@ -393,42 +350,29 @@ func _log(msg: String) -> void:
 	_log_display.append_text(msg + "\n")
 
 
-func _log_recent_actions() -> void:
-	while _last_action_log_size < state.action_log.size():
-		var ga: GameAction = state.action_log[_last_action_log_size]
-		_last_action_log_size += 1
-		var text := _format_game_action(ga)
-		if not text.is_empty():
-			_log(text)
-
-
 # =============================================================================
 # フォーマット
 # =============================================================================
 
-func _format_card(inst_id: int) -> String:
-	if not state.instances.has(inst_id):
-		return "<#%d ?>" % inst_id
-	var inst: CardInstance = state.instances[inst_id]
-	var card_def: CardDef = registry.get_card(inst.card_id)
-	if not card_def:
-		return "<#%d ?>" % inst_id
-	var icons := inst.effective_icons(card_def)
-	var suits := inst.effective_suits(card_def)
+func _format_card_dict(d: Dictionary) -> String:
+	if d.get("hidden", false):
+		return "<hidden>"
+	var card_id: int = d.get("card_id", -1)
+	var nickname: String = d.get("nickname", "?")
+	var icons: Array = d.get("icons", [])
+	var suits: Array = d.get("suits", [])
 	var icon_abbrs: Array[String] = []
 	for ic in icons:
-		icon_abbrs.append(ic.left(3))
+		icon_abbrs.append(str(ic).left(3))
 	var suit_abbrs: Array[String] = []
 	for su in suits:
-		suit_abbrs.append(su.left(3))
-	return "<#%d %s %s-%s>" % [inst_id, card_def.nickname.left(3), ",".join(icon_abbrs), ",".join(suit_abbrs)]
-
-
-func _format_id_list(ids: Array) -> String:
-	var parts: Array[String] = []
-	for inst_id in ids:
-		parts.append(_format_card(inst_id))
-	return ", ".join(parts)
+		suit_abbrs.append(str(su).left(3))
+	return "<#%03d %s %s-%s>" % [
+		card_id,
+		nickname.left(3),
+		",".join(icon_abbrs),
+		",".join(suit_abbrs)
+	]
 
 
 func _format_action(action: Dictionary) -> String:
@@ -437,66 +381,103 @@ func _format_action(action: Dictionary) -> String:
 		Enums.ActionType.PASS:
 			return "Pass"
 		Enums.ActionType.OPEN:
-			return "Open backstage %s" % _format_card(action["instance_id"])
+			var card_str := _lookup_card_label(action.get("instance_id", -1))
+			return "Open backstage %s" % card_str
 		Enums.ActionType.PLAY_CARD:
-			var target: String = action["target"]
-			var card_str := _format_card(action["instance_id"])
+			var target: String = action.get("target", "")
+			var card_str := _lookup_card_label(action.get("instance_id", -1))
 			if target == "stage":
 				return "Play %s -> Stage" % card_str
 			else:
 				return "Play %s -> Backstage" % card_str
 		Enums.ActionType.ACTIVATE_SKILL:
-			var inst_id: int = action["instance_id"]
-			var skill_idx: int = action["skill_index"]
-			var card_str := _format_card(inst_id)
+			var skill_idx: int = action.get("skill_index", 0)
+			var card_str := _lookup_card_label(action.get("instance_id", -1))
 			return "Activate skill #%d of %s" % [skill_idx, card_str]
 		_:
 			return str(action)
 
 
-func _format_game_action(ga: GameAction) -> String:
-	var prefix := "[T%d] P%d: " % [state.turn_number, ga.player]
-	match ga.type:
-		Enums.ActionType.DRAW:
-			var inst_id: int = ga.params.get("instance_id", -1)
-			return prefix + "Drew %s" % _format_card(inst_id)
-		Enums.ActionType.PASS:
-			return prefix + "Pass (%s)" % _phase_name()
-		Enums.ActionType.OPEN:
-			return prefix + "Opened backstage %s" % _format_card(ga.params.get("instance_id", -1))
-		Enums.ActionType.PLAY_CARD:
-			var target: String = ga.params.get("target", "")
-			var card_str := _format_card(ga.params.get("instance_id", -1))
+func _format_event(event: Dictionary) -> String:
+	var type: String = event.get("type", "")
+	var player: int = event.get("player", 0)
+	var cs: ClientState = session.get_client_state()
+	var turn: int = cs.turn_number if cs else 0
+	var prefix := "[T%d] P%d: " % [turn, player]
+
+	match type:
+		"DRAW":
+			var card: Variant = event.get("card")
+			if card != null:
+				return prefix + "Drew %s" % _format_card_dict(card)
+			else:
+				return prefix + "Drew a card"
+		"PASS":
+			return prefix + "Pass (%s)" % _get_phase_name_from_session()
+		"OPEN":
+			var card: Variant = event.get("card")
+			if card != null:
+				return prefix + "Opened backstage %s" % _format_card_dict(card)
+			return prefix + "Opened backstage"
+		"PLAY_CARD":
+			var card: Variant = event.get("card")
+			var target: String = event.get("target", "")
+			var card_str := _format_card_dict(card) if card != null else "?"
 			if target == "stage":
 				return prefix + "Played %s -> Stage" % card_str
 			else:
 				return prefix + "Played %s -> Backstage" % card_str
-		Enums.ActionType.ACTIVATE_SKILL:
-			return prefix + "Activated skill of %s" % _format_card(ga.params.get("instance_id", -1))
-		Enums.ActionType.ROUND_END:
-			var winner: int = ga.params.get("winner", -1)
-			return "[color=yellow]--- Round End: Player %d wins! (P0=%d P1=%d) ---[/color]" % [
-				winner, state.round_wins[0], state.round_wins[1]
-			]
-		Enums.ActionType.TURN_START:
-			return ""  # ターン開始は _do_start_turn で別途ログ
-		Enums.ActionType.TURN_END:
-			return ""  # 暗黙
-		_:
-			return prefix + str(ga.type)
+		"ACTIVATE_SKILL":
+			var card: Variant = event.get("card")
+			var card_str := _format_card_dict(card) if card != null else "?"
+			return prefix + "Activated skill of %s" % card_str
+		"ROUND_END":
+			var winner: int = event.get("winner", -1)
+			if cs:
+				return "[color=yellow]--- Round End: Player %d wins! (P0=%d P1=%d) ---[/color]" % [
+					winner, cs.round_wins[0], cs.round_wins[1]
+				]
+			return "[color=yellow]--- Round End: Player %d wins! ---[/color]" % winner
+		"TURN_START":
+			return ""
+		"TURN_END":
+			return ""
+
+	return ""
 
 
-func _phase_name() -> String:
-	match state.phase:
+func _lookup_card_label(instance_id: int) -> String:
+	var cs: ClientState = session.get_client_state() if session else null
+	if cs == null:
+		return "#?"
+	# Search all zones in ClientState for the matching instance_id
+	for d in cs.my_hand:
+		if d.get("instance_id", -1) == instance_id:
+			return _format_card_dict(d)
+	for p in range(2):
+		for d in cs.stages[p]:
+			if d.get("instance_id", -1) == instance_id:
+				return _format_card_dict(d)
+		if cs.backstages[p] != null:
+			var d: Dictionary = cs.backstages[p]
+			if d.get("instance_id", -1) == instance_id:
+				return _format_card_dict(d)
+	for d in cs.home:
+		if d.get("instance_id", -1) == instance_id:
+			return _format_card_dict(d)
+	for d in cs.removed:
+		if d.get("instance_id", -1) == instance_id:
+			return _format_card_dict(d)
+	return "#?"
+
+
+func _get_phase_name_from_session() -> String:
+	var cs: ClientState = session.get_client_state() if session else null
+	if cs == null:
+		return "?"
+	match cs.phase:
 		Enums.Phase.ACTION: return "ACTION"
 		Enums.Phase.PLAY: return "PLAY"
 		Enums.Phase.LIVE: return "LIVE"
 		Enums.Phase.SHOWDOWN: return "SHOWDOWN"
 		_: return "?"
-
-
-func _get_active_pending_choice() -> PendingChoice:
-	for pc in state.pending_choices:
-		if not pc.resolved:
-			return pc
-	return null
