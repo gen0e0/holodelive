@@ -196,7 +196,11 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 	_btn_send.disabled = false
 
 	var target_player: int = choice_data_arg.get("target_player", 0)
-	_log("[color=green]Choose (for P%d):[/color]" % target_player)
+	var timeout: float = choice_data_arg.get("timeout", 0.0)
+	if timeout > 0.0:
+		_log("[color=green]Choose (for P%d) [timeout: %.0fs]:[/color]" % [target_player, timeout])
+	else:
+		_log("[color=green]Choose (for P%d):[/color]" % target_player)
 
 	var valid_targets: Array = choice_data_arg.get("valid_targets", [])
 	var details: Array = choice_data_arg.get("valid_target_details", [])

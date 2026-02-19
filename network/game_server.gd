@@ -9,6 +9,7 @@ var controller: GameController
 var registry: CardRegistry
 var skill_registry: SkillRegistry
 var _last_log_index: int = 0
+var _choice_timer: Timer = null
 
 
 func start_game() -> void:
@@ -62,6 +63,8 @@ func receive_choice(choice_idx: int, value: int, player_index: int) -> void:
 	if not pc.valid_targets.has(value):
 		push_warning("[GameServer] Invalid choice value: %d" % value)
 		return
+
+	_stop_choice_timer()
 
 	var prev_turn: int = state.turn_number
 	controller.submit_choice(choice_idx, value)
@@ -136,6 +139,7 @@ func _advance(prev_turn: int) -> void:
 		if pc:
 			var choice_data: Dictionary = _make_choice_data(pc)
 			_send_to_player(pc.target_player, "_on_receive_choice", [choice_data])
+			_start_choice_timer(pc)
 		return
 
 	if state.turn_number != prev_turn:
@@ -190,6 +194,7 @@ func _make_choice_data(pc: PendingChoice) -> Dictionary:
 		"choice_type": int(pc.choice_type),
 		"valid_targets": pc.valid_targets,
 		"valid_target_details": details,
+		"timeout": pc.timeout,
 	}
 
 
@@ -218,3 +223,52 @@ func _broadcast_to_clients(method: String, args: Array) -> void:
 	for pid in nm._peer_to_player:
 		var player: int = nm._peer_to_player[pid]
 		_send_to_player(player, method, args)
+
+
+# =============================================================================
+# Choice timer
+# =============================================================================
+
+func _start_choice_timer(pc: PendingChoice) -> void:
+	_stop_choice_timer()
+	if pc.timeout <= 0.0:
+		return
+	_choice_timer = Timer.new()
+	_choice_timer.one_shot = true
+	_choice_timer.wait_time = pc.timeout
+	_choice_timer.timeout.connect(_on_choice_timeout)
+	add_child(_choice_timer)
+	_choice_timer.start()
+
+
+func _stop_choice_timer() -> void:
+	if _choice_timer != null:
+		_choice_timer.stop()
+		_choice_timer.queue_free()
+		_choice_timer = null
+
+
+func _on_choice_timeout() -> void:
+	_stop_choice_timer()
+
+	var pc: PendingChoice = _get_active_pending_choice()
+	if pc == null or pc.valid_targets.is_empty():
+		return
+
+	var value: Variant = _pick_by_strategy(pc.timeout_strategy, pc.valid_targets)
+	var choice_idx: int = state.pending_choices.find(pc)
+
+	var prev_turn: int = state.turn_number
+	controller.submit_choice(choice_idx, value)
+	_flush_and_send()
+	_advance(prev_turn)
+
+
+func _pick_by_strategy(strategy: String, targets: Array) -> Variant:
+	match strategy:
+		"last":
+			return targets[targets.size() - 1]
+		"random":
+			return targets[randi() % targets.size()]
+		_:  # "first"
+			return targets[0]

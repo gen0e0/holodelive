@@ -185,5 +185,14 @@ func test_pending_choice_default() -> void:
 	assert_int(pc.target_player).is_equal(0)
 	assert_int(pc.choice_type).is_equal(Enums.ChoiceType.SELECT_CARD)
 	assert_array(pc.valid_targets).is_empty()
+	assert_float(pc.timeout).is_equal(30.0)
+	assert_str(pc.timeout_strategy).is_equal("first")
 	assert_bool(pc.resolved).is_false()
 	assert_that(pc.result).is_null()
+
+func test_pending_choice_custom_timeout() -> void:
+	var pc := PendingChoice.new()
+	pc.timeout = 60.0
+	pc.timeout_strategy = "random"
+	assert_float(pc.timeout).is_equal(60.0)
+	assert_str(pc.timeout_strategy).is_equal("random")
