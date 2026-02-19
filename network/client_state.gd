@@ -18,6 +18,26 @@ var live_ready: Array = [false, false]
 var live_ready_turn: Array[int] = [-1, -1]
 
 
+func to_dict() -> Dictionary:
+	return {
+		"my_player": my_player,
+		"my_hand": my_hand,
+		"opponent_hand_count": opponent_hand_count,
+		"stages": stages,
+		"backstages": backstages,
+		"deck_count": deck_count,
+		"home": home,
+		"removed": removed,
+		"current_player": current_player,
+		"phase": phase,
+		"round_number": round_number,
+		"turn_number": turn_number,
+		"round_wins": round_wins,
+		"live_ready": live_ready,
+		"live_ready_turn": live_ready_turn,
+	}
+
+
 static func from_dict(data: Dictionary) -> ClientState:
 	var cs := ClientState.new()
 	cs.my_player = data.get("my_player", 0)

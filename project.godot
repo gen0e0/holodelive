@@ -11,9 +11,13 @@ config_version=5
 [application]
 
 config/name="holodelive_simple"
-run/main_scene="uid://d3s3t30jfj7n5"
+run/main_scene="uid://cbtferp3xcntd"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+NetworkManager="*res://network/network_manager.gd"
 
 [editor_plugins]
 

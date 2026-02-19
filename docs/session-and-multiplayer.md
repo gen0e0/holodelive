@@ -149,9 +149,9 @@ RPC 受信 (クライアントから):
   4. apply_action() 実行
   5. action_log から新規 GameAction 取得
   6. 各プレイヤーに対し:
-     a. StateSerializer.serialize_for_player() → filtered state
-     b. EventSerializer.serialize_events() → filtered events
-     c. RPC で送信
+	 a. StateSerializer.serialize_for_player() → filtered state
+	 b. EventSerializer.serialize_events() → filtered events
+	 c. RPC で送信
   7. 次のアクティブプレイヤーに available_actions を送信
 
 RPC 送信 (クライアントへ):
@@ -224,7 +224,7 @@ GameState をプレイヤーごとにフィルタリングしてシリアライ�
 class_name StateSerializer extends RefCounted
 
 static func serialize_for_player(
-    state: GameState, player: int, registry: CardRegistry
+	state: GameState, player: int, registry: CardRegistry
 ) -> Dictionary
 
 フィルタリングルール (player P が受信する情報):
@@ -236,7 +236,7 @@ static func serialize_for_player(
   deck           → 枚数のみ
   home / removed → 全情報 (公開ゾーン)
   + current_player, phase, round_number, turn_number,
-    round_wins, live_ready
+	round_wins, live_ready
 ```
 
 ### EventSerializer（`network/event_serializer.gd`）
@@ -247,9 +247,9 @@ GameAction 列をプレイヤーごとにフィルタリングしてイベント
 class_name EventSerializer extends RefCounted
 
 static func serialize_events(
-    actions: Array[GameAction],
-    for_player: int,
-    registry: CardRegistry
+	actions: Array[GameAction],
+	for_player: int,
+	registry: CardRegistry
 ) -> Array[Dictionary]
 
 フィルタリング例:
@@ -291,24 +291,24 @@ static func from_dict(data: Dictionary) -> ClientState
 
 ```
  GameClient (P0)          GameServer              GameClient (P1)
-      │                       │                        │
-      │                  start_game()                   │
-      │◄── update(state,events)│── update(state,events)►│
-      │◄── actions ───────────┤                        │
-      │                       │                        │
-      ├─── request_action ───►│                        │
-      │                  validate & apply               │
-      │◄── update(state,events)│── update(state,events)►│
-      │                       ├─── actions ───────────►│
-      │                       │                        │
-      │                       │◄── request_action ─────┤
-      │                  validate & apply               │
-      │                       │                        │
-      │              [PendingChoice 発生]                │
-      │◄── choice_prompt ────┤                        │
-      ├─── request_choice ──►│                        │
-      │                  submit_choice & resolve        │
-      │◄── update(state,events)│── update(state,events)►│
+	  │                       │                        │
+	  │                  start_game()                   │
+	  │◄── update(state,events)│── update(state,events)►│
+	  │◄── actions ───────────┤                        │
+	  │                       │                        │
+	  ├─── request_action ───►│                        │
+	  │                  validate & apply               │
+	  │◄── update(state,events)│── update(state,events)►│
+	  │                       ├─── actions ───────────►│
+	  │                       │                        │
+	  │                       │◄── request_action ─────┤
+	  │                  validate & apply               │
+	  │                       │                        │
+	  │              [PendingChoice 発生]                │
+	  │◄── choice_prompt ────┤                        │
+	  ├─── request_choice ──►│                        │
+	  │                  submit_choice & resolve        │
+	  │◄── update(state,events)│── update(state,events)►│
 ```
 
 ---
@@ -319,24 +319,24 @@ static func from_dict(data: Dictionary) -> ClientState
 var session: GameSession  # Local or Network — UI は区別しない
 
 func _ready() -> void:
-    session.state_updated.connect(_on_state_updated)
-    session.actions_received.connect(_on_actions_received)
-    session.choice_requested.connect(_on_choice_requested)
-    session.game_over.connect(_on_game_over)
+	session.state_updated.connect(_on_state_updated)
+	session.actions_received.connect(_on_actions_received)
+	session.choice_requested.connect(_on_choice_requested)
+	session.game_over.connect(_on_game_over)
 
 func _on_state_updated(client_state: ClientState, events: Array) -> void:
-    # イベントを順に再生（各演出の完了を await）
-    for event in events:
-        await _play_animation(event)
-    # 全演出完了後、最終状態で表示を確定
-    _refresh_display(client_state)
+	# イベントを順に再生（各演出の完了を await）
+	for event in events:
+		await _play_animation(event)
+	# 全演出完了後、最終状態で表示を確定
+	_refresh_display(client_state)
 
 func _on_actions_received(actions: Array) -> void:
-    # 入力受付開始
-    _show_action_choices(actions)
+	# 入力受付開始
+	_show_action_choices(actions)
 
 func _on_action_selected(action: Dictionary) -> void:
-    session.send_action(action)
+	session.send_action(action)
 ```
 
 ---
@@ -415,5 +415,5 @@ test/
   │  ├ state_serializer_test.gd
   │  └ event_serializer_test.gd
   └ session/               # 新規
-     └ local_game_session_test.gd
+	 └ local_game_session_test.gd
 ```

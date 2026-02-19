@@ -152,6 +152,35 @@ func test_home_and_removed_public() -> void:
 	assert_int(removed_card["instance_id"]).is_equal(inst_id2)
 
 
+func test_to_dict_from_dict_roundtrip() -> void:
+	var data: Dictionary = _create_state()
+	var state: GameState = data["state"]
+	var registry: CardRegistry = data["registry"]
+	var cs: ClientState = StateSerializer.serialize_for_player(state, 0, registry)
+
+	var dict: Dictionary = cs.to_dict()
+	var cs2: ClientState = ClientState.from_dict(dict)
+
+	assert_int(cs2.my_player).is_equal(cs.my_player)
+	assert_int(cs2.opponent_hand_count).is_equal(cs.opponent_hand_count)
+	assert_int(cs2.deck_count).is_equal(cs.deck_count)
+	assert_int(cs2.current_player).is_equal(cs.current_player)
+	assert_int(cs2.phase).is_equal(cs.phase)
+	assert_int(cs2.round_number).is_equal(cs.round_number)
+	assert_int(cs2.turn_number).is_equal(cs.turn_number)
+	assert_int(cs2.my_hand.size()).is_equal(cs.my_hand.size())
+	assert_array(cs2.round_wins).is_equal(cs.round_wins)
+	assert_array(cs2.live_ready).is_equal(cs.live_ready)
+	assert_array(cs2.live_ready_turn).is_equal(cs.live_ready_turn)
+
+	# Verify card dicts in hand are preserved
+	for i in range(cs.my_hand.size()):
+		var orig: Dictionary = cs.my_hand[i]
+		var copy: Dictionary = cs2.my_hand[i]
+		assert_int(copy["instance_id"]).is_equal(orig["instance_id"])
+		assert_int(copy["card_id"]).is_equal(orig["card_id"])
+
+
 func test_modifier_reflected() -> void:
 	var data: Dictionary = _create_state()
 	var state: GameState = data["state"]
