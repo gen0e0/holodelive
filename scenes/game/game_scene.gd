@@ -172,7 +172,7 @@ func _on_game_started() -> void:
 func _on_state_updated(client_state: ClientState, events: Array) -> void:
 	_update_state_display(client_state)
 	for event in events:
-		var text: String = _format_event(event)
+		var text: String = DisplayHelper.format_event(event, client_state)
 		if not text.is_empty():
 			_log(text)
 
@@ -182,10 +182,11 @@ func _on_actions_received(actions: Array) -> void:
 	_waiting_choice = false
 	_btn_send.disabled = false
 
-	var phase_name: String = _get_phase_name()
+	var cs: ClientState = session.get_client_state()
+	var phase_name: String = DisplayHelper.get_phase_name(cs.phase) if cs else "?"
 	_log("[color=green]Available actions (%s):[/color]" % phase_name)
 	for i in range(_current_actions.size()):
-		_log("  %d. %s" % [i + 1, _format_action(_current_actions[i])])
+		_log("  %d. %s" % [i + 1, DisplayHelper.format_action(_current_actions[i], cs)])
 
 	_input_line.call_deferred("grab_focus")
 
@@ -213,7 +214,7 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 			if d.is_empty():
 				_log("  %d. %s" % [i + 1, str(target)])
 			else:
-				_log("  %d. %s" % [i + 1, _format_card_dict(d)])
+				_log("  %d. %s" % [i + 1, DisplayHelper.format_card_dict(d)])
 		else:
 			_log("  %d. %s" % [i + 1, str(target)])
 
@@ -270,12 +271,7 @@ func _update_state_display(cs: ClientState) -> void:
 		_state_display.text = ""
 		return
 
-	var phase_name: String = ""
-	match cs.phase:
-		Enums.Phase.ACTION: phase_name = "ACTION"
-		Enums.Phase.PLAY: phase_name = "PLAY"
-		Enums.Phase.LIVE: phase_name = "LIVE"
-		Enums.Phase.SHOWDOWN: phase_name = "SHOWDOWN"
+	var phase_name: String = DisplayHelper.get_phase_name(cs.phase)
 
 	var lines: Array[String] = []
 	lines.append("[color=cyan]=== Round %d | Turn %d | P%d | Phase: %s ===[/color]" % [
@@ -301,7 +297,7 @@ func _update_state_display(cs: ClientState) -> void:
 			else:
 				var parts: Array[String] = []
 				for d in cs.my_hand:
-					parts.append("[%s]" % _format_card_dict(d))
+					parts.append("[%s]" % DisplayHelper.format_card_dict(d))
 				hand_str = " ".join(parts)
 			lines.append("  Hand: %s" % hand_str)
 		else:
@@ -315,7 +311,7 @@ func _update_state_display(cs: ClientState) -> void:
 			if dict.get("hidden", false):
 				stage_parts.append("[face down]")
 			else:
-				stage_parts.append("[%s]" % _format_card_dict(dict))
+				stage_parts.append("[%s]" % DisplayHelper.format_card_dict(dict))
 		var empty_count: int = 3 - stage_cards.size()
 		for _i in range(empty_count):
 			stage_parts.append("[empty]")
@@ -330,7 +326,7 @@ func _update_state_display(cs: ClientState) -> void:
 			if bs_dict.get("hidden", false):
 				lines.append("  Backstage: (face down)")
 			else:
-				lines.append("  Backstage: %s" % _format_card_dict(bs_dict))
+				lines.append("  Backstage: %s" % DisplayHelper.format_card_dict(bs_dict))
 
 		# Live ready
 		var live_str: String = "Yes (turn %d)" % cs.live_ready_turn[p] if cs.live_ready[p] else "No"
@@ -347,135 +343,3 @@ func _update_state_display(cs: ClientState) -> void:
 
 func _log(msg: String) -> void:
 	_log_display.append_text(msg + "\n")
-
-
-# =============================================================================
-# Format helpers
-# =============================================================================
-
-func _format_card_dict(d: Dictionary) -> String:
-	if d.get("hidden", false):
-		return "<hidden>"
-	var card_id: int = d.get("card_id", -1)
-	var nickname: String = d.get("nickname", "?")
-	var icons: Array = d.get("icons", [])
-	var suits: Array = d.get("suits", [])
-	var icon_abbrs: Array[String] = []
-	for ic in icons:
-		icon_abbrs.append(str(ic).left(3))
-	var suit_abbrs: Array[String] = []
-	for su in suits:
-		suit_abbrs.append(str(su).left(3))
-	return "<#%03d %s %s-%s>" % [
-		card_id,
-		nickname.left(3),
-		",".join(icon_abbrs),
-		",".join(suit_abbrs)
-	]
-
-
-func _format_action(action: Dictionary) -> String:
-	var atype: Enums.ActionType = action["type"]
-	match atype:
-		Enums.ActionType.PASS:
-			return "Pass"
-		Enums.ActionType.OPEN:
-			var card_str: String = _lookup_card_label(action.get("instance_id", -1))
-			return "Open backstage %s" % card_str
-		Enums.ActionType.PLAY_CARD:
-			var target: String = action.get("target", "")
-			var card_str: String = _lookup_card_label(action.get("instance_id", -1))
-			if target == "stage":
-				return "Play %s -> Stage" % card_str
-			else:
-				return "Play %s -> Backstage" % card_str
-		Enums.ActionType.ACTIVATE_SKILL:
-			var skill_idx: int = action.get("skill_index", 0)
-			var card_str: String = _lookup_card_label(action.get("instance_id", -1))
-			return "Activate skill #%d of %s" % [skill_idx, card_str]
-		_:
-			return str(action)
-
-
-func _format_event(event: Dictionary) -> String:
-	var type: String = event.get("type", "")
-	var player: int = event.get("player", 0)
-	var cs: ClientState = session.get_client_state()
-	var turn: int = cs.turn_number if cs else 0
-	var prefix: String = "[T%d] P%d: " % [turn, player]
-
-	match type:
-		"DRAW":
-			var card: Variant = event.get("card")
-			if card != null:
-				return prefix + "Drew %s" % _format_card_dict(card)
-			else:
-				return prefix + "Drew a card"
-		"PASS":
-			return prefix + "Pass (%s)" % _get_phase_name()
-		"OPEN":
-			var card: Variant = event.get("card")
-			if card != null:
-				return prefix + "Opened backstage %s" % _format_card_dict(card)
-			return prefix + "Opened backstage"
-		"PLAY_CARD":
-			var card: Variant = event.get("card")
-			var target: String = event.get("target", "")
-			var card_str: String = _format_card_dict(card) if card != null else "?"
-			if target == "stage":
-				return prefix + "Played %s -> Stage" % card_str
-			else:
-				return prefix + "Played %s -> Backstage" % card_str
-		"ACTIVATE_SKILL":
-			var card: Variant = event.get("card")
-			var card_str: String = _format_card_dict(card) if card != null else "?"
-			return prefix + "Activated skill of %s" % card_str
-		"ROUND_END":
-			var winner: int = event.get("winner", -1)
-			if cs:
-				return "[color=yellow]--- Round End: Player %d wins! (P0=%d P1=%d) ---[/color]" % [
-					winner, cs.round_wins[0], cs.round_wins[1]
-				]
-			return "[color=yellow]--- Round End: Player %d wins! ---[/color]" % winner
-		"TURN_START":
-			return ""
-		"TURN_END":
-			return ""
-
-	return ""
-
-
-func _lookup_card_label(instance_id: int) -> String:
-	var cs: ClientState = session.get_client_state() if session else null
-	if cs == null:
-		return "#?"
-	for d in cs.my_hand:
-		if d.get("instance_id", -1) == instance_id:
-			return _format_card_dict(d)
-	for p in range(2):
-		for d in cs.stages[p]:
-			if d.get("instance_id", -1) == instance_id:
-				return _format_card_dict(d)
-		if cs.backstages[p] != null:
-			var d: Dictionary = cs.backstages[p]
-			if d.get("instance_id", -1) == instance_id:
-				return _format_card_dict(d)
-	for d in cs.home:
-		if d.get("instance_id", -1) == instance_id:
-			return _format_card_dict(d)
-	for d in cs.removed:
-		if d.get("instance_id", -1) == instance_id:
-			return _format_card_dict(d)
-	return "#?"
-
-
-func _get_phase_name() -> String:
-	var cs: ClientState = session.get_client_state() if session else null
-	if cs == null:
-		return "?"
-	match cs.phase:
-		Enums.Phase.ACTION: return "ACTION"
-		Enums.Phase.PLAY: return "PLAY"
-		Enums.Phase.LIVE: return "LIVE"
-		Enums.Phase.SHOWDOWN: return "SHOWDOWN"
-		_: return "?"

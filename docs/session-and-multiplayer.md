@@ -33,8 +33,8 @@ Host Machine                              Guest Machine
 │    ├ StateSerializer          │        │                         │
 │    └ EventSerializer          │        │                         │
 │                               │        │                         │
+│  GameClient (子Node)          │        │  GameClient (子Node)    │
 │  NetworkGameSession (P0)      │        │  NetworkGameSession (P1)│
-│    └ GameClient               │        │    └ GameClient         │
 │                               │        │                         │
 │  UI ── GameSession interface  │        │  UI ── GameSession      │
 └───────────────────────────────┘        └─────────────────────────┘
@@ -63,6 +63,7 @@ UI が依存する唯一のインターフェース。
 class_name GameSession extends RefCounted
 
 # --- UI → Session ---
+func start_game() -> void
 func send_action(action: Dictionary) -> void
 func send_choice(choice_idx: int, value: Variant) -> void
 
@@ -91,9 +92,8 @@ class_name LocalGameSession extends GameSession
   - controller: GameController
   - registry: CardRegistry
   - skill_registry: SkillRegistry
-  - event_serializer: EventSerializer
-  - my_player: int (人間側の player index)
   - _last_log_index: int (action_log の読み取り位置)
+  - _client_state: ClientState
 
 フロー:
   1. send_action() → controller.apply_action()
@@ -113,7 +113,7 @@ class_name NetworkGameSession extends GameSession
 
 保持:
   - client: GameClient
-  - my_player: int
+  - _client_state: ClientState
 
 フロー:
   send_action() → client.send_action() → RPC to server
@@ -123,6 +123,7 @@ class_name NetworkGameSession extends GameSession
 ### GameServer（`network/game_server.gd`）
 
 サーバー権威のゲームロジック。ホストのみに存在。
+RPC は直接送受信せず、GameClient の RPC メソッドを経由する。
 
 ```
 class_name GameServer extends Node
@@ -132,87 +133,91 @@ class_name GameServer extends Node
   - controller: GameController
   - registry: CardRegistry
   - skill_registry: SkillRegistry
-  - state_serializer: StateSerializer
-  - event_serializer: EventSerializer
   - _last_log_index: int
-  - _peer_to_player: Dictionary  # {peer_id: player_index}
+  - _choice_timer: Timer (選択タイムアウト用)
 
-RPC 受信 (クライアントから):
-  @rpc("any_peer", "reliable")
-  - request_action(action: Dictionary)
-  - request_choice(choice_idx: int, value: Variant)
+受信 (GameClient 経由):
+  - receive_action(action: Dictionary, player_index: int)
+  - receive_choice(choice_idx: int, value: int, player_index: int)
 
 処理:
-  1. 送信元 peer_id → player_index を解決
-  2. current_player と一致するか検証
-  3. get_available_actions() と照合してバリデーション
-  4. apply_action() 実行
-  5. action_log から新規 GameAction 取得
-  6. 各プレイヤーに対し:
+  1. player_index が current_player と一致するか検証
+  2. get_available_actions() と照合してバリデーション
+  3. apply_action() 実行
+  4. action_log から新規 GameAction 取得
+  5. 各プレイヤーに対し:
 	 a. StateSerializer.serialize_for_player() → filtered state
 	 b. EventSerializer.serialize_events() → filtered events
-	 c. RPC で送信
-  7. 次のアクティブプレイヤーに available_actions を送信
+	 c. GameClient の RPC メソッドを rpc_id() で呼び出して送信
+  6. 次のアクティブプレイヤーに available_actions を送信
 
-RPC 送信 (クライアントへ):
-  @rpc("authority", "reliable", "call_remote") — ゲスト宛
-  @rpc("authority", "reliable", "call_local") — ホスト自身宛 (必要に応じて)
-  - _client_receive_update(state_dict: Dictionary, events: Array)
-  - _client_receive_actions(actions: Array)
-  - _client_receive_choice(choice_data: Dictionary)
-  - _client_receive_game_over(winner: int)
+送信 (GameClient の RPC を経由):
+  _send_to_player() → GameClient.rpc_id(peer_id, "_on_receive_*", ...)
+  GameClient の _on_receive_* は @rpc("authority", "reliable", "call_local")
+  なので、ホスト自身のローカル実行も自動的に走る。
 ```
 
 ### GameClient（`network/game_client.gd`）
 
-クライアント側のRPCプロキシ。ホスト・ゲスト両方に存在。
+RPC の送受信を担うプロキシ。ホスト・ゲスト両方に存在。
+GameServer → クライアント方向の RPC もすべて GameClient 上のメソッドとして定義。
 
 ```
 class_name GameClient extends Node
 
 保持:
-  - client_state: ClientState
-  - current_actions: Array
-  - my_player: int
+  - _client_state: ClientState
+  - _current_actions: Array
 
-RPC 送信 (サーバーへ):
-  - send_action(action: Dictionary) → rpc_id(1, "request_action", action)
-  - send_choice(choice_idx: int, value: Variant) → rpc_id(1, "request_choice", ...)
+クライアント → サーバー (RPC送信):
+  - send_action(action: Dictionary)
+	ホスト: _deliver_action() で直接 GameServer.receive_action() を呼ぶ
+	ゲスト: _request_action.rpc_id(1, action) → ホスト側 GameClient で受信
+  - send_choice(choice_idx: int, value: int)
+	同上の分岐
 
-RPC 受信 (サーバーから):
-  @rpc("authority", "reliable")
+サーバー → クライアント (RPC受信):
+  @rpc("authority", "reliable", "call_local")
   - _on_receive_update(state_dict: Dictionary, events: Array)
   - _on_receive_actions(actions: Array)
   - _on_receive_choice(choice_data: Dictionary)
+  - _on_receive_game_started()
   - _on_receive_game_over(winner: int)
 
 シグナル:
   - state_updated(client_state: ClientState, events: Array)
   - actions_received(actions: Array)
   - choice_requested(choice_data: Dictionary)
+  - game_started()
   - game_over(winner: int)
 ```
 
 ### NetworkManager（`network/network_manager.gd`）
 
-接続ライフサイクル管理。
+接続ライフサイクル管理。Autoload として登録。`class_name` は持たない。
 
 ```
-class_name NetworkManager extends Node
+extends Node
 
 メソッド:
-  - create_game(port: int) → ENet サーバー作成
-  - join_game(address: String, port: int) → クライアント接続
-  - disconnect()
+  - host_game(port: int = 7000) -> Error  # ENet サーバー作成
+  - join_game(address: String, port: int = 7000) -> Error  # クライアント接続
+  - disconnect_game()  # 切断・クリーンアップ
+  - get_player_index(peer_id: int) -> int
+  - get_peer_id_for_player(player_index: int) -> int
+  - get_server() -> GameServer
+  - get_client() -> GameClient
 
 管理:
   - peer_id → player_index マッピング (ホスト = peer 1 = player 0)
   - 接続状態
+  - GameServer / GameClient の生成・破棄
 
 シグナル:
-  - player_connected(player_index: int)
-  - player_disconnected(player_index: int)
+  - player_connected(peer_id: int)
+  - player_disconnected(peer_id: int)
   - connection_failed()
+  - connection_succeeded()
   - game_ready()  # 2人揃った
 ```
 
@@ -225,7 +230,7 @@ class_name StateSerializer extends RefCounted
 
 static func serialize_for_player(
 	state: GameState, player: int, registry: CardRegistry
-) -> Dictionary
+) -> ClientState
 
 フィルタリングルール (player P が受信する情報):
   hands[P]       → 全情報 (instance_id, card_id, name, icons, suits)
@@ -236,7 +241,7 @@ static func serialize_for_player(
   deck           → 枚数のみ
   home / removed → 全情報 (公開ゾーン)
   + current_player, phase, round_number, turn_number,
-	round_wins, live_ready
+	round_wins, live_ready, live_ready_turn
 ```
 
 ### EventSerializer（`network/event_serializer.gd`）
@@ -247,10 +252,11 @@ GameAction 列をプレイヤーごとにフィルタリングしてイベント
 class_name EventSerializer extends RefCounted
 
 static func serialize_events(
-	actions: Array[GameAction],
+	actions: Array,
 	for_player: int,
+	state: GameState,
 	registry: CardRegistry
-) -> Array[Dictionary]
+) -> Array
 
 フィルタリング例:
   DRAW (自分)     → {type: "DRAW", card: {id, name, icons, suits}}
@@ -281,8 +287,41 @@ var round_number: int
 var turn_number: int
 var round_wins: Array[int]
 var live_ready: Array[bool]
+var live_ready_turn: Array[int]
 
+func to_dict() -> Dictionary
 static func from_dict(data: Dictionary) -> ClientState
+```
+
+### ユーティリティクラス
+
+共通ロジックを static メソッドで提供する。
+
+```
+utils/display_helper.gd — class_name DisplayHelper extends RefCounted
+  static func format_card_dict(d: Dictionary) -> String
+  static func format_action(action: Dictionary, cs: ClientState) -> String
+  static func format_event(event: Dictionary, cs: ClientState) -> String
+  static func lookup_card_label(instance_id: int, cs: ClientState) -> String
+  static func get_phase_name(phase: Enums.Phase) -> String
+
+utils/choice_helper.gd — class_name ChoiceHelper extends RefCounted
+  static func get_active_pending_choice(pending_choices: Array) -> PendingChoice
+  static func make_choice_data(pc: PendingChoice, state: GameState, registry: CardRegistry) -> Dictionary
+```
+
+### PendingChoice の選択タイムアウト
+
+```
+system/pending_choice.gd:
+  var timeout: float = 30.0          # 秒（0以下でタイムアウト無し）
+  var timeout_strategy: String = "first"  # "first" / "last" / "random"
+
+GameServer がタイマー管理を担当:
+  - _advance() で choice 送信時に Timer を生成・開始
+  - タイムアウト時: timeout_strategy に従い valid_targets から自動選択
+  - receive_choice() で時間内に応答した場合: タイマーを停止・破棄
+  - choice_data に "timeout" フィールドを含めてクライアントに送信（UI カウントダウン用）
 ```
 
 ---
@@ -293,20 +332,24 @@ static func from_dict(data: Dictionary) -> ClientState
  GameClient (P0)          GameServer              GameClient (P1)
 	  │                       │                        │
 	  │                  start_game()                   │
+	  │                       │                        │
+	  │   GameServer が GameClient._on_receive_* を      │
+	  │   rpc_id() で呼び出す（call_local で自身にも配信） │
+	  │                       │                        │
 	  │◄── update(state,events)│── update(state,events)►│
 	  │◄── actions ───────────┤                        │
 	  │                       │                        │
-	  ├─── request_action ───►│                        │
+	  ├─ send_action ────────►│ (ホスト: 直接呼出し)     │
 	  │                  validate & apply               │
 	  │◄── update(state,events)│── update(state,events)►│
 	  │                       ├─── actions ───────────►│
 	  │                       │                        │
-	  │                       │◄── request_action ─────┤
+	  │                       │◄── _request_action ────┤ (ゲスト: RPC)
 	  │                  validate & apply               │
 	  │                       │                        │
 	  │              [PendingChoice 発生]                │
 	  │◄── choice_prompt ────┤                        │
-	  ├─── request_choice ──►│                        │
+	  ├─── send_choice ─────►│                        │
 	  │                  submit_choice & resolve        │
 	  │◄── update(state,events)│── update(state,events)►│
 ```
@@ -343,7 +386,7 @@ func _on_action_selected(action: Dictionary) -> void:
 
 ## 実装段取り
 
-### Phase A: 基盤クラス（ネットワーク不要）
+### Phase A: 基盤クラス（ネットワーク不要） ✅ 完了
 
 ネットワーク無しで動く範囲を先に作り、既存テスト + デバッグ UI で検証する。
 
@@ -358,9 +401,7 @@ func _on_action_selected(action: Dictionary) -> void:
 | A-7 | テスト: LocalGameSession 統合テスト | `test/session/` |
 | A-8 | debug_scene を GameSession 経由に書き換え | `scenes/debug/debug_scene.gd` |
 
-**検証ポイント**: デバッグ UI が LocalGameSession 経由で動作し、events が正しく生成されること。
-
-### Phase B: ネットワーク層
+### Phase B: ネットワーク層 ✅ 完了
 
 Godot MultiplayerAPI を使ったリモート通信を追加。
 
@@ -373,8 +414,6 @@ Godot MultiplayerAPI を使ったリモート通信を追加。
 | B-5 | ロビー UI（ホスト/ゲスト選択 + 接続） | `scenes/lobby/` |
 | B-6 | 対戦 UI を GameSession で動作させる | `scenes/game/` |
 | B-7 | 2プロセスでの動作確認 | 手動テスト |
-
-**検証ポイント**: 2つの Godot インスタンスで対戦が完走すること。
 
 ### Phase C: 堅牢化（将来）
 
@@ -391,29 +430,39 @@ Godot MultiplayerAPI を使ったリモート通信を追加。
 ## ファイル配置
 
 ```
-system/                    # 既存 — 変更なし
+system/                    # 既存
   ├ game_state.gd
   ├ game_controller.gd
   ├ zone_ops.gd
+  ├ pending_choice.gd      # timeout / timeout_strategy フィールド追加
   └ ...
 
-network/                   # 新規
-  ├ network_manager.gd
+network/                   # Phase A-B で追加
+  ├ network_manager.gd     # Autoload (class_name なし)
   ├ game_server.gd
   ├ game_client.gd
   ├ state_serializer.gd
   ├ event_serializer.gd
   └ client_state.gd
 
-session/                   # 新規
+session/                   # Phase A-B で追加
   ├ game_session.gd
   ├ local_game_session.gd
   └ network_game_session.gd
 
+utils/                     # 共通ユーティリティ
+  ├ display_helper.gd
+  └ choice_helper.gd
+
+scenes/
+  ├ debug/                 # デバッグ UI (LocalGameSession)
+  ├ lobby/                 # ロビー UI (接続管理)
+  └ game/                  # ネットワーク対戦 UI (NetworkGameSession)
+
 test/
-  ├ network/               # 新規
+  ├ network/
   │  ├ state_serializer_test.gd
   │  └ event_serializer_test.gd
-  └ session/               # 新規
+  └ session/
 	 └ local_game_session_test.gd
 ```

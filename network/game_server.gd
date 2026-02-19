@@ -51,7 +51,7 @@ func receive_choice(choice_idx: int, value: int, player_index: int) -> void:
 		push_warning("[GameServer] Unknown player index: %d" % player_index)
 		return
 
-	var pc: PendingChoice = _get_active_pending_choice()
+	var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 	if pc == null:
 		push_warning("[GameServer] No pending choice")
 		return
@@ -135,9 +135,9 @@ func _advance(prev_turn: int) -> void:
 		return
 
 	if controller.is_waiting_for_choice():
-		var pc: PendingChoice = _get_active_pending_choice()
+		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 		if pc:
-			var choice_data: Dictionary = _make_choice_data(pc)
+			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
 			_send_to_player(pc.target_player, "_on_receive_choice", [choice_data])
 			_start_choice_timer(pc)
 		return
@@ -171,31 +171,6 @@ func _is_valid_action(action: Dictionary, available: Array) -> bool:
 
 		return true
 	return false
-
-
-func _get_active_pending_choice() -> PendingChoice:
-	for pc in state.pending_choices:
-		if not pc.resolved:
-			return pc
-	return null
-
-
-func _make_choice_data(pc: PendingChoice) -> Dictionary:
-	var details: Array = []
-	for target in pc.valid_targets:
-		if target is int and target >= 0:
-			details.append(StateSerializer._card_dict(target, state, registry))
-		else:
-			details.append({})
-
-	return {
-		"choice_index": state.pending_choices.find(pc),
-		"target_player": pc.target_player,
-		"choice_type": int(pc.choice_type),
-		"valid_targets": pc.valid_targets,
-		"valid_target_details": details,
-		"timeout": pc.timeout,
-	}
 
 
 # =============================================================================
@@ -251,7 +226,7 @@ func _stop_choice_timer() -> void:
 func _on_choice_timeout() -> void:
 	_stop_choice_timer()
 
-	var pc: PendingChoice = _get_active_pending_choice()
+	var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 	if pc == null or pc.valid_targets.is_empty():
 		return
 

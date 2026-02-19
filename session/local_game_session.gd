@@ -98,9 +98,9 @@ func _advance(prev_turn: int) -> void:
 		return
 
 	if controller.is_waiting_for_choice():
-		var pc: PendingChoice = _get_active_pending_choice()
+		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 		if pc:
-			var choice_data: Dictionary = _make_choice_data(pc)
+			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
 			choice_requested.emit(choice_data)
 		return
 
@@ -109,27 +109,3 @@ func _advance(prev_turn: int) -> void:
 		return
 
 	_emit_actions()
-
-
-func _get_active_pending_choice() -> PendingChoice:
-	for pc in state.pending_choices:
-		if not pc.resolved:
-			return pc
-	return null
-
-
-func _make_choice_data(pc: PendingChoice) -> Dictionary:
-	var details: Array = []
-	for target in pc.valid_targets:
-		if target is int and target >= 0:
-			details.append(StateSerializer._card_dict(target, state, registry))
-		else:
-			details.append(null)
-
-	return {
-		"choice_index": state.pending_choices.find(pc),
-		"target_player": pc.target_player,
-		"choice_type": pc.choice_type,
-		"valid_targets": pc.valid_targets,
-		"valid_target_details": details,
-	}
