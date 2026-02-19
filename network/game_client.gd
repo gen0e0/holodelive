@@ -71,13 +71,13 @@ func _deliver_choice(choice_idx: int, value: int, player_index: int) -> void:
 # RPC: server → client direction (received from host's GameServer via helpers)
 # =============================================================================
 
-@rpc("authority", "reliable")
+@rpc("authority", "reliable", "call_local")
 func _on_receive_update(state_dict: Dictionary, events: Array) -> void:
 	_client_state = ClientState.from_dict(state_dict)
 	state_updated.emit(_client_state, events)
 
 
-@rpc("authority", "reliable")
+@rpc("authority", "reliable", "call_local")
 func _on_receive_actions(actions: Array) -> void:
 	# Reconstruct enum types from int
 	var typed: Array = []
@@ -89,16 +89,16 @@ func _on_receive_actions(actions: Array) -> void:
 	actions_received.emit(typed)
 
 
-@rpc("authority", "reliable")
+@rpc("authority", "reliable", "call_local")
 func _on_receive_choice(choice_data: Dictionary) -> void:
 	choice_requested.emit(choice_data)
 
 
-@rpc("authority", "reliable")
+@rpc("authority", "reliable", "call_local")
 func _on_receive_game_started() -> void:
 	game_started.emit()
 
 
-@rpc("authority", "reliable")
+@rpc("authority", "reliable", "call_local")
 func _on_receive_game_over(winner: int) -> void:
 	game_over.emit(winner)

@@ -203,17 +203,14 @@ func _send_to_player(player: int, method: String, args: Array) -> void:
 	if peer_id < 0:
 		return
 
+	# GameClient の _on_receive_* は call_local 付きなので、
+	# rpc_id(1, ...) でもホスト自身のローカル実行が走る。
 	var client: GameClient = nm.get_node("GameClient")
-	if peer_id == 1:
-		# Host: call directly on local GameClient
-		client.callv(method, args)
-	else:
-		# Remote peer: send via RPC through GameClient
-		match args.size():
-			0: client.rpc_id(peer_id, method)
-			1: client.rpc_id(peer_id, method, args[0])
-			2: client.rpc_id(peer_id, method, args[0], args[1])
-			3: client.rpc_id(peer_id, method, args[0], args[1], args[2])
+	match args.size():
+		0: client.rpc_id(peer_id, method)
+		1: client.rpc_id(peer_id, method, args[0])
+		2: client.rpc_id(peer_id, method, args[0], args[1])
+		3: client.rpc_id(peer_id, method, args[0], args[1], args[2])
 
 
 func _broadcast_to_clients(method: String, args: Array) -> void:
