@@ -131,8 +131,15 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	print("[NetworkManager] Peer disconnected: %d" % peer_id)
+	var player_index: int = _peer_to_player.get(peer_id, -1)
 	_peer_to_player.erase(peer_id)
 	player_disconnected.emit(peer_id)
+
+	# Hand off to CPU if the game is in progress
+	if _server and player_index >= 0:
+		print("[NetworkManager] Handing player %d to CPU" % player_index)
+		_server.set_cpu_player(player_index)
+		_server.check_cpu_needs_action()
 
 
 func _on_connected_to_server() -> void:

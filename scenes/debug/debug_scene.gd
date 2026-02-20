@@ -127,6 +127,8 @@ func _build_ui() -> void:
 
 func _on_init_pressed() -> void:
 	session = LocalGameSession.new()
+	session.set_cpu_player(1)
+	session.human_player = 0
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
 	session.choice_requested.connect(_on_choice_requested)

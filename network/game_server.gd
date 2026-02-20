@@ -10,6 +10,9 @@ var registry: CardRegistry
 var skill_registry: SkillRegistry
 var _last_log_index: int = 0
 var _choice_timer: Timer = null
+var _cpu_strategies: Dictionary = {}
+
+const CPU_DELAY: float = 0.5
 
 
 func start_game() -> void:
@@ -22,6 +25,38 @@ func start_game() -> void:
 
 	_broadcast_to_clients("_on_receive_game_started", [])
 	_do_start_turn()
+
+
+## Register a player index as CPU-controlled with the given strategy.
+## If strategy is null, defaults to RandomStrategy.
+func set_cpu_player(player_index: int, strategy: CpuStrategy = null) -> void:
+	if not _cpu_strategies.has(player_index):
+		if strategy == null:
+			strategy = RandomStrategy.new()
+		_cpu_strategies[player_index] = strategy
+		print("[GameServer] Player %d is now CPU-controlled" % player_index)
+
+
+func _is_cpu_player(player_index: int) -> bool:
+	return _cpu_strategies.has(player_index)
+
+
+## Check if CPU needs to act right now (e.g. after disconnect handoff).
+func check_cpu_needs_action() -> void:
+	if controller.is_game_over():
+		return
+
+	if controller.is_waiting_for_choice():
+		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
+		if pc and _is_cpu_player(pc.target_player):
+			_stop_choice_timer()
+			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
+			_schedule_cpu_choice(choice_data)
+		return
+
+	if _is_cpu_player(state.current_player):
+		var actions: Array = controller.get_available_actions()
+		_schedule_cpu_action(actions)
 
 
 ## Called by GameClient when a player submits an action.
@@ -106,6 +141,8 @@ func _flush_and_send() -> void:
 	_last_log_index = log_size
 
 	for player in range(2):
+		if _is_cpu_player(player):
+			continue
 		var events: Array = EventSerializer.serialize_events(new_actions, player, state, registry)
 		var cs: ClientState = StateSerializer.serialize_for_player(state, player, registry)
 		var state_dict: Dictionary = cs.to_dict()
@@ -114,6 +151,11 @@ func _flush_and_send() -> void:
 
 func _send_actions_to_current_player() -> void:
 	var actions: Array = controller.get_available_actions()
+
+	if _is_cpu_player(state.current_player):
+		_schedule_cpu_action(actions)
+		return
+
 	var serialized: Array = []
 	for a in actions:
 		var d: Dictionary = {}
@@ -138,8 +180,11 @@ func _advance(prev_turn: int) -> void:
 		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 		if pc:
 			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
-			_send_to_player(pc.target_player, "_on_receive_choice", [choice_data])
-			_start_choice_timer(pc)
+			if _is_cpu_player(pc.target_player):
+				_schedule_cpu_choice(choice_data)
+			else:
+				_send_to_player(pc.target_player, "_on_receive_choice", [choice_data])
+				_start_choice_timer(pc)
 		return
 
 	if state.turn_number != prev_turn:
@@ -147,6 +192,48 @@ func _advance(prev_turn: int) -> void:
 		return
 
 	_send_actions_to_current_player()
+
+
+# =============================================================================
+# CPU scheduling — delayed execution via Timer
+# =============================================================================
+
+func _schedule_cpu_action(actions: Array) -> void:
+	var strategy: CpuStrategy = _cpu_strategies[state.current_player]
+	var action: Dictionary = strategy.pick_action(actions, state, registry)
+	if action.is_empty():
+		return
+	var player_index: int = state.current_player
+	var timer := Timer.new()
+	timer.one_shot = true
+	timer.wait_time = CPU_DELAY
+	timer.timeout.connect(func() -> void:
+		timer.queue_free()
+		receive_action(action, player_index)
+	)
+	add_child(timer)
+	timer.start()
+
+
+func _schedule_cpu_choice(choice_data: Dictionary) -> void:
+	var pc_for_strategy: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
+	var strategy: CpuStrategy = _cpu_strategies[pc_for_strategy.target_player]
+	var result: Dictionary = strategy.pick_choice(choice_data, state, registry)
+	if result.is_empty():
+		return
+	var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
+	if pc == null:
+		return
+	var player_index: int = pc.target_player
+	var timer := Timer.new()
+	timer.one_shot = true
+	timer.wait_time = CPU_DELAY
+	timer.timeout.connect(func() -> void:
+		timer.queue_free()
+		receive_choice(result["choice_index"], result["value"], player_index)
+	)
+	add_child(timer)
+	timer.start()
 
 
 # =============================================================================
@@ -178,6 +265,8 @@ func _is_valid_action(action: Dictionary, available: Array) -> bool:
 # =============================================================================
 
 func _send_to_player(player: int, method: String, args: Array) -> void:
+	if _is_cpu_player(player):
+		return
 	var nm: Node = get_parent()
 	var peer_id: int = nm.get_peer_id_for_player(player)
 	if peer_id < 0:
