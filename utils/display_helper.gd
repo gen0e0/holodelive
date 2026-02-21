@@ -126,3 +126,27 @@ static func get_phase_name(phase: Enums.Phase) -> String:
 		Enums.Phase.LIVE: return "LIVE"
 		Enums.Phase.SHOWDOWN: return "SHOWDOWN"
 		_: return "?"
+
+
+static func get_rank_name(rank: Enums.ShowdownRank) -> String:
+	match rank:
+		Enums.ShowdownRank.MIRACLE: return "MIRACLE"
+		Enums.ShowdownRank.TRIO: return "TRIO"
+		Enums.ShowdownRank.FLASH: return "FLASH"
+		Enums.ShowdownRank.DUO: return "DUO"
+		Enums.ShowdownRank.CASUAL: return "CASUAL"
+		_: return "?"
+
+
+## ステージ上の可視カード辞書から役を算出して表示文字列を返す。
+## 裏向きカードはショウダウン不参加のため除外して計算する。
+static func format_stage_rank(stage_cards: Array) -> String:
+	var visible: Array = []
+	for d in stage_cards:
+		var dict: Dictionary = d
+		if not dict.get("hidden", false):
+			visible.append(dict)
+	if visible.is_empty():
+		return "-"
+	var rank: Enums.ShowdownRank = ShowdownCalculator.evaluate_rank(visible)
+	return get_rank_name(rank)

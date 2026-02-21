@@ -199,3 +199,110 @@ func test_get_rank_single_instance_is_casual() -> void:
 	registry.register(CardDef.new(1, "A", ["VOCAL"] as Array[String], ["COOL"] as Array[String]))
 	var instances: Array = [CardInstance.new(10, 1)]
 	assert_int(ShowdownCalculator.get_rank(instances, registry)).is_equal(Enums.ShowdownRank.CASUAL)
+
+# --- WILD アイコンで TRIO / DUO ---
+
+func test_wild_icon_completes_trio() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["VOCAL"], ["HOT"]),
+		_card(["WILD"], ["LOVELY"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.TRIO)
+
+func test_wild_icon_two_wilds_trio() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["WILD"], ["HOT"]),
+		_card(["WILD"], ["LOVELY"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.TRIO)
+
+func test_wild_icon_completes_duo() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["WILD"], ["HOT"]),
+		_card(["SEISO"], ["LOVELY"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.DUO)
+
+func test_wild_icon_pairs_with_any_regular() -> void:
+	# WILD 1枚 + 異なる2枚 → WILD がどちらかとペアを組む → DUO
+	var cards := [
+		_card(["WILD"], ["COOL"]),
+		_card(["VOCAL"], ["HOT"]),
+		_card(["SEISO"], ["LOVELY"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.DUO)
+
+# --- WILD スートで FLASH ---
+
+func test_wild_suit_completes_flash() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["SEISO"], ["COOL"]),
+		_card(["ENJOY"], ["WILD"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.FLASH)
+
+func test_wild_suit_two_wilds_flash() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["SEISO"], ["WILD"]),
+		_card(["ENJOY"], ["WILD"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.FLASH)
+
+# --- WILD アイコン + WILD スートで MIRACLE ---
+
+func test_wild_icon_and_suit_completes_miracle() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["VOCAL"], ["COOL"]),
+		_card(["WILD"], ["WILD"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.MIRACLE)
+
+func test_wild_icon_with_regular_suit_miracle() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["WILD"], ["COOL"]),
+		_card(["VOCAL"], ["COOL"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.MIRACLE)
+
+func test_wild_suit_with_regular_icon_miracle() -> void:
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["VOCAL"], ["WILD"]),
+		_card(["VOCAL"], ["COOL"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.MIRACLE)
+
+# --- WILD エッジケース ---
+
+func test_all_wild_is_miracle() -> void:
+	var cards := [
+		_card(["WILD"], ["WILD"]),
+		_card(["WILD"], ["WILD"]),
+		_card(["WILD"], ["WILD"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.MIRACLE)
+
+func test_wild_among_multi_icon_cards() -> void:
+	# VOCAL×COOL が2枚 + WILD×WILD → MIRACLE
+	var cards := [
+		_card(["VOCAL", "SEISO"], ["COOL", "HOT"]),
+		_card(["VOCAL"], ["COOL"]),
+		_card(["WILD"], ["WILD"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.MIRACLE)
+
+func test_single_wild_with_all_different_is_duo() -> void:
+	# WILD 1枚 + バラバラ2枚 → DUO（WILD がどちらかとペアを組む）
+	var cards := [
+		_card(["VOCAL"], ["COOL"]),
+		_card(["SEISO"], ["HOT"]),
+		_card(["WILD"], ["LOVELY"]),
+	]
+	assert_int(ShowdownCalculator.evaluate_rank(cards)).is_equal(Enums.ShowdownRank.DUO)

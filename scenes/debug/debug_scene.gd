@@ -335,6 +335,9 @@ func _update_state_display(cs: ClientState) -> void:
 			else:
 				lines.append("  Backstage: %s" % DisplayHelper.format_card_dict(bs_dict))
 
+		# Rank
+		lines.append("  Rank: %s" % DisplayHelper.format_stage_rank(stage_cards))
+
 		# Live ready
 		var live_str: String = "Yes (turn %d)" % cs.live_ready_turn[p] if cs.live_ready[p] else "No"
 		lines.append("  Live Ready: %s" % live_str)

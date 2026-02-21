@@ -1,51 +1,84 @@
 class_name ShowdownCalculator
 extends RefCounted
 
-## ユニット（3〜4枚）のカードデータリストから最高ランクを算出する。
+## 各カードから1アイコン・1スートを選択し、最高役を探索する。
+## WILD アイコン/スートは任意の値として扱う。
+
+const WILD = "WILD"
+
+
 ## unit: Array of {"icons": Array[String], "suits": Array[String]}
 static func evaluate_rank(unit: Array) -> Enums.ShowdownRank:
 	if unit.size() < 2:
 		return Enums.ShowdownRank.CASUAL
 
-	# 各アイコンが何枚のカードに出現するかカウント
-	var icon_counts: Dictionary = {}
-	# 各スートが何枚のカードに出現するかカウント
-	var suit_counts: Dictionary = {}
-	# 各 (アイコン, スート) ペアが何枚のカードに出現するかカウント
-	var pair_counts: Dictionary = {}
-
-	for entry in unit:
-		var icons: Array = entry["icons"]
-		var suits: Array = entry["suits"]
-		for icon: String in icons:
-			icon_counts[icon] = icon_counts.get(icon, 0) + 1
-			for suit: String in suits:
-				var key: String = icon + ":" + suit
-				pair_counts[key] = pair_counts.get(key, 0) + 1
-		for suit: String in suits:
-			suit_counts[suit] = suit_counts.get(suit, 0) + 1
-
-	# ミラクル: 同一アイコン×同一スートが3枚以上
-	for key in pair_counts:
-		if pair_counts[key] >= 3:
-			return Enums.ShowdownRank.MIRACLE
-
-	# トリオ: 同一アイコンが3枚以上
-	for icon in icon_counts:
-		if icon_counts[icon] >= 3:
-			return Enums.ShowdownRank.TRIO
-
-	# フラッシュ: 同一スートが3枚以上
-	for suit in suit_counts:
-		if suit_counts[suit] >= 3:
-			return Enums.ShowdownRank.FLASH
-
-	# デュオ: 同一アイコンが2枚以上
-	for icon in icon_counts:
-		if icon_counts[icon] >= 2:
-			return Enums.ShowdownRank.DUO
+	if _check_miracle(unit):
+		return Enums.ShowdownRank.MIRACLE
+	if _check_trio(unit):
+		return Enums.ShowdownRank.TRIO
+	if _check_flash(unit):
+		return Enums.ShowdownRank.FLASH
+	if _check_duo(unit):
+		return Enums.ShowdownRank.DUO
 
 	return Enums.ShowdownRank.CASUAL
+
+
+static func _can_provide_icon(entry: Dictionary, icon: String) -> bool:
+	return icon in entry["icons"] or WILD in entry["icons"]
+
+
+static func _can_provide_suit(entry: Dictionary, suit: String) -> bool:
+	return suit in entry["suits"] or WILD in entry["suits"]
+
+
+## 同一 (icon, suit) を3+枚が提供可能か
+static func _check_miracle(unit: Array) -> bool:
+	for icon in Enums.icon_names():
+		for suit in Enums.suit_names():
+			var count: int = 0
+			for entry in unit:
+				if _can_provide_icon(entry, icon) and _can_provide_suit(entry, suit):
+					count += 1
+			if count >= 3:
+				return true
+	return false
+
+
+## 同一 icon を3+枚が提供可能か
+static func _check_trio(unit: Array) -> bool:
+	for icon in Enums.icon_names():
+		var count: int = 0
+		for entry in unit:
+			if _can_provide_icon(entry, icon):
+				count += 1
+		if count >= 3:
+			return true
+	return false
+
+
+## 同一 suit を3+枚が提供可能か
+static func _check_flash(unit: Array) -> bool:
+	for suit in Enums.suit_names():
+		var count: int = 0
+		for entry in unit:
+			if _can_provide_suit(entry, suit):
+				count += 1
+		if count >= 3:
+			return true
+	return false
+
+
+## 同一 icon を2+枚が提供可能か
+static func _check_duo(unit: Array) -> bool:
+	for icon in Enums.icon_names():
+		var count: int = 0
+		for entry in unit:
+			if _can_provide_icon(entry, icon):
+				count += 1
+		if count >= 2:
+			return true
+	return false
 
 
 ## CardInstance 配列から直接ランクを算出する便利メソッド。
