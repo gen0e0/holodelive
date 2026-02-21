@@ -14,7 +14,7 @@ enum DiffType {
 
 enum ModifierType { ICON_ADD, ICON_REMOVE, SUIT_ADD, SUIT_REMOVE }
 
-enum ChoiceType { SELECT_CARD, SELECT_ZONE }
+enum ChoiceType { SELECT_CARD, SELECT_ZONE, RANDOM_RESULT }
 
 enum SkillType { PLAY, ACTION, PASSIVE }
 

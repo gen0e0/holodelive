@@ -78,6 +78,58 @@ static func remove_card(state: GameState, instance_id: int, recorder: DiffRecord
 	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "removed", state.removed.size() - 1)
 
 
+## カードを任意ゾーンから手札に移動する。
+static func move_to_hand(state: GameState, instance_id: int, player: int, recorder: DiffRecorder) -> void:
+	var zone := state.find_zone(instance_id)
+	_remove_from_zone(state, instance_id, zone)
+	state.hands[player].append(instance_id)
+	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "hand", state.hands[player].size() - 1)
+
+
+## カードを任意ゾーンからデッキ先頭に移動する。
+static func move_to_deck_top(state: GameState, instance_id: int, recorder: DiffRecorder) -> void:
+	var zone := state.find_zone(instance_id)
+	_remove_from_zone(state, instance_id, zone)
+	state.deck.push_front(instance_id)
+	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "deck", 0)
+
+
+## カードを任意ゾーンからデッキ末尾に移動する。
+static func move_to_deck_bottom(state: GameState, instance_id: int, recorder: DiffRecorder) -> void:
+	var zone := state.find_zone(instance_id)
+	_remove_from_zone(state, instance_id, zone)
+	state.deck.append(instance_id)
+	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "deck", state.deck.size() - 1)
+
+
+## カードを任意ゾーンからステージにプレイする（表向き）。
+## ステージが満杯の場合は false を返す。
+static func play_to_stage_from_zone(state: GameState, player: int, instance_id: int, recorder: DiffRecorder) -> bool:
+	if state.stages[player].size() >= 3:
+		return false
+	var zone := state.find_zone(instance_id)
+	_remove_from_zone(state, instance_id, zone)
+	state.stages[player].append(instance_id)
+	state.instances[instance_id].face_down = false
+	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "stage", state.stages[player].size() - 1)
+	recorder.record_card_flip(instance_id, state.instances[instance_id].face_down, false)
+	return true
+
+
+## カードを任意ゾーンから楽屋にプレイする（裏向き）。
+## 楽屋が占有済みの場合は false を返す。
+static func play_to_backstage_from_zone(state: GameState, player: int, instance_id: int, recorder: DiffRecorder) -> bool:
+	if state.backstages[player] != -1:
+		return false
+	var zone := state.find_zone(instance_id)
+	_remove_from_zone(state, instance_id, zone)
+	state.backstages[player] = instance_id
+	state.instances[instance_id].face_down = true
+	recorder.record_card_move(instance_id, zone.get("zone", ""), zone.get("index", -1), "backstage", 0)
+	recorder.record_card_flip(instance_id, state.instances[instance_id].face_down, true)
+	return true
+
+
 ## ゾーンからカードを取り除く（内部ヘルパー）。
 static func _remove_from_zone(state: GameState, instance_id: int, zone: Dictionary) -> void:
 	if zone.is_empty():

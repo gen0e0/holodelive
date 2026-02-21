@@ -22,6 +22,9 @@ var round_wins: Array[int] = [0, 0]
 var live_ready: Array = [false, false]
 var live_ready_turn: Array[int] = [-1, -1]
 
+# --- ターンフラグ（ターン開始時にクリア）---
+var turn_flags: Dictionary = {}
+
 # --- スキル解決スタック ---
 var skill_stack: Array = []  # Array[SkillStackEntry]
 

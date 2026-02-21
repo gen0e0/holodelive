@@ -10,11 +10,14 @@ var _state_display: RichTextLabel
 var _log_display: RichTextLabel
 var _input_line: LineEdit
 var _btn_send: Button
+var _cpu_toggle: CheckButton
+var _cpu_speed_input: LineEdit
 
 # --- 内部状態 ---
 var _current_actions: Array = []
 var _waiting_choice: bool = false
 var _choice_data: Dictionary = {}
+var _auto_epoch: int = 0
 
 
 func _ready() -> void:
@@ -65,6 +68,27 @@ func _build_ui() -> void:
 	_btn_start.disabled = true
 	_btn_start.pressed.connect(_on_start_pressed)
 	left.add_child(_btn_start)
+
+	# --- CPU Auto-Play ---
+	left.add_child(HSeparator.new())
+
+	_cpu_toggle = CheckButton.new()
+	_cpu_toggle.text = "CPU Auto-Play"
+	_cpu_toggle.button_pressed = false
+	left.add_child(_cpu_toggle)
+
+	var speed_row := HBoxContainer.new()
+	left.add_child(speed_row)
+
+	var speed_label := Label.new()
+	speed_label.text = "Speed (s):"
+	speed_row.add_child(speed_label)
+
+	_cpu_speed_input = LineEdit.new()
+	_cpu_speed_input.text = "5"
+	_cpu_speed_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cpu_speed_input.custom_minimum_size.x = 50
+	speed_row.add_child(_cpu_speed_input)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -127,7 +151,6 @@ func _build_ui() -> void:
 
 func _on_init_pressed() -> void:
 	session = LocalGameSession.new()
-	session.set_cpu_player(1)
 	session.human_player = 0
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
@@ -138,6 +161,7 @@ func _on_init_pressed() -> void:
 	_current_actions = []
 	_waiting_choice = false
 	_choice_data = {}
+	_auto_epoch += 1
 
 	_log_display.clear()
 	_log("[color=yellow]--- Session Created ---[/color]")
@@ -163,6 +187,9 @@ func _on_send_pressed() -> void:
 		return
 
 	var num := text.to_int()
+
+	# 手動入力時はエポックを進めて pending タイマーを無効化
+	_auto_epoch += 1
 
 	if _waiting_choice:
 		_handle_choice_input(num)
@@ -192,6 +219,7 @@ func _on_state_updated(client_state: ClientState, events: Array) -> void:
 
 
 func _on_actions_received(actions: Array) -> void:
+	_auto_epoch += 1
 	_current_actions = actions
 	_waiting_choice = false
 	_btn_send.disabled = false
@@ -202,10 +230,16 @@ func _on_actions_received(actions: Array) -> void:
 	for i in range(_current_actions.size()):
 		_log("  %d. %s" % [i + 1, DisplayHelper.format_action(_current_actions[i], cs)])
 
-	_input_line.call_deferred("grab_focus")
+	var player: int = cs.current_player if cs else 0
+	if _should_auto_respond_for_player(player):
+		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
+		_schedule_auto_action(delay, _auto_epoch)
+	else:
+		_input_line.call_deferred("grab_focus")
 
 
 func _on_choice_requested(choice_data_arg: Dictionary) -> void:
+	_auto_epoch += 1
 	_waiting_choice = true
 	_choice_data = choice_data_arg
 	_btn_send.disabled = false
@@ -228,10 +262,15 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 		else:
 			_log("  %d. %s" % [i + 1, str(target)])
 
-	_input_line.call_deferred("grab_focus")
+	if _should_auto_respond_for_player(target_player):
+		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
+		_schedule_auto_choice(delay, _auto_epoch)
+	else:
+		_input_line.call_deferred("grab_focus")
 
 
 func _on_game_over(winner: int) -> void:
+	_auto_epoch += 1
 	var cs: ClientState = session.get_client_state()
 	_log("")
 	_log("[color=yellow]========================================[/color]")
@@ -241,6 +280,59 @@ func _on_game_over(winner: int) -> void:
 	_log("[color=yellow]========================================[/color]")
 	_btn_send.disabled = true
 	_btn_init.disabled = false
+
+
+# =============================================================================
+# CPU 自動応答
+# =============================================================================
+
+func _should_auto_respond_for_player(player: int) -> bool:
+	if _cpu_toggle.button_pressed:
+		return true
+	# トグルOFF: P1 のみ自動応答
+	return player == 1
+
+
+func _get_cpu_speed() -> float:
+	var text: String = _cpu_speed_input.text.strip_edges()
+	if text.is_valid_float():
+		var val: float = text.to_float()
+		if val >= 0.0:
+			return val
+	return 5.0
+
+
+func _schedule_auto_action(delay: float, epoch: int) -> void:
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout
+	else:
+		await get_tree().process_frame
+	if epoch != _auto_epoch:
+		return
+	if _current_actions.is_empty():
+		return
+	var idx: int = randi() % _current_actions.size()
+	var action: Dictionary = _current_actions[idx]
+	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
+	session.send_action(action)
+
+
+func _schedule_auto_choice(delay: float, epoch: int) -> void:
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout
+	else:
+		await get_tree().process_frame
+	if epoch != _auto_epoch:
+		return
+	var valid_targets: Array = _choice_data.get("valid_targets", [])
+	if valid_targets.is_empty():
+		return
+	var idx: int = randi() % valid_targets.size()
+	var chosen_value: Variant = valid_targets[idx]
+	var choice_index: int = _choice_data.get("choice_index", 0)
+	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
+	_waiting_choice = false
+	session.send_choice(choice_index, chosen_value)
 
 
 # =============================================================================

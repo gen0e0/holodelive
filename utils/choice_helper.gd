@@ -15,11 +15,15 @@ static func make_choice_data(
 	pc: PendingChoice, state: GameState, registry: CardRegistry
 ) -> Dictionary:
 	var details: Array = []
-	for target in pc.valid_targets:
-		if target is int and target >= 0:
-			details.append(StateSerializer._card_dict(target, state, registry))
-		else:
-			details.append({})
+	if pc.choice_type == Enums.ChoiceType.RANDOM_RESULT:
+		for target in pc.valid_targets:
+			details.append({"value": target})
+	else:
+		for target in pc.valid_targets:
+			if target is int and target >= 0:
+				details.append(StateSerializer._card_dict(target, state, registry))
+			else:
+				details.append({})
 
 	return {
 		"choice_index": state.pending_choices.find(pc),

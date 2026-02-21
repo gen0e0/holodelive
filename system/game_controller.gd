@@ -18,6 +18,7 @@ func _init(p_state: GameState, p_registry: CardRegistry, p_skill_registry: Skill
 ## ターン開始: ライブチェック → ドロー → ACTION フェーズ。
 ## ライブが発生した場合は true を返す。
 func start_turn() -> bool:
+	state.turn_flags.clear()
 	_log_action(Enums.ActionType.TURN_START, state.current_player, {})
 
 	# ライブチェック（ドロー前）
