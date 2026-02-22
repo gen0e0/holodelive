@@ -1,0 +1,28 @@
+extends GdUnitTestSuite
+
+var H := SkillTestHelper
+
+
+func _load_skill() -> BaseCardSkill:
+	return (load("res://cards/042_mori_calliope/card_skills.gd") as GDScript).new()
+
+
+func test_042_calliope_to_deck_bottom() -> void:
+	var env: Dictionary = H.create_test_env([
+		H.make_card_def(42, "カリオペ", ["VOCAL"], ["ENGLISH"], [H.play_skill()])
+	])
+	var state: GameState = env.state
+	var sr: SkillRegistry = env.skill_registry
+	sr.register(42, _load_skill())
+
+	var opp_card: int = H.place_on_stage(state, 1, 42)
+	var inst_id: int = H.place_on_stage(state, 0, 42)
+
+	var ctx := SkillContext.new(state, env.registry, inst_id, 0, 0, null, DiffRecorder.new())
+	var result: SkillResult = sr.get_skill(42).execute_skill(ctx, 0)
+	assert_int(result.status).is_equal(SkillResult.Status.WAITING_FOR_CHOICE)
+
+	ctx = SkillContext.new(state, env.registry, inst_id, 0, 1, opp_card, DiffRecorder.new())
+	result = sr.get_skill(42).execute_skill(ctx, 0)
+	assert_int(result.status).is_equal(SkillResult.Status.DONE)
+	assert_int(state.deck.back()).is_equal(opp_card)
