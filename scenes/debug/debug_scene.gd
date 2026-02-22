@@ -12,6 +12,13 @@ var _input_line: LineEdit
 var _btn_send: Button
 var _cpu_toggle: CheckButton
 var _cpu_speed_input: LineEdit
+var _gui_toggle: CheckButton
+
+# --- GUI ペイン ---
+var _vsplit: VSplitContainer
+var _state_panel: PanelContainer
+var _gui_container: Control
+var _game_screen: GameScreen
 
 # --- 内部状態 ---
 var _current_actions: Array = []
@@ -90,32 +97,48 @@ func _build_ui() -> void:
 	_cpu_speed_input.custom_minimum_size.x = 50
 	speed_row.add_child(_cpu_speed_input)
 
+	# --- GUI Mode Toggle ---
+	left.add_child(HSeparator.new())
+
+	_gui_toggle = CheckButton.new()
+	_gui_toggle.text = "GUI Mode"
+	_gui_toggle.button_pressed = false
+	_gui_toggle.toggled.connect(_on_gui_toggled)
+	left.add_child(_gui_toggle)
+
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(spacer)
 
 	# --- 右ペイン ---
-	var vsplit := VSplitContainer.new()
-	vsplit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hsplit.add_child(vsplit)
+	_vsplit = VSplitContainer.new()
+	_vsplit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hsplit.add_child(_vsplit)
 
-	# 上: 状態コンソール
-	var state_panel := PanelContainer.new()
-	state_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	state_panel.size_flags_stretch_ratio = 1.5
-	vsplit.add_child(state_panel)
+	# 上: 状態コンソール (テキスト)
+	_state_panel = PanelContainer.new()
+	_state_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_state_panel.size_flags_stretch_ratio = 1.5
+	_vsplit.add_child(_state_panel)
 
 	_state_display = RichTextLabel.new()
 	_state_display.bbcode_enabled = true
 	_state_display.scroll_following = false
 	_state_display.selection_enabled = true
 	_state_display.focus_mode = Control.FOCUS_NONE
-	state_panel.add_child(_state_display)
+	_state_panel.add_child(_state_display)
 
-	# 下: ログ + 入力
+	# 上: GUI コンテナ（初期非表示、state_panel と排他）
+	_gui_container = Control.new()
+	_gui_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_gui_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_gui_container.visible = false
+	_vsplit.add_child(_gui_container)
+
+	# 下: ログ + 入力（常に表示）
 	var bottom := VBoxContainer.new()
 	bottom.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vsplit.add_child(bottom)
+	_vsplit.add_child(bottom)
 
 	var log_panel := PanelContainer.new()
 	log_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -168,6 +191,12 @@ func _on_init_pressed() -> void:
 	_btn_start.disabled = false
 	_btn_send.disabled = true
 	_state_display.text = ""
+
+	# GUI モードが有効ならセッションを接続
+	if _game_screen != null:
+		_game_screen.disconnect_session()
+		if _gui_toggle.button_pressed:
+			_game_screen.connect_session(session)
 
 
 func _on_start_pressed() -> void:
@@ -280,6 +309,26 @@ func _on_game_over(winner: int) -> void:
 	_log("[color=yellow]========================================[/color]")
 	_btn_send.disabled = true
 	_btn_init.disabled = false
+
+
+# =============================================================================
+# GUI モード切替
+# =============================================================================
+
+func _on_gui_toggled(enabled: bool) -> void:
+	_state_panel.visible = not enabled
+	_gui_container.visible = enabled
+	if enabled:
+		if _game_screen == null:
+			_game_screen = GameScreen.new()
+			_game_screen.anchor_right = 1.0
+			_game_screen.anchor_bottom = 1.0
+			_gui_container.add_child(_game_screen)
+		if session != null:
+			_game_screen.connect_session(session)
+	else:
+		if _game_screen != null and session != null:
+			_game_screen.disconnect_session()
 
 
 # =============================================================================

@@ -73,4 +73,3 @@ func test_base_card_skill_invalid_index_returns_done() -> void:
 	var ctx := SkillContext.new()
 	var result: SkillResult = skill.execute_skill(ctx, 99)
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
-
