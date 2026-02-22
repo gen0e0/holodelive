@@ -320,9 +320,8 @@ func _on_gui_toggled(enabled: bool) -> void:
 	_gui_container.visible = enabled
 	if enabled:
 		if _game_screen == null:
-			_game_screen = GameScreen.new()
-			_game_screen.anchor_right = 1.0
-			_game_screen.anchor_bottom = 1.0
+			var scene: PackedScene = preload("res://scenes/gui/game_screen.tscn")
+			_game_screen = scene.instantiate()
 			_gui_container.add_child(_game_screen)
 		if session != null:
 			_game_screen.connect_session(session)

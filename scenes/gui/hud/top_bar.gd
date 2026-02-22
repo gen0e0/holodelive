@@ -7,10 +7,7 @@ var _phase_label: Label
 var _wins_label: Label
 
 
-func _init() -> void:
-	alignment = BoxContainer.ALIGNMENT_CENTER
-	add_theme_constant_override("separation", 24)
-
+func _ready() -> void:
 	_round_label = _make_label("Round: 1")
 	_turn_label = _make_label("Turn: 1")
 	_phase_label = _make_label("Phase: ACTION")

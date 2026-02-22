@@ -19,56 +19,56 @@ scenes/
 ├── game/                         ← 既存: ネットワーク対戦画面（テキスト）
 │
 └── gui/                          ← 新規: GUI ゲーム画面
-    ├── game_screen.tscn          ← ルートシーン
-    ├── game_screen.gd            ← GameSession 接続、子への配分
-    │
-    ├── components/               ← 再利用コンポーネント
-    │   ├── card_view.tscn        ← カード1枚の表示
-    │   ├── card_view.gd
-    │   ├── slot_marker.tscn      ← レイアウト用の空スロット
-    │   ├── slot_marker.gd
-    │   ├── slot_highlight.tscn   ← ドロップ先候補のハイライト
-    │   ├── slot_highlight.gd
-    │   ├── speech_bubble.tscn    ← カード追従セリフ吹き出し
-    │   └── speech_bubble.gd
-    │
-    ├── field/                    ← 盤面レイアウト
-    │   ├── field_layout.tscn     ← SlotMarker の配置・座標管理
-    │   ├── field_layout.gd
-    │   ├── card_layer.tscn       ← 全 CardView のフラットな親
-    │   └── card_layer.gd         ← CardView の生成・破棄・移動アニメ
-    │
-    ├── hud/                      ← 情報表示・操作 UI
-    │   ├── top_bar.tscn          ← ラウンド・ターン・フェーズ・勝利数
-    │   ├── top_bar.gd
-    │   ├── action_panel.tscn     ← Pass / 補助ボタン
-    │   ├── action_panel.gd
-    │   ├── log_panel.tscn        ← トグル式イベントログ
-    │   └── log_panel.gd
-    │
-    ├── overlay/                  ← 選択 UI・モーダル
-    │   ├── card_detail.tscn      ← カード詳細ポップアップ
-    │   ├── card_detail.gd
-    │   ├── zone_select.tscn      ← ステージ / 楽屋 選択オーバーレイ
-    │   ├── zone_select.gd
-    │   ├── home_browser.tscn     ← 自宅カード一覧（選択時）
-    │   └── home_browser.gd
-    │
-    ├── skill_ui/                 ← スキル固有の演出シーン
-    │   ├── dice_scene.tscn       ← 020 等: ダイス演出
-    │   ├── dice_scene.gd
-    │   ├── janken_scene.tscn     ← 059: じゃんけんミニゲーム
-    │   ├── janken_scene.gd
-    │   ├── random_pick.tscn      ← 010/036/056: ランダム選出演出
-    │   └── random_pick.gd
-    │
-    ├── effect/                   ← エフェクト
-    │   ├── effect_layer.tscn     ← カード非追従の全画面エフェクト
-    │   └── effect_layer.gd
-    │
-    └── manager/                  ← 入力・状態管理
-        ├── input_manager.gd      ← 入力モード管理、選択状態の制御
-        └── animation_queue.gd    ← アニメーション順序管理
+	├── game_screen.tscn          ← ルートシーン
+	├── game_screen.gd            ← GameSession 接続、子への配分
+	│
+	├── components/               ← 再利用コンポーネント
+	│   ├── card_view.tscn        ← カード1枚の表示
+	│   ├── card_view.gd
+	│   ├── slot_marker.tscn      ← レイアウト用の空スロット
+	│   ├── slot_marker.gd
+	│   ├── slot_highlight.tscn   ← ドロップ先候補のハイライト
+	│   ├── slot_highlight.gd
+	│   ├── speech_bubble.tscn    ← カード追従セリフ吹き出し
+	│   └── speech_bubble.gd
+	│
+	├── field/                    ← 盤面レイアウト
+	│   ├── field_layout.tscn     ← SlotMarker の配置・座標管理
+	│   ├── field_layout.gd
+	│   ├── card_layer.tscn       ← 全 CardView のフラットな親
+	│   └── card_layer.gd         ← CardView の生成・破棄・移動アニメ
+	│
+	├── hud/                      ← 情報表示・操作 UI
+	│   ├── top_bar.tscn          ← ラウンド・ターン・フェーズ・勝利数
+	│   ├── top_bar.gd
+	│   ├── action_panel.tscn     ← Pass / 補助ボタン
+	│   ├── action_panel.gd
+	│   ├── log_panel.tscn        ← トグル式イベントログ
+	│   └── log_panel.gd
+	│
+	├── overlay/                  ← 選択 UI・モーダル
+	│   ├── card_detail.tscn      ← カード詳細ポップアップ
+	│   ├── card_detail.gd
+	│   ├── zone_select.tscn      ← ステージ / 楽屋 選択オーバーレイ
+	│   ├── zone_select.gd
+	│   ├── home_browser.tscn     ← 自宅カード一覧（選択時）
+	│   └── home_browser.gd
+	│
+	├── skill_ui/                 ← スキル固有の演出シーン
+	│   ├── dice_scene.tscn       ← 020 等: ダイス演出
+	│   ├── dice_scene.gd
+	│   ├── janken_scene.tscn     ← 059: じゃんけんミニゲーム
+	│   ├── janken_scene.gd
+	│   ├── random_pick.tscn      ← 010/036/056: ランダム選出演出
+	│   └── random_pick.gd
+	│
+	├── effect/                   ← エフェクト
+	│   ├── effect_layer.tscn     ← カード非追従の全画面エフェクト
+	│   └── effect_layer.gd
+	│
+	└── manager/                  ← 入力・状態管理
+		├── input_manager.gd      ← 入力モード管理、選択状態の制御
+		└── animation_queue.gd    ← アニメーション順序管理
 ```
 
 ---

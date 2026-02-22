@@ -4,47 +4,24 @@ extends Control
 ## GUI ルートコンポーネント。
 ## GameSession のシグナルを受けて TopBar / FieldLayout / CardLayer を更新する。
 ## 内部は 1920x1080 固定座標で描画し、親サイズに合わせてスケーリングする。
+##
+## tscn から使用する場合、以下のノード構成が必要:
+##   GameScreen (Control + this script)
+##     └── Content (Control, size 1920x1080)
+##           ├── Background (ColorRect, 1920x1080)
+##           ├── TopBar (HBoxContainer + top_bar.gd)
+##           ├── FieldLayout (Control + field_layout.gd)
+##           └── CardLayer (Control + card_layer.gd)
 
 const DESIGN_W: float = 1920.0
 const DESIGN_H: float = 1080.0
 
 var session: GameSession
 
-var _content: Control
-var _top_bar: TopBar
-var _field_layout: FieldLayout
-var _card_layer: CardLayer
-var _bg: ColorRect
-
-
-func _init() -> void:
-	clip_contents = true
-
-	# 1920x1080 固定サイズのコンテンツコンテナ
-	_content = Control.new()
-	_content.size = Vector2(DESIGN_W, DESIGN_H)
-	add_child(_content)
-
-	# 背景
-	_bg = ColorRect.new()
-	_bg.color = Color(0.12, 0.12, 0.16)
-	_bg.size = Vector2(DESIGN_W, DESIGN_H)
-	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_content.add_child(_bg)
-
-	# TopBar
-	_top_bar = TopBar.new()
-	_top_bar.position = Vector2(0, 4)
-	_top_bar.size = Vector2(DESIGN_W, 32)
-	_content.add_child(_top_bar)
-
-	# FieldLayout (SlotMarker 配置)
-	_field_layout = FieldLayout.new()
-	_content.add_child(_field_layout)
-
-	# CardLayer (CardView 管理)
-	_card_layer = CardLayer.new()
-	_content.add_child(_card_layer)
+@onready var _content: Control = $Content
+@onready var _top_bar: TopBar = $Content/TopBar
+@onready var _field_layout: FieldLayout = $Content/FieldLayout
+@onready var _card_layer: CardLayer = $Content/CardLayer
 
 
 func _notification(what: int) -> void:

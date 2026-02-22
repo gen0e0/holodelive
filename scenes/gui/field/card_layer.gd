@@ -6,6 +6,8 @@ extends Control
 
 signal card_clicked(instance_id: int)
 
+const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
+
 var _card_views: Dictionary = {}  # instance_id -> CardView
 
 
@@ -33,10 +35,10 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		for i in range(stage_cards.size()):
 			var card_data: Dictionary = stage_cards[i]
 			var iid: int = card_data.get("instance_id", -1)
-			var hidden: bool = card_data.get("hidden", false)
+			var _hidden: bool = card_data.get("hidden", false)
 			active_ids[iid] = true
 			var pos: Vector2 = field_layout.get_stage_slot_pos(p, i)
-			_ensure_card(iid, card_data, not hidden, pos)
+			_ensure_card(iid, card_data, not _hidden, pos)
 
 	# --- 楽屋 ---
 	for p in range(2):
@@ -44,10 +46,10 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		if bs != null:
 			var card_data: Dictionary = bs
 			var iid: int = card_data.get("instance_id", -1)
-			var hidden: bool = card_data.get("hidden", false)
+			var _hidden: bool = card_data.get("hidden", false)
 			active_ids[iid] = true
 			var pos: Vector2 = field_layout.get_backstage_slot_pos(p)
-			_ensure_card(iid, card_data, not hidden, pos)
+			_ensure_card(iid, card_data, not _hidden, pos)
 
 	# --- デッキ（枚数表示用） ---
 	if cs.deck_count > 0:
@@ -82,7 +84,7 @@ func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) 
 		cv.setup(card_data, face_up)
 		cv.position = pos
 	else:
-		cv = CardView.new()
+		cv = _CardViewScene.instantiate()
 		cv.setup(card_data, face_up)
 		cv.position = pos
 		cv.card_clicked.connect(_on_card_clicked)
