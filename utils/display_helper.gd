@@ -81,6 +81,12 @@ static func format_event(event: Dictionary, cs: ClientState) -> String:
 			var card: Variant = event.get("card")
 			var card_str: String = format_card_dict(card) if card != null else "?"
 			return prefix + "Activated skill of %s" % card_str
+		"SKILL_EFFECT":
+			var card_id: int = event.get("card_id", 0)
+			var nickname: String = event.get("nickname", "?")
+			var skill_name: String = event.get("skill_name", "?")
+			var skill_desc: String = event.get("skill_description", "")
+			return "[color=aqua][Skill] %03d %s - %s: %s[/color]" % [card_id, nickname, skill_name, skill_desc]
 		"ROUND_END":
 			var winner: int = event.get("winner", -1)
 			if cs:

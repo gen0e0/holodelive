@@ -381,6 +381,18 @@ func _resolve_skill_stack() -> void:
 		# PENDING → RESOLVING
 		top.state = Enums.SkillState.RESOLVING
 
+		# スキル発動時にログ出力（初回フェーズのみ）
+		if top.phase == 0:
+			var card_def: CardDef = registry.get_card(top.card_id)
+			if card_def and top.skill_index < card_def.skills.size():
+				var sk: Dictionary = card_def.skills[top.skill_index]
+				_log_action(Enums.ActionType.SKILL_EFFECT, top.player, {
+					"card_id": card_def.card_id,
+					"nickname": card_def.nickname,
+					"skill_name": sk["name"],
+					"skill_description": sk["description"],
+				})
+
 		var skill_script: BaseCardSkill = skill_registry.get_skill(top.card_id)
 		if not skill_script:
 			top.state = Enums.SkillState.RESOLVED
