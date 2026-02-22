@@ -3,6 +3,9 @@ extends Control
 
 signal card_clicked(instance_id: int)
 
+## true の場合、組み込みホバー演出を無効化（HandZone など親が管理）
+var managed_hover: bool = false
+
 var instance_id: int = -1
 var _face_up: bool = true
 var _card_data: Dictionary = {}
@@ -75,7 +78,7 @@ func _update_display() -> void:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	draw_rect(rect, Color(0, 0, 0, 0.6), false, 2.0)
+	draw_rect(rect, Color(0, 0, 0, 0.6), false, 2.5)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -86,6 +89,8 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _notification(what: int) -> void:
+	if managed_hover:
+		return
 	match what:
 		NOTIFICATION_MOUSE_ENTER:
 			_hovered = true

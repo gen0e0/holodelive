@@ -22,6 +22,8 @@ var session: GameSession
 @onready var _top_bar: TopBar = $Content/TopBar
 @onready var _field_layout: FieldLayout = $Content/FieldLayout
 @onready var _card_layer: CardLayer = $Content/CardLayer
+@onready var _my_hand: HandZone = $Content/MyHandZone
+@onready var _opp_hand: HandZone = $Content/OppHandZone
 
 
 func _notification(what: int) -> void:
@@ -72,3 +74,5 @@ func _refresh(cs: ClientState) -> void:
 	_top_bar.update_display(cs)
 	_field_layout.update_layout(cs)
 	_card_layer.sync_state(cs, _field_layout)
+	_my_hand.sync_cards(cs.my_hand, true)
+	_opp_hand.sync_hidden(cs.opponent_hand_count)

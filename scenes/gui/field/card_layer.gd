@@ -14,21 +14,6 @@ var _card_views: Dictionary = {}  # instance_id -> CardView
 func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 	var active_ids: Dictionary = {}  # instance_id -> true
 
-	# --- 自分の手札 ---
-	for i in range(cs.my_hand.size()):
-		var card_data: Dictionary = cs.my_hand[i]
-		var iid: int = card_data.get("instance_id", -1)
-		active_ids[iid] = true
-		var pos: Vector2 = field_layout.get_my_hand_slot_pos(i)
-		_ensure_card(iid, card_data, true, pos)
-
-	# --- 相手の手札（裏向き） ---
-	for i in range(cs.opponent_hand_count):
-		var fake_id: int = -1000 - i  # 負のIDで相手手札を識別
-		active_ids[fake_id] = true
-		var pos: Vector2 = field_layout.get_opp_hand_slot_pos(i)
-		_ensure_card(fake_id, {"hidden": true}, false, pos)
-
 	# --- ステージ ---
 	for p in range(2):
 		var stage_cards: Array = cs.stages[p]
