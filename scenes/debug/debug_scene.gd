@@ -4,8 +4,9 @@ extends Control
 var session: LocalGameSession
 
 # --- UI ノード ---
-var _btn_init: Button
-var _btn_start: Button
+var _btn_restart: Button
+var _seed_input: LineEdit
+var _seed_display: LineEdit
 var _state_display: RichTextLabel
 var _log_display: RichTextLabel
 var _input_line: LineEdit
@@ -21,6 +22,7 @@ var _gui_container: Control
 var _game_screen: GameScreen
 
 # --- 内部状態 ---
+var _rng: RandomNumberGenerator
 var _current_actions: Array = []
 var _waiting_choice: bool = false
 var _choice_data: Dictionary = {}
@@ -29,6 +31,8 @@ var _auto_epoch: int = 0
 
 func _ready() -> void:
 	_build_ui()
+	# 自動的にゲームを開始
+	_init_and_start()
 
 
 # =============================================================================
@@ -65,16 +69,34 @@ func _build_ui() -> void:
 
 	left.add_child(HSeparator.new())
 
-	_btn_init = Button.new()
-	_btn_init.text = "Init Game"
-	_btn_init.pressed.connect(_on_init_pressed)
-	left.add_child(_btn_init)
+	_btn_restart = Button.new()
+	_btn_restart.text = "Restart Game"
+	_btn_restart.pressed.connect(_on_restart_pressed)
+	left.add_child(_btn_restart)
 
-	_btn_start = Button.new()
-	_btn_start.text = "Start Game"
-	_btn_start.disabled = true
-	_btn_start.pressed.connect(_on_start_pressed)
-	left.add_child(_btn_start)
+	var seed_row := HBoxContainer.new()
+	left.add_child(seed_row)
+
+	var seed_label := Label.new()
+	seed_label.text = "Seed:"
+	seed_row.add_child(seed_label)
+
+	_seed_input = LineEdit.new()
+	_seed_input.placeholder_text = "random"
+	_seed_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_seed_input.custom_minimum_size.x = 80
+	seed_row.add_child(_seed_input)
+
+	_seed_display = LineEdit.new()
+	_seed_display.editable = false
+	_seed_display.placeholder_text = "-"
+	_seed_display.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var display_row := HBoxContainer.new()
+	left.add_child(display_row)
+	var current_label := Label.new()
+	current_label.text = "Current:"
+	display_row.add_child(current_label)
+	display_row.add_child(_seed_display)
 
 	# --- CPU Auto-Play ---
 	left.add_child(HSeparator.new())
@@ -102,7 +124,7 @@ func _build_ui() -> void:
 
 	_gui_toggle = CheckButton.new()
 	_gui_toggle.text = "GUI Mode"
-	_gui_toggle.button_pressed = false
+	_gui_toggle.button_pressed = true
 	_gui_toggle.toggled.connect(_on_gui_toggled)
 	left.add_child(_gui_toggle)
 
@@ -115,10 +137,11 @@ func _build_ui() -> void:
 	_vsplit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hsplit.add_child(_vsplit)
 
-	# 上: 状態コンソール (テキスト)
+	# 上: 状態コンソール (テキスト) — GUI デフォルト ON なので非表示
 	_state_panel = PanelContainer.new()
 	_state_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_state_panel.size_flags_stretch_ratio = 1.5
+	_state_panel.visible = false
 	_vsplit.add_child(_state_panel)
 
 	_state_display = RichTextLabel.new()
@@ -128,11 +151,11 @@ func _build_ui() -> void:
 	_state_display.focus_mode = Control.FOCUS_NONE
 	_state_panel.add_child(_state_display)
 
-	# 上: GUI コンテナ（初期非表示、state_panel と排他）
+	# 上: GUI コンテナ（デフォルト表示）
 	_gui_container = Control.new()
 	_gui_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_gui_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_gui_container.visible = false
+	_gui_container.visible = true
 	_vsplit.add_child(_gui_container)
 
 	# 下: ログ + 入力（常に表示）
@@ -169,12 +192,22 @@ func _build_ui() -> void:
 
 
 # =============================================================================
-# ボタンハンドラ
+# ゲーム初期化・開始
 # =============================================================================
 
-func _on_init_pressed() -> void:
+func _init_and_start() -> void:
+	# RNG 作成（シード指定があれば固定、なければランダム）
+	_rng = RandomNumberGenerator.new()
+	var seed_text: String = _seed_input.text.strip_edges()
+	if seed_text.is_valid_int():
+		_rng.seed = seed_text.to_int()
+	else:
+		_rng.randomize()
+	_seed_display.text = str(_rng.seed)
+
 	session = LocalGameSession.new()
 	session.human_player = 0
+	session.rng = _rng
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
 	session.choice_requested.connect(_on_choice_requested)
@@ -187,23 +220,27 @@ func _on_init_pressed() -> void:
 	_auto_epoch += 1
 
 	_log_display.clear()
-	_log("[color=yellow]--- Session Created ---[/color]")
-	_btn_start.disabled = false
-	_btn_send.disabled = true
 	_state_display.text = ""
+	_btn_send.disabled = true
 
-	# GUI モードが有効ならセッションを接続
-	if _game_screen != null:
-		_game_screen.disconnect_session()
-		if _gui_toggle.button_pressed:
-			_game_screen.connect_session(session)
+	# GUI モードが有効なら GameScreen を接続
+	if _gui_toggle.button_pressed:
+		_ensure_game_screen()
+		_game_screen.connect_session(session)
 
-
-func _on_start_pressed() -> void:
-	_btn_start.disabled = true
-	_btn_init.disabled = true
+	_log("[color=yellow]--- Game Starting (seed: %d) ---[/color]" % _rng.seed)
 	session.start_game()
 
+
+func _on_restart_pressed() -> void:
+	if _game_screen != null and session != null:
+		_game_screen.disconnect_session()
+	_init_and_start()
+
+
+# =============================================================================
+# ボタンハンドラ
+# =============================================================================
 
 func _on_send_pressed() -> void:
 	var text := _input_line.text.strip_edges()
@@ -308,21 +345,24 @@ func _on_game_over(winner: int) -> void:
 		_log("[color=yellow]  Rounds: P0=%d  P1=%d[/color]" % [cs.round_wins[0], cs.round_wins[1]])
 	_log("[color=yellow]========================================[/color]")
 	_btn_send.disabled = true
-	_btn_init.disabled = false
 
 
 # =============================================================================
 # GUI モード切替
 # =============================================================================
 
+func _ensure_game_screen() -> void:
+	if _game_screen == null:
+		var scene: PackedScene = preload("res://scenes/gui/game_screen.tscn")
+		_game_screen = scene.instantiate()
+		_gui_container.add_child(_game_screen)
+
+
 func _on_gui_toggled(enabled: bool) -> void:
 	_state_panel.visible = not enabled
 	_gui_container.visible = enabled
 	if enabled:
-		if _game_screen == null:
-			var scene: PackedScene = preload("res://scenes/gui/game_screen.tscn")
-			_game_screen = scene.instantiate()
-			_gui_container.add_child(_game_screen)
+		_ensure_game_screen()
 		if session != null:
 			_game_screen.connect_session(session)
 	else:
@@ -359,7 +399,7 @@ func _schedule_auto_action(delay: float, epoch: int) -> void:
 		return
 	if _current_actions.is_empty():
 		return
-	var idx: int = randi() % _current_actions.size()
+	var idx: int = _rng.randi() % _current_actions.size()
 	var action: Dictionary = _current_actions[idx]
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
 	session.send_action(action)
@@ -375,7 +415,7 @@ func _schedule_auto_choice(delay: float, epoch: int) -> void:
 	var valid_targets: Array = _choice_data.get("valid_targets", [])
 	if valid_targets.is_empty():
 		return
-	var idx: int = randi() % valid_targets.size()
+	var idx: int = _rng.randi() % valid_targets.size()
 	var chosen_value: Variant = valid_targets[idx]
 	var choice_index: int = _choice_data.get("choice_index", 0)
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])

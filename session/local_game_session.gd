@@ -12,23 +12,27 @@ var _client_state: ClientState
 var _cpu_strategies: Dictionary = {}
 ## The human player's index, used as the viewing perspective.
 var human_player: int = 0
-
+## Shared RNG for deterministic replay. If null, uses random seed.
+var rng: RandomNumberGenerator
 
 ## Register a player index as CPU-controlled with the given strategy.
-## If strategy is null, defaults to RandomStrategy.
+## If strategy is null, defaults to RandomStrategy sharing this session's RNG.
 func set_cpu_player(player_index: int, strategy: CpuStrategy = null) -> void:
 	if strategy == null:
-		strategy = RandomStrategy.new()
+		strategy = RandomStrategy.new(rng)
 	_cpu_strategies[player_index] = strategy
 
 const MAX_CPU_DEPTH: int = 500
 
 
 func start_game() -> void:
+	if rng == null:
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
 	var loaded: Dictionary = CardLoader.load_all()
 	registry = loaded["card_registry"]
 	skill_registry = loaded["skill_registry"]
-	state = GameSetup.setup_game(registry)
+	state = GameSetup.setup_game(registry, rng)
 	controller = GameController.new(state, registry, skill_registry)
 	_last_log_index = 0
 	_client_state = null
