@@ -70,10 +70,12 @@ static func _card_dict(instance_id: int, state: GameState, registry: CardRegistr
 		return {"instance_id": instance_id, "card_id": inst.card_id, "nickname": "?", "icons": [], "suits": []}
 	var icons: Array[String] = inst.effective_icons(card_def)
 	var suits: Array[String] = inst.effective_suits(card_def)
+	var image_path: String = card_def.dir_path + "/img_card.png"
 	return {
 		"instance_id": instance_id,
 		"card_id": inst.card_id,
 		"nickname": card_def.nickname,
 		"icons": icons,
 		"suits": suits,
+		"image_path": image_path,
 	}

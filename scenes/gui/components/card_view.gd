@@ -11,7 +11,8 @@ var _face_up: bool = true
 var _card_data: Dictionary = {}
 var _hovered: bool = false
 
-@onready var _bg_rect: ColorRect = $BgRect
+@onready var _bg_panel: Panel = $BgPanel
+@onready var _character_rect: TextureRect = $BgPanel/CharacterRect
 @onready var _name_label: Label = $NameLabel
 @onready var _info_label: Label = $InfoLabel
 
@@ -39,15 +40,20 @@ func setup(card_data: Dictionary, face_up: bool) -> void:
 
 
 func _ready() -> void:
+	# StyleBoxFlat を複製して各インスタンス固有にする
+	var style: StyleBoxFlat = _bg_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if style:
+		_bg_panel.add_theme_stylebox_override("panel", style.duplicate())
 	_update_display()
 
 
 func _update_display() -> void:
-	if _bg_rect == null:
+	if _bg_panel == null:
 		return
 
 	if not _face_up or _card_data.get("hidden", false):
-		_bg_rect.color = BACK_COLOR
+		_set_bg_color(BACK_COLOR)
+		_character_rect.texture = null
 		_name_label.text = "?"
 		_info_label.text = ""
 		return
@@ -56,9 +62,16 @@ func _update_display() -> void:
 	var suits: Array = _card_data.get("suits", [])
 	if suits.size() > 0:
 		var first_suit: String = suits[0]
-		_bg_rect.color = SUIT_COLORS.get(first_suit, BACK_COLOR)
+		_set_bg_color(SUIT_COLORS.get(first_suit, BACK_COLOR))
 	else:
-		_bg_rect.color = BACK_COLOR
+		_set_bg_color(BACK_COLOR)
+
+	# キャラ画像
+	var image_path: String = _card_data.get("image_path", "")
+	if image_path != "" and ResourceLoader.exists(image_path):
+		_character_rect.texture = load(image_path)
+	else:
+		_character_rect.texture = null
 
 	# 名前
 	var nickname: String = _card_data.get("nickname", "?")
@@ -76,9 +89,10 @@ func _update_display() -> void:
 	_info_label.text = "%s\n%s" % [",".join(icon_strs), ",".join(suit_strs)]
 
 
-func _draw() -> void:
-	var rect := Rect2(Vector2.ZERO, size)
-	draw_rect(rect, Color(0, 0, 0, 0.6), false, 2.5)
+func _set_bg_color(color: Color) -> void:
+	var style: StyleBoxFlat = _bg_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if style:
+		style.bg_color = color
 
 
 func _gui_input(event: InputEvent) -> void:

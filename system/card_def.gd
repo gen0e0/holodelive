@@ -6,6 +6,7 @@ var nickname: String = ""
 var base_icons: Array[String] = []
 var base_suits: Array[String] = []
 var skills: Array = []  # Array[Dictionary] — {"name", "type": SkillType, "description"}
+var dir_path: String = ""  # カードディレクトリパス（例: "res://cards/001_tokino_sora"）
 
 func _init(p_card_id: int = 0, p_nickname: String = "", p_icons: Array[String] = [], p_suits: Array[String] = [], p_skills: Array = []) -> void:
 	card_id = p_card_id

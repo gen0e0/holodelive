@@ -12,8 +12,10 @@ func load_card(dir_path: String) -> CardDef:
 			"type": _parse_skill_type(s["type"]),
 			"description": s["description"],
 		})
-	return CardDef.new(data.card_id, data.nickname,
+	var def := CardDef.new(data.card_id, data.nickname,
 		data.base_icons, data.base_suits, skills)
+	def.dir_path = dir_path
+	return def
 
 static func _parse_skill_type(type_str: String) -> int:
 	match type_str:
