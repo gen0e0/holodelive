@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dfxn07yl3q4lt" path="res://scenes/gui/game_screen.gd" id="1"]
 [ext_resource type="Script" uid="uid://dlrp37734l02i" path="res://scenes/gui/hud/top_bar.gd" id="2"]
-[ext_resource type="Script" uid="uid://b2r2uqjvx7e1l" path="res://scenes/gui/field/field_layout.gd" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/gui/field/field_layout.tscn" id="3"]
 [ext_resource type="Script" uid="uid://7knxut1m742f" path="res://scenes/gui/field/card_layer.gd" id="4"]
 [ext_resource type="Script" path="res://scenes/gui/components/hand_zone.gd" id="5"]
 
@@ -41,14 +41,7 @@ offset_bottom = 36.0
 alignment = 1
 script = ExtResource("2")
 
-[node name="FieldLayout" type="Control" parent="Content"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("3")
+[node name="FieldLayout" parent="Content" instance=ExtResource("3")]
 
 [node name="CardLayer" type="Control" parent="Content"]
 layout_mode = 1

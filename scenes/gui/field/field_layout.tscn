@@ -1,0 +1,111 @@
+[gd_scene load_steps=3 format=3 uid="uid://ihit7oce7gem"]
+
+[ext_resource type="Script" uid="uid://b2r2uqjvx7e1l" path="res://scenes/gui/field/field_layout.gd" id="1"]
+[ext_resource type="Script" uid="uid://cw4cckvq4pudm" path="res://scenes/gui/components/slot_marker.gd" id="2"]
+
+[node name="FieldLayout" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="MyStage1" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 648.0
+offset_top = 80.0
+offset_right = 948.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+
+[node name="MyStage2" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 336.0
+offset_top = 80.0
+offset_right = 636.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+slot_index = 1
+
+[node name="MyStage3" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 324.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+slot_index = 2
+
+[node name="OppStage1" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 972.0
+offset_top = 80.0
+offset_right = 1272.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+player = 1
+
+[node name="OppStage2" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 1284.0
+offset_top = 80.0
+offset_right = 1584.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+player = 1
+slot_index = 1
+
+[node name="OppStage3" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 1596.0
+offset_top = 80.0
+offset_right = 1896.0
+offset_bottom = 500.0
+script = ExtResource("2")
+slot_type = 1
+player = 1
+slot_index = 2
+
+[node name="MyBackstage" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 648.0
+offset_top = 530.0
+offset_right = 948.0
+offset_bottom = 950.0
+script = ExtResource("2")
+slot_type = 2
+
+[node name="OppBackstage" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 972.0
+offset_top = 530.0
+offset_right = 1272.0
+offset_bottom = 950.0
+script = ExtResource("2")
+slot_type = 2
+player = 1
+
+[node name="Deck" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 530.0
+offset_right = 174.0
+offset_bottom = 740.0
+script = ExtResource("2")
+slot_type = 3
+
+[node name="Home" type="Control" parent="."]
+anchors_preset = 0
+offset_left = 186.0
+offset_top = 530.0
+offset_right = 336.0
+offset_bottom = 740.0
+script = ExtResource("2")
+slot_type = 4
