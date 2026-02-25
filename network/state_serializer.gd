@@ -24,7 +24,7 @@ static func serialize_for_player(state: GameState, player: int, registry: CardRe
 					d["face_down"] = true
 					cs.stages[p].append(d)
 				else:
-					cs.stages[p].append({"instance_id": inst_id, "hidden": true})
+					cs.stages[p].append({"instance_id": inst_id, "hidden": true, "face_down": true})
 			else:
 				cs.stages[p].append(_card_dict(inst_id, state, registry))
 
@@ -45,7 +45,7 @@ static func serialize_for_player(state: GameState, player: int, registry: CardRe
 			# Opponent backstage: hidden if face_down
 			var inst: CardInstance = state.instances.get(bs_id)
 			if inst and inst.face_down:
-				cs.backstages[p] = {"instance_id": bs_id, "hidden": true}
+				cs.backstages[p] = {"instance_id": bs_id, "hidden": true, "face_down": true}
 			else:
 				cs.backstages[p] = _card_dict(bs_id, state, registry)
 

@@ -79,7 +79,8 @@ func _update_display() -> void:
 		_info_label.text = ""
 		_clear_icons()
 		if _guest_mask:
-			_guest_mask.visible = false
+			_guest_mask.visible = _is_guest
+			_guest_mask.modulate.a = 1.0
 		return
 
 	# スートで背景色決定（suits は Array[String]: "LOVELY", "COOL" 等）
@@ -183,13 +184,13 @@ func _notification(what: int) -> void:
 			if not managed_hover:
 				_hovered = false
 				scale = Vector2(1.0, 1.0)
-			if _is_guest:
+			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(1.0)
 		NOTIFICATION_MOUSE_ENTER:
 			if not managed_hover:
 				_hovered = true
 				scale = Vector2(1.05, 1.05)
-			if _is_guest:
+			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(0.0)
 
 
