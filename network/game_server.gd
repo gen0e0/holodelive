@@ -156,6 +156,14 @@ func _send_actions_to_current_player() -> void:
 		_schedule_cpu_action(actions)
 		return
 
+	# パスしか選択肢がない場合は自動パス
+	if _is_pass_only(actions):
+		var prev_turn: int = state.turn_number
+		controller.apply_action({"type": Enums.ActionType.PASS})
+		_flush_and_send()
+		_advance(prev_turn)
+		return
+
 	var serialized: Array = []
 	for a in actions:
 		var d: Dictionary = {}
@@ -239,6 +247,15 @@ func _schedule_cpu_choice(choice_data: Dictionary) -> void:
 # =============================================================================
 # Validation helpers
 # =============================================================================
+
+func _is_pass_only(actions: Array) -> bool:
+	if actions.is_empty():
+		return false
+	for a in actions:
+		if a.get("type") != Enums.ActionType.PASS:
+			return false
+	return true
+
 
 func _is_valid_action(action: Dictionary, available: Array) -> bool:
 	var atype: int = int(action.get("type", -1))

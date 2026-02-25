@@ -72,8 +72,17 @@ func is_my_turn() -> bool:
 
 
 # =============================================================================
-# CPU helpers
+# Helpers
 # =============================================================================
+
+func _is_pass_only(actions: Array) -> bool:
+	if actions.is_empty():
+		return false
+	for a in actions:
+		if a.get("type") != Enums.ActionType.PASS:
+			return false
+	return true
+
 
 func _is_cpu_player(player_index: int) -> bool:
 	return _cpu_strategies.has(player_index)
@@ -153,6 +162,9 @@ func _emit_actions() -> void:
 		_cpu_take_action()
 		return
 	var actions: Array = controller.get_available_actions()
+	if _is_pass_only(actions):
+		send_action({"type": Enums.ActionType.PASS})
+		return
 	actions_received.emit(actions)
 
 
@@ -203,4 +215,7 @@ func _advance_cpu(prev_turn: int, depth: int) -> void:
 		return
 
 	var actions: Array = controller.get_available_actions()
+	if _is_pass_only(actions):
+		send_action({"type": Enums.ActionType.PASS})
+		return
 	actions_received.emit(actions)
