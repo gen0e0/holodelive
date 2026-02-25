@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" uid="uid://dfxn07yl3q4lt" path="res://scenes/gui/game_screen.gd" id="1"]
 [ext_resource type="Script" uid="uid://dlrp37734l02i" path="res://scenes/gui/hud/top_bar.gd" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/gui/field/field_layout.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://ihit7oce7gem" path="res://scenes/gui/field/field_layout.tscn" id="3"]
 [ext_resource type="Script" uid="uid://7knxut1m742f" path="res://scenes/gui/field/card_layer.gd" id="4"]
-[ext_resource type="Script" path="res://scenes/gui/components/hand_zone.gd" id="5"]
+[ext_resource type="Script" uid="uid://ciuon08eqqdab" path="res://scenes/gui/components/hand_zone.gd" id="5"]
 
 [node name="GameScreen" type="Control"]
 clip_contents = true
@@ -42,6 +42,7 @@ alignment = 1
 script = ExtResource("2")
 
 [node name="FieldLayout" parent="Content" instance=ExtResource("3")]
+layout_mode = 1
 
 [node name="CardLayer" type="Control" parent="Content"]
 layout_mode = 1
@@ -55,15 +56,18 @@ script = ExtResource("4")
 [node name="MyHandZone" type="Control" parent="Content"]
 anchors_preset = 0
 offset_left = 960.0
-offset_top = 1000.0
+offset_top = 1080.0
 offset_right = 960.0
-offset_bottom = 1000.0
+offset_bottom = 1080.0
 script = ExtResource("5")
 
 [node name="OppHandZone" type="Control" parent="Content"]
 anchors_preset = 0
-offset_left = 960.0
-offset_right = 960.0
+offset_left = 1750.0
+offset_top = 700.0
+offset_right = 1750.0
+offset_bottom = 700.0
+scale = Vector2(0.3, 0.3)
 script = ExtResource("5")
 is_interactive = false
 arc_angle = 0.13
