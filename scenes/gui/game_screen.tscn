@@ -1,10 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://1ln2b17dg3x"]
+[gd_scene load_steps=8 format=3 uid="uid://1ln2b17dg3x"]
 
 [ext_resource type="Script" uid="uid://dfxn07yl3q4lt" path="res://scenes/gui/game_screen.gd" id="1"]
 [ext_resource type="Script" uid="uid://dlrp37734l02i" path="res://scenes/gui/hud/top_bar.gd" id="2"]
 [ext_resource type="PackedScene" uid="uid://ihit7oce7gem" path="res://scenes/gui/field/field_layout.tscn" id="3"]
 [ext_resource type="Script" uid="uid://7knxut1m742f" path="res://scenes/gui/field/card_layer.gd" id="4"]
 [ext_resource type="Script" uid="uid://ciuon08eqqdab" path="res://scenes/gui/components/hand_zone.gd" id="5"]
+[ext_resource type="Script" path="res://scenes/gui/components/deck_view.gd" id="6"]
+[ext_resource type="Script" path="res://scenes/gui/components/home_view.gd" id="7"]
 
 [node name="GameScreen" type="Control"]
 clip_contents = true
@@ -52,6 +54,22 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("4")
+
+[node name="DeckView" type="Control" parent="Content"]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 530.0
+offset_right = 174.0
+offset_bottom = 740.0
+script = ExtResource("6")
+
+[node name="HomeView" type="Control" parent="Content"]
+anchors_preset = 0
+offset_left = 186.0
+offset_top = 530.0
+offset_right = 336.0
+offset_bottom = 740.0
+script = ExtResource("7")
 
 [node name="MyHandZone" type="Control" parent="Content"]
 anchors_preset = 0

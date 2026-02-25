@@ -36,22 +36,6 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 			var pos: Vector2 = field_layout.get_backstage_slot_pos(p)
 			_ensure_card(iid, card_data, not _hidden, pos)
 
-	# --- デッキ（枚数表示用） ---
-	var scale_val: float = field_layout.get_deck_home_scale()
-	if cs.deck_count > 0:
-		var deck_id: int = -2000
-		active_ids[deck_id] = true
-		var pos: Vector2 = field_layout.get_deck_slot_pos()
-		_ensure_card(deck_id, {"hidden": true, "nickname": "Deck\n%d" % cs.deck_count}, false, pos, scale_val)
-
-	# --- 自宅（最上部のみ表示） ---
-	if cs.home.size() > 0:
-		var home_id: int = -3000
-		active_ids[home_id] = true
-		var card_data: Dictionary = cs.home[cs.home.size() - 1]
-		var pos: Vector2 = field_layout.get_home_slot_pos()
-		_ensure_card(home_id, card_data, true, pos, scale_val)
-
 	# --- 消えたカードを破棄 ---
 	var to_remove: Array = []
 	for iid in _card_views:
