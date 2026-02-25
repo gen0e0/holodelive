@@ -31,44 +31,15 @@ var _selected_instance_id: int = -1
 @onready var _opp_hand: HandZone = $Content/OppHandZone
 
 var _overlay: Control
-var _btn_stage: Button
-var _btn_backstage: Button
-var _btn_pass: Button
+var _btn_stage: OverlayButton
+var _btn_backstage: OverlayButton
+var _btn_pass: OverlayButton
 var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
 
 
 func _ready() -> void:
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
 	_setup_buttons()
-
-
-func _make_overlay_button(text: String, rect: Rect2) -> Button:
-	var btn := Button.new()
-	btn.text = text
-	btn.position = rect.position
-	btn.size = rect.size
-	btn.modulate = Color(1, 1, 1, 0.85)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.2, 0.5, 0.8, 0.35)
-	style.border_color = Color(0.4, 0.7, 1.0, 0.8)
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
-	btn.add_theme_stylebox_override("normal", style)
-	var hover_style := style.duplicate()
-	hover_style.bg_color = Color(0.3, 0.6, 0.9, 0.5)
-	btn.add_theme_stylebox_override("hover", hover_style)
-	var pressed_style := style.duplicate()
-	pressed_style.bg_color = Color(0.15, 0.4, 0.7, 0.5)
-	btn.add_theme_stylebox_override("pressed", pressed_style)
-	btn.add_theme_font_size_override("font_size", 28)
-	btn.visible = false
-	return btn
 
 
 func _setup_buttons() -> void:
@@ -78,17 +49,17 @@ func _setup_buttons() -> void:
 	_content.add_child(_overlay)
 
 	# ステージ全体を覆うボタン (MyStage1-3: x=24-948, y=80-500)
-	_btn_stage = _make_overlay_button("ステージにプレイ", Rect2(24, 80, 924, 420))
+	_btn_stage = OverlayButton.create("ステージにプレイ", Rect2(24, 80, 924, 420))
 	_btn_stage.pressed.connect(_on_stage_pressed)
 	_overlay.add_child(_btn_stage)
 
 	# 楽屋全体を覆うボタン (MyBackstage: x=648-948, y=530-950)
-	_btn_backstage = _make_overlay_button("楽屋にプレイ", Rect2(648, 530, 300, 420))
+	_btn_backstage = OverlayButton.create("楽屋にプレイ", Rect2(648, 530, 300, 420))
 	_btn_backstage.pressed.connect(_on_backstage_pressed)
 	_overlay.add_child(_btn_backstage)
 
 	# パスボタン（カードが出せない時のみ表示）
-	_btn_pass = _make_overlay_button("パス", Rect2(360, 430, 200, 60))
+	_btn_pass = OverlayButton.create("パス", Rect2(360, 430, 200, 60))
 	_btn_pass.pressed.connect(_on_pass_pressed)
 	_overlay.add_child(_btn_pass)
 
@@ -130,6 +101,7 @@ func disconnect_session() -> void:
 		if session.game_over.is_connected(_on_game_over):
 			session.game_over.disconnect(_on_game_over)
 		session = null
+	_clear_interaction_state()
 
 
 func _on_state_updated(client_state: ClientState, _events: Array) -> void:
@@ -190,7 +162,7 @@ func _show_action_phase_buttons() -> void:
 		if rect.size == Vector2.ZERO:
 			continue
 		var label: String = "オープン" if atype == Enums.ActionType.OPEN else "スキル発動"
-		var btn: Button = _make_overlay_button(label, rect)
+		var btn: OverlayButton = OverlayButton.create(label, rect)
 		btn.visible = true
 		var action_copy: Dictionary = a.duplicate()
 		btn.pressed.connect(func() -> void: _on_action_button_pressed(action_copy))

@@ -47,18 +47,16 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		_card_views.erase(iid)
 
 
-func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2, card_scale: float = 1.0) -> void:
+func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) -> void:
 	var cv: CardView
 	if _card_views.has(iid):
 		cv = _card_views[iid]
 		cv.setup(card_data, face_up)
 		cv.position = pos
-		cv.scale = Vector2(card_scale, card_scale)
 	else:
 		cv = _CardViewScene.instantiate()
 		cv.setup(card_data, face_up)
 		cv.position = pos
-		cv.scale = Vector2(card_scale, card_scale)
 		cv.card_clicked.connect(_on_card_clicked)
 		add_child(cv)
 		_card_views[iid] = cv

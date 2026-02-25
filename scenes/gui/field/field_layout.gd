@@ -4,9 +4,6 @@ extends Control
 ## SlotMarker 配置を管理する。
 ## 1920x1080 の固定座標レイアウト。スロット位置は tscn で定義。
 
-# Deck/Home のスケール比率（CardView 標準サイズとの比）
-var deck_home_scale: float = 0.5
-
 @onready var _my_stage_slots: Array[SlotMarker] = [
 	$MyStage1, $MyStage2, $MyStage3
 ]
@@ -47,5 +44,3 @@ func get_home_slot_pos() -> Vector2:
 	return _home_slot.position
 
 
-func get_deck_home_scale() -> float:
-	return deck_home_scale
