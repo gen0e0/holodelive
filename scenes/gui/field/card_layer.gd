@@ -60,5 +60,26 @@ func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) 
 		_card_views[iid] = cv
 
 
+func get_card_content_transform(instance_id: int) -> Dictionary:
+	if _card_views.has(instance_id):
+		var cv: CardView = _card_views[instance_id]
+		return {
+			"pos": cv.position,
+			"scale": cv.scale,
+			"rotation": cv.rotation,
+		}
+	return {}
+
+
+func hide_card(instance_id: int) -> void:
+	if _card_views.has(instance_id):
+		_card_views[instance_id].visible = false
+
+
+func show_card(instance_id: int) -> void:
+	if _card_views.has(instance_id):
+		_card_views[instance_id].visible = true
+
+
 func _on_card_clicked(iid: int) -> void:
 	card_clicked.emit(iid)

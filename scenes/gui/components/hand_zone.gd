@@ -28,6 +28,8 @@ const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_vi
 @export_group("Animation")
 @export var animation_duration: float = 0.2
 
+const PIVOT: Vector2 = Vector2(150, 210)  # CardView の pivot_offset
+
 var is_selectable: bool = false
 var _hover_index: int = -1
 var _selected_index: int = -1
@@ -93,6 +95,31 @@ func deselect() -> void:
 		return
 	_selected_index = -1
 	_reposition(true)
+
+
+func get_card_content_transform(instance_id: int) -> Dictionary:
+	for cv in _card_views:
+		if cv.instance_id == instance_id:
+			return {
+				"pos": position + (cv.position + PIVOT) * scale - PIVOT,
+				"scale": cv.scale * scale,
+				"rotation": cv.rotation,
+			}
+	return {}
+
+
+func hide_card(instance_id: int) -> void:
+	for cv in _card_views:
+		if cv.instance_id == instance_id:
+			cv.visible = false
+			return
+
+
+func show_card(instance_id: int) -> void:
+	for cv in _card_views:
+		if cv.instance_id == instance_id:
+			cv.visible = true
+			return
 
 
 func find_card_index(instance_id: int) -> int:

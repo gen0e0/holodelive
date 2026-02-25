@@ -29,6 +29,14 @@ func _ready() -> void:
 	add_child(_count_label)
 
 
+func get_card_content_transform() -> Dictionary:
+	return {
+		"pos": position + _card_view.position,
+		"scale": _card_view.scale,
+		"rotation": 0.0,
+	}
+
+
 func update_count(count: int) -> void:
 	if count > 0:
 		_card_view.setup({"instance_id": -2000, "hidden": true}, false)

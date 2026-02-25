@@ -79,6 +79,16 @@ offset_right = 960.0
 offset_bottom = 1080.0
 script = ExtResource("5")
 
+[node name="AnimationLayer" type="Control" parent="Content"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+z_index = 50
+mouse_filter = 2
+
 [node name="OppHandZone" type="Control" parent="Content"]
 anchors_preset = 0
 offset_left = 1750.0

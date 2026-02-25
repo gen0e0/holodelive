@@ -19,6 +19,14 @@ func _ready() -> void:
 	add_child(_card_view)
 
 
+func get_card_content_transform() -> Dictionary:
+	return {
+		"pos": position + _card_view.position,
+		"scale": _card_view.scale,
+		"rotation": 0.0,
+	}
+
+
 func update_cards(cards: Array) -> void:
 	_cards = cards
 	if cards.size() > 0:

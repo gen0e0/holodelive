@@ -20,6 +20,8 @@ var session: GameSession
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
+var _prev_client_state: ClientState
+var _animator: CardAnimator
 
 @onready var _content: Control = $Content
 @onready var _top_bar: TopBar = $Content/TopBar
@@ -29,6 +31,7 @@ var _selected_instance_id: int = -1
 @onready var _home_view: HomeView = $Content/HomeView
 @onready var _my_hand: HandZone = $Content/MyHandZone
 @onready var _opp_hand: HandZone = $Content/OppHandZone
+@onready var _anim_layer: Control = $Content/AnimationLayer
 
 var _overlay: Control
 var _btn_stage: OverlayButton
@@ -38,6 +41,7 @@ var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
 
 
 func _ready() -> void:
+	_animator = CardAnimator.new(_anim_layer)
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
 	_setup_buttons()
 
@@ -90,6 +94,7 @@ func connect_session(s: GameSession) -> void:
 	var cs: ClientState = session.get_client_state()
 	if cs != null:
 		_refresh(cs)
+		_prev_client_state = cs
 
 
 func disconnect_session() -> void:
@@ -101,11 +106,18 @@ func disconnect_session() -> void:
 		if session.game_over.is_connected(_on_game_over):
 			session.game_over.disconnect(_on_game_over)
 		session = null
+	_animator.cancel_all()
 	_clear_interaction_state()
 
 
-func _on_state_updated(client_state: ClientState, _events: Array) -> void:
+func _on_state_updated(client_state: ClientState, events: Array) -> void:
+	var old_positions: Dictionary = _animator.capture_positions(
+		_my_hand, _opp_hand, _card_layer, _deck_view, _home_view, _prev_client_state)
 	_refresh(client_state)
+	_prev_client_state = client_state
+	_animator.animate_events(events, old_positions,
+		_my_hand, _opp_hand, _card_layer, _deck_view, _home_view,
+		_field_layout, client_state)
 
 
 func _on_game_over(_winner: int) -> void:
