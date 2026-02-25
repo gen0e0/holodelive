@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://bctik8ew3gpgt"]
+[gd_scene load_steps=6 format=3 uid="uid://bctik8ew3gpgt"]
 
 [ext_resource type="Script" uid="uid://co6g5pltsd6d5" path="res://scenes/gui/components/card_view.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://bci6g61qthayy" path="res://cards/001_tokino_sora/img_card.png" id="2_vda0c"]
@@ -9,6 +9,16 @@ corner_radius_top_right = 15
 corner_radius_bottom_right = 15
 corner_radius_bottom_left = 15
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vda0c"]
+bg_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_so4tv"]
+bg_color = Color(0.91213524, 0.410238, 0.53414065, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [node name="CardView" type="Control"]
 custom_minimum_size = Vector2(300, 420)
 layout_mode = 3
@@ -18,7 +28,7 @@ offset_bottom = 420.0
 pivot_offset = Vector2(150, 210)
 script = ExtResource("1")
 
-[node name="BgPanel" type="Panel" parent="."]
+[node name="CardBody" type="Panel" parent="."]
 clip_children = 1
 layout_mode = 1
 anchors_preset = 15
@@ -26,10 +36,35 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(150, 210)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_j2ekx")
 
-[node name="CharacterRect" type="TextureRect" parent="BgPanel"]
+[node name="BgBorderPanel" type="Panel" parent="CardBody"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vda0c")
+
+[node name="BgSuitPanel" type="Panel" parent="CardBody"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_so4tv")
+
+[node name="CharacterRect" type="TextureRect" parent="CardBody"]
 layout_mode = 0
 offset_left = -180.0
 offset_top = -80.0
@@ -39,7 +74,7 @@ scale = Vector2(0.5, 0.5)
 mouse_filter = 2
 texture = ExtResource("2_vda0c")
 
-[node name="NameLabel" type="Label" parent="."]
+[node name="NameLabel" type="Label" parent="CardBody"]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 10.0
@@ -50,17 +85,17 @@ theme_override_font_sizes/font_size = 24
 text = "?"
 autowrap_mode = 2
 
-[node name="IconContainer" type="HBoxContainer" parent="."]
+[node name="IconContainer" type="HBoxContainer" parent="CardBody"]
 layout_mode = 0
 offset_left = 170.0
 offset_top = 10.0
 offset_right = 290.0
 offset_bottom = 46.0
 mouse_filter = 2
-alignment = 2
 theme_override_constants/separation = 4
+alignment = 2
 
-[node name="InfoLabel" type="Label" parent="."]
+[node name="InfoLabel" type="Label" parent="CardBody"]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 320.0

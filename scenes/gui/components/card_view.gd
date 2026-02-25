@@ -10,14 +10,24 @@ var instance_id: int = -1
 var _face_up: bool = true
 var _card_data: Dictionary = {}
 var _hovered: bool = false
+var _pressed: bool = false
+var _click_tween: Tween = null
 
-@onready var _bg_panel: Panel = $BgPanel
-@onready var _character_rect: TextureRect = $BgPanel/CharacterRect
-@onready var _name_label: Label = $NameLabel
-@onready var _info_label: Label = $InfoLabel
-@onready var _icon_container: HBoxContainer = $IconContainer
+@onready var _card_body: Panel = $CardBody
+@onready var _suit_panel: Panel = $CardBody/BgSuitPanel
+@onready var _character_rect: TextureRect = $CardBody/CharacterRect
+@onready var _name_label: Label = $CardBody/NameLabel
+@onready var _info_label: Label = $CardBody/InfoLabel
+@onready var _icon_container: HBoxContainer = $CardBody/IconContainer
 
 const ICON_VIEW_SCENE: PackedScene = preload("res://scenes/gui/components/icon_view.tscn")
+
+const PRESS_SCALE := Vector2(0.9, 0.9)
+const NORMAL_SCALE := Vector2(1.0, 1.0)
+const OVERSHOOT_SCALE := Vector2(1.05, 1.05)
+const PRESS_DURATION := 0.2
+const OVERSHOOT_DURATION := 0.1
+const SETTLE_DURATION := 0.15
 
 
 ## スートごとの背景色（キーは文字列: StateSerializer が String で格納するため）
@@ -44,14 +54,14 @@ func setup(card_data: Dictionary, face_up: bool) -> void:
 
 func _ready() -> void:
 	# StyleBoxFlat を複製して各インスタンス固有にする
-	var style: StyleBoxFlat = _bg_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	var style: StyleBoxFlat = _suit_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	if style:
-		_bg_panel.add_theme_stylebox_override("panel", style.duplicate())
+		_suit_panel.add_theme_stylebox_override("panel", style.duplicate())
 	_update_display()
 
 
 func _update_display() -> void:
-	if _bg_panel == null:
+	if _card_body == null:
 		return
 
 	if not _face_up or _card_data.get("hidden", false):
@@ -106,25 +116,59 @@ func _update_icons(icons: Array) -> void:
 
 
 func _set_bg_color(color: Color) -> void:
-	var style: StyleBoxFlat = _bg_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	var style: StyleBoxFlat = _suit_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	if style:
 		style.bg_color = color
+
+
+# -- クリックアニメーション --
+
+func _animate_press() -> void:
+	_kill_click_tween()
+	_click_tween = create_tween()
+	_click_tween.tween_property(_card_body, "scale", PRESS_SCALE, PRESS_DURATION) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+
+func _animate_release() -> void:
+	_kill_click_tween()
+	_click_tween = create_tween()
+	_click_tween.tween_property(_card_body, "scale", OVERSHOOT_SCALE, OVERSHOOT_DURATION) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_click_tween.tween_property(_card_body, "scale", NORMAL_SCALE, SETTLE_DURATION) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+
+
+func _kill_click_tween() -> void:
+	if _click_tween and _click_tween.is_valid():
+		_click_tween.kill()
+	_click_tween = null
 
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			card_clicked.emit(instance_id)
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_pressed = true
+				_animate_press()
+			else:
+				if _pressed:
+					_pressed = false
+					_animate_release()
+					card_clicked.emit(instance_id)
 
 
 func _notification(what: int) -> void:
-	if managed_hover:
-		return
 	match what:
-		NOTIFICATION_MOUSE_ENTER:
-			_hovered = true
-			scale = Vector2(1.05, 1.05)
 		NOTIFICATION_MOUSE_EXIT:
-			_hovered = false
-			scale = Vector2(1.0, 1.0)
+			if _pressed:
+				_pressed = false
+				_animate_release()
+			if not managed_hover:
+				_hovered = false
+				scale = Vector2(1.0, 1.0)
+		NOTIFICATION_MOUSE_ENTER:
+			if not managed_hover:
+				_hovered = true
+				scale = Vector2(1.05, 1.05)
