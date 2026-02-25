@@ -32,6 +32,7 @@ var _overlay: Control
 var _btn_stage: Button
 var _btn_backstage: Button
 var _btn_pass: Button
+var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
 
 
 func _ready() -> void:
@@ -153,14 +154,73 @@ func _refresh(cs: ClientState) -> void:
 func _on_actions_received(actions: Array) -> void:
 	_current_actions = actions
 	var has_play_card: bool = false
+	var has_field_action: bool = false
 	for a in actions:
-		if a.get("type") == Enums.ActionType.PLAY_CARD:
+		var atype: int = a.get("type", -1)
+		if atype == Enums.ActionType.PLAY_CARD:
 			has_play_card = true
-			break
+		elif atype == Enums.ActionType.OPEN or atype == Enums.ActionType.ACTIVATE_SKILL:
+			has_field_action = true
+
 	_my_hand.is_selectable = has_play_card
-	# カードが出せない時のみパスボタンを表示
-	if not has_play_card:
+
+	if has_field_action:
+		_show_action_phase_buttons()
 		_btn_pass.visible = true
+	elif not has_play_card:
+		_btn_pass.visible = true
+
+
+func _show_action_phase_buttons() -> void:
+	_clear_action_buttons()
+	var cs: ClientState = session.get_client_state()
+	if cs == null:
+		return
+
+	for a in _current_actions:
+		var atype: int = a.get("type", -1)
+		if atype != Enums.ActionType.OPEN and atype != Enums.ActionType.ACTIVATE_SKILL:
+			continue
+		var iid: int = a.get("instance_id", -1)
+		var rect: Rect2 = _find_field_card_rect(iid, cs)
+		if rect.size == Vector2.ZERO:
+			continue
+		var label: String = "オープン" if atype == Enums.ActionType.OPEN else "スキル発動"
+		var btn: Button = _make_overlay_button(label, rect)
+		btn.visible = true
+		var action_copy: Dictionary = a.duplicate()
+		btn.pressed.connect(func() -> void: _on_action_button_pressed(action_copy))
+		_overlay.add_child(btn)
+		_action_buttons.append(btn)
+
+
+func _find_field_card_rect(instance_id: int, cs: ClientState) -> Rect2:
+	# 自分のステージを検索
+	for i in range(cs.stages[cs.my_player].size()):
+		var card: Dictionary = cs.stages[cs.my_player][i]
+		if card.get("instance_id") == instance_id:
+			var pos: Vector2 = _field_layout.get_stage_slot_pos(cs.my_player, i)
+			return Rect2(pos, Vector2(300, 420))
+	# 自分の楽屋を検索
+	if cs.backstages[cs.my_player] != null:
+		var bs: Dictionary = cs.backstages[cs.my_player]
+		if bs.get("instance_id") == instance_id:
+			var pos: Vector2 = _field_layout.get_backstage_slot_pos(cs.my_player)
+			return Rect2(pos, Vector2(300, 420))
+	return Rect2(Vector2.ZERO, Vector2.ZERO)
+
+
+func _on_action_button_pressed(action: Dictionary) -> void:
+	if session == null:
+		return
+	_clear_interaction_state()
+	session.send_action(action)
+
+
+func _clear_action_buttons() -> void:
+	for btn in _action_buttons:
+		btn.queue_free()
+	_action_buttons.clear()
 
 
 func _on_hand_card_clicked(instance_id: int) -> void:
@@ -237,6 +297,7 @@ func _clear_interaction_state() -> void:
 	_selected_instance_id = -1
 	_my_hand.is_selectable = false
 	_my_hand.deselect()
+	_clear_action_buttons()
 	if _btn_stage != null:
 		_btn_stage.visible = false
 	if _btn_backstage != null:
