@@ -14,6 +14,7 @@ const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_vi
 @export var arc_angle: float = PI / 12.0
 @export var card_offset_y: float = -60.0
 @export var gap_pitch: float = 5.0
+@export var few_cards_pitch: float = 7.0
 
 @export_group("Hover Effect")
 @export var hover_scale: float = 1.2
@@ -131,7 +132,7 @@ func _reposition(animate: bool) -> void:
 		return
 
 	# カード枚数に応じて扇の開き角度を調整
-	var pitch: float = gap_pitch if count > 2 else 7.0
+	var pitch: float = gap_pitch if count > 2 else few_cards_pitch
 	var dynamic_arc: float = minf(arc_angle * (float(count) / pitch), arc_angle)
 
 	# 隣接カードシフト用: selected > hover の順で active_index を決定

@@ -183,13 +183,13 @@ func _notification(what: int) -> void:
 				_animate_release()
 			if not managed_hover:
 				_hovered = false
-				scale = Vector2(1.0, 1.0)
+				scale = NORMAL_SCALE
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(1.0)
 		NOTIFICATION_MOUSE_ENTER:
 			if not managed_hover:
 				_hovered = true
-				scale = Vector2(1.05, 1.05)
+				scale = OVERSHOOT_SCALE
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(0.0)
 

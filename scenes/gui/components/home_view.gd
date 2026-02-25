@@ -15,6 +15,7 @@ func _ready() -> void:
 	_card_view = _CardViewScene.instantiate()
 	_card_view.managed_hover = true
 	_card_view.scale = Vector2(CARD_SCALE, CARD_SCALE)
+	_card_view.position = -_card_view.pivot_offset * (1.0 - CARD_SCALE)
 	add_child(_card_view)
 
 

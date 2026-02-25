@@ -20,10 +20,9 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		for i in range(stage_cards.size()):
 			var card_data: Dictionary = stage_cards[i]
 			var iid: int = card_data.get("instance_id", -1)
-			var _hidden: bool = card_data.get("hidden", false)
 			active_ids[iid] = true
 			var pos: Vector2 = field_layout.get_stage_slot_pos(p, i)
-			_ensure_card(iid, card_data, not _hidden, pos)
+			_ensure_card(iid, card_data, not card_data.get("hidden", false), pos)
 
 	# --- 楽屋 ---
 	for p in range(2):
@@ -31,10 +30,9 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		if bs != null:
 			var card_data: Dictionary = bs
 			var iid: int = card_data.get("instance_id", -1)
-			var _hidden: bool = card_data.get("hidden", false)
 			active_ids[iid] = true
 			var pos: Vector2 = field_layout.get_backstage_slot_pos(p)
-			_ensure_card(iid, card_data, not _hidden, pos)
+			_ensure_card(iid, card_data, not card_data.get("hidden", false), pos)
 
 	# --- 消えたカードを破棄 ---
 	var to_remove: Array = []
