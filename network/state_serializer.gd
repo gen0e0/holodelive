@@ -13,13 +13,18 @@ static func serialize_for_player(state: GameState, player: int, registry: CardRe
 		cs.my_hand.append(_card_dict(inst_id, state, registry))
 	cs.opponent_hand_count = state.hands[opponent].size()
 
-	# Stages: visible cards get details, face_down cards get {instance_id, hidden: true}
+	# Stages: own face_down cards get full data + face_down flag, opponent face_down cards get hidden
 	cs.stages = [[], []]
 	for p in range(2):
 		for inst_id in state.stages[p]:
 			var inst: CardInstance = state.instances.get(inst_id)
 			if inst and inst.face_down:
-				cs.stages[p].append({"instance_id": inst_id, "hidden": true})
+				if p == player:
+					var d: Dictionary = _card_dict(inst_id, state, registry)
+					d["face_down"] = true
+					cs.stages[p].append(d)
+				else:
+					cs.stages[p].append({"instance_id": inst_id, "hidden": true})
 			else:
 				cs.stages[p].append(_card_dict(inst_id, state, registry))
 
@@ -30,8 +35,12 @@ static func serialize_for_player(state: GameState, player: int, registry: CardRe
 		if bs_id == -1:
 			cs.backstages[p] = null
 		elif p == player:
-			# Own backstage: always show details
-			cs.backstages[p] = _card_dict(bs_id, state, registry)
+			# Own backstage: always show details, add face_down flag if applicable
+			var d: Dictionary = _card_dict(bs_id, state, registry)
+			var inst: CardInstance = state.instances.get(bs_id)
+			if inst and inst.face_down:
+				d["face_down"] = true
+			cs.backstages[p] = d
 		else:
 			# Opponent backstage: hidden if face_down
 			var inst: CardInstance = state.instances.get(bs_id)
