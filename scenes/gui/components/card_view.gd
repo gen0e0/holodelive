@@ -15,6 +15,9 @@ var _hovered: bool = false
 @onready var _character_rect: TextureRect = $BgPanel/CharacterRect
 @onready var _name_label: Label = $NameLabel
 @onready var _info_label: Label = $InfoLabel
+@onready var _icon_container: HBoxContainer = $IconContainer
+
+const ICON_VIEW_SCENE: PackedScene = preload("res://scenes/gui/components/icon_view.tscn")
 
 
 ## スートごとの背景色（キーは文字列: StateSerializer が String で格納するため）
@@ -56,6 +59,7 @@ func _update_display() -> void:
 		_character_rect.texture = null
 		_name_label.text = "?"
 		_info_label.text = ""
+		_clear_icons()
 		return
 
 	# スートで背景色決定（suits は Array[String]: "LOVELY", "COOL" 等）
@@ -78,15 +82,27 @@ func _update_display() -> void:
 	var card_id: int = _card_data.get("card_id", 0)
 	_name_label.text = "#%03d\n%s" % [card_id, nickname]
 
-	# アイコン・スート略称（icons/suits は文字列配列）
-	var icons: Array = _card_data.get("icons", [])
-	var icon_strs: Array[String] = []
-	for ic in icons:
-		icon_strs.append(str(ic).left(3))
+	# アイコン画像
+	_update_icons(_card_data.get("icons", []))
+
+	# スート略称
 	var suit_strs: Array[String] = []
 	for su in suits:
 		suit_strs.append(str(su).left(3))
-	_info_label.text = "%s\n%s" % [",".join(icon_strs), ",".join(suit_strs)]
+	_info_label.text = ",".join(suit_strs)
+
+
+func _clear_icons() -> void:
+	for child in _icon_container.get_children():
+		child.queue_free()
+
+
+func _update_icons(icons: Array) -> void:
+	_clear_icons()
+	for ic in icons:
+		var iv: IconView = ICON_VIEW_SCENE.instantiate()
+		iv.icon_name = str(ic)
+		_icon_container.add_child(iv)
 
 
 func _set_bg_color(color: Color) -> void:

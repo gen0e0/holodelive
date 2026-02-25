@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://bdrvanl38mfnr"]
+
+[ext_resource type="Script" path="res://scenes/gui/components/icon_view.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://b8gm32g2f7m13" path="res://resources/icons/SEISO.png" id="2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(1, 1, 1, 1)
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[node name="IconView" type="PanelContainer"]
+custom_minimum_size = Vector2(32, 32)
+offset_right = 32.0
+offset_bottom = 32.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+script = ExtResource("1")
+icon_name = "SEISO"
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2")
+expand_mode = 3
+stretch_mode = 5

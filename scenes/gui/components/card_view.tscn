@@ -50,6 +50,16 @@ theme_override_font_sizes/font_size = 24
 text = "?"
 autowrap_mode = 2
 
+[node name="IconContainer" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 10.0
+offset_right = 290.0
+offset_bottom = 46.0
+mouse_filter = 2
+alignment = 2
+theme_override_constants/separation = 4
+
 [node name="InfoLabel" type="Label" parent="."]
 layout_mode = 0
 offset_left = 10.0
