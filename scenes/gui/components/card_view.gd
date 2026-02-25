@@ -34,10 +34,10 @@ const SETTLE_DURATION := 0.15
 static var SUIT_COLORS: Dictionary = {
 	"LOVELY": Color(0.95, 0.5, 0.65),    # ピンク
 	"COOL": Color(0.4, 0.55, 0.9),        # 青
-	"HOT": Color(0.9, 0.35, 0.3),         # 赤
+	"HOT": Color(0.902, 0.855, 0.302, 1.0),         # 赤
 	"ENGLISH": Color(0.65, 0.45, 0.85),   # 紫
 	"INDONESIA": Color(0.35, 0.75, 0.45), # 緑
-	"STAFF": Color(0.9, 0.8, 0.3),        # 黄
+	"STAFF": Color(0.777, 0.777, 0.777, 1.0),        # 黄
 }
 
 const BACK_COLOR := Color(0.35, 0.35, 0.4)
