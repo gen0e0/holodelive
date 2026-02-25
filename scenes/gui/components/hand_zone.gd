@@ -20,10 +20,16 @@ const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_vi
 @export var hover_offset_y: float = 200.0
 @export var hover_shift_x: float = 120.0
 
+@export_group("Selection Effect")
+@export var selected_offset_y: float = 260.0
+@export var selected_scale: float = 1.15
+
 @export_group("Animation")
 @export var animation_duration: float = 0.2
 
+var is_selectable: bool = false
 var _hover_index: int = -1
+var _selected_index: int = -1
 var _card_views: Array = []  # Array[CardView]
 
 
@@ -47,6 +53,7 @@ func sync_cards(cards: Array, face_up: bool) -> void:
 		cv.queue_free()
 	_card_views.clear()
 	_hover_index = -1
+	_selected_index = -1
 
 	for card_data in cards:
 		var cv: CardView = _CardViewScene.instantiate()
@@ -67,6 +74,31 @@ func sync_hidden(count: int) -> void:
 	for i in range(count):
 		cards.append({"instance_id": -1000 - i, "hidden": true})
 	sync_cards(cards, false)
+
+
+# ---------------------------------------------------------------------------
+# 選択
+# ---------------------------------------------------------------------------
+
+func select_card(index: int) -> void:
+	if index < 0 or index >= _card_views.size():
+		return
+	_selected_index = index
+	_reposition(true)
+
+
+func deselect() -> void:
+	if _selected_index == -1:
+		return
+	_selected_index = -1
+	_reposition(true)
+
+
+func find_card_index(instance_id: int) -> int:
+	for i in range(_card_views.size()):
+		if _card_views[i].instance_id == instance_id:
+			return i
+	return -1
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +134,9 @@ func _reposition(animate: bool) -> void:
 	var pitch: float = gap_pitch if count > 2 else 7.0
 	var dynamic_arc: float = minf(arc_angle * (float(count) / pitch), arc_angle)
 
+	# 隣接カードシフト用: selected > hover の順で active_index を決定
+	var active_index: int = _selected_index if _selected_index >= 0 else _hover_index
+
 	for i in range(count):
 		var t: float = float(i) / float(count - 1) if count > 1 else 0.5
 		var angle: float = lerpf(-dynamic_arc, dynamic_arc, t)
@@ -112,21 +147,31 @@ func _reposition(animate: bool) -> void:
 		var extra_x: float = 0.0
 		var target_angle: float = angle
 
-		if _hover_index >= 0 and i == _hover_index:
+		# selected が hover より優先
+		if _selected_index >= 0 and i == _selected_index:
+			card_y = -selected_offset_y
+			target_scale = Vector2(selected_scale, selected_scale)
+			target_angle = 0.0
+		elif _hover_index >= 0 and i == _hover_index and i != _selected_index:
 			card_y = -hover_offset_y
 			target_scale = Vector2(hover_scale, hover_scale)
 			target_angle = 0.0
-		elif _hover_index >= 0 and i < _hover_index:
+		elif active_index >= 0 and i < active_index:
 			extra_x = -hover_shift_x
-		elif _hover_index >= 0 and i > _hover_index:
+		elif active_index >= 0 and i > active_index:
 			extra_x = hover_shift_x
 
 		var cv: CardView = _card_views[i]
 		# pivot_offset 基準で中央配置
 		var target_pos := Vector2(card_x + extra_x, card_y) - cv.pivot_offset
 
-		# z-order: ホバー中のカードを最前面に
-		cv.z_index = count + 1 if (_hover_index >= 0 and i == _hover_index) else i
+		# z-order: selected > hover > 通常
+		if _selected_index >= 0 and i == _selected_index:
+			cv.z_index = count + 2
+		elif _hover_index >= 0 and i == _hover_index:
+			cv.z_index = count + 1
+		else:
+			cv.z_index = i
 
 		if animate:
 			var tween: Tween = cv.create_tween()
