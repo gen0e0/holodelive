@@ -213,25 +213,15 @@ func _show_action_phase_buttons() -> void:
 		_action_buttons.append(btn)
 
 
-func _find_field_card_rect(instance_id: int, cs: ClientState) -> Rect2:
-	# pivot_offset 中心スケールによる視覚オフセットを算出
+func _find_field_card_rect(instance_id: int, _cs: ClientState) -> Rect2:
+	var xform: Dictionary = _card_layer.get_card_content_transform(instance_id)
+	if xform.is_empty():
+		return Rect2(Vector2.ZERO, Vector2.ZERO)
 	var full_size := Vector2(300, 420)
-	var card_size: Vector2 = full_size * CardLayer.FIELD_SCALE
-	var visual_offset: Vector2 = (full_size - card_size) / 2.0
-
-	# 自分のステージを検索
-	for i in range(cs.stages[cs.my_player].size()):
-		var card: Dictionary = cs.stages[cs.my_player][i]
-		if card.get("instance_id") == instance_id:
-			var pos: Vector2 = _field_layout.get_stage_slot_pos(cs.my_player, i)
-			return Rect2(pos + visual_offset, card_size)
-	# 自分の楽屋を検索
-	if cs.backstages[cs.my_player] != null:
-		var bs: Dictionary = cs.backstages[cs.my_player]
-		if bs.get("instance_id") == instance_id:
-			var pos: Vector2 = _field_layout.get_backstage_slot_pos(cs.my_player)
-			return Rect2(pos + visual_offset, card_size)
-	return Rect2(Vector2.ZERO, Vector2.ZERO)
+	var s: Vector2 = xform.get("scale", Vector2.ONE)
+	var card_size: Vector2 = full_size * s.x
+	var offset: Vector2 = (full_size - card_size) / 2.0
+	return Rect2(xform.get("pos", Vector2.ZERO) + offset, card_size)
 
 
 func _on_action_button_pressed(action: Dictionary) -> void:

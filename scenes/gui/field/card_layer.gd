@@ -24,8 +24,8 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 			var card_data: Dictionary = stage_cards[i]
 			var iid: int = card_data.get("instance_id", -1)
 			active_ids[iid] = true
-			var pos: Vector2 = field_layout.get_stage_slot_pos(p, i)
-			_ensure_card(iid, card_data, not card_data.get("hidden", false), pos)
+			var slot: SlotMarker = field_layout.get_stage_slot(p, i)
+			_ensure_card(iid, card_data, not card_data.get("hidden", false), slot)
 
 	# --- 楽屋 ---
 	for p in range(2):
@@ -34,8 +34,8 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 			var card_data: Dictionary = bs
 			var iid: int = card_data.get("instance_id", -1)
 			active_ids[iid] = true
-			var pos: Vector2 = field_layout.get_backstage_slot_pos(p)
-			_ensure_card(iid, card_data, not card_data.get("hidden", false), pos)
+			var slot: SlotMarker = field_layout.get_backstage_slot(p)
+			_ensure_card(iid, card_data, not card_data.get("hidden", false), slot)
 
 	# --- 消えたカードを破棄 ---
 	var to_remove: Array = []
@@ -48,30 +48,31 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		_card_views.erase(iid)
 
 
-func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) -> void:
+func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, slot: Control) -> void:
 	var cv: CardView
 	if _card_views.has(iid):
 		cv = _card_views[iid]
 		cv.setup(card_data, face_up)
-		cv.position = pos
-		cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
+		if cv.get_parent() != slot:
+			cv.reparent(slot)
 	else:
 		cv = _CardViewScene.instantiate()
 		cv.setup(card_data, face_up)
-		cv.position = pos
-		cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
 		cv.card_clicked.connect(_on_card_clicked)
 		cv.card_hovered.connect(func(cd: Dictionary, gr: Rect2) -> void: card_hovered.emit(cd, gr))
 		cv.card_unhovered.connect(func() -> void: card_unhovered.emit())
-		add_child(cv)
+		slot.add_child(cv)
 		_card_views[iid] = cv
+	cv.position = Vector2.ZERO
+	cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
 
 
 func get_card_content_transform(instance_id: int) -> Dictionary:
 	if _card_views.has(instance_id):
 		var cv: CardView = _card_views[instance_id]
+		var slot: Control = cv.get_parent()
 		return {
-			"pos": cv.position,
+			"pos": slot.position + cv.position,
 			"scale": cv.scale,
 			"rotation": cv.rotation,
 		}

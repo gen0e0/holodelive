@@ -21,24 +21,16 @@ func update_layout(_cs: ClientState) -> void:
 	pass
 
 
-# --- スロット位置取得 API ---
+# --- スロット参照取得 API ---
 
-func get_stage_slot_pos(player: int, index: int) -> Vector2:
+func get_stage_slot(player: int, index: int) -> SlotMarker:
 	var slots: Array[SlotMarker] = _my_stage_slots if player == 0 else _opp_stage_slots
 	if index >= 0 and index < slots.size():
-		return slots[index].position
-	return Vector2.ZERO
+		return slots[index]
+	return null
 
 
-func get_backstage_slot_pos(player: int) -> Vector2:
+func get_backstage_slot(player: int) -> SlotMarker:
 	if player == 0:
-		return _my_backstage_slot.position
-	return _opp_backstage_slot.position
-
-
-func get_deck_slot_pos() -> Vector2:
-	return _deck_slot.position
-
-
-func get_home_slot_pos() -> Vector2:
-	return _home_slot.position
+		return _my_backstage_slot
+	return _opp_backstage_slot
