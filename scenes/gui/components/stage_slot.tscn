@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3 uid="uid://0jg6c2l221gv"]
+
+[ext_resource type="Script" uid="uid://cw4cckvq4pudm" path="res://scenes/gui/components/slot_marker.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.2, 0.35, 0.55, 0.3)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.5, 0.7, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="StageSlot" type="Control"]
+custom_minimum_size = Vector2(280, 392)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1")
+slot_type = 1
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 0
+offset_right = 280.0
+offset_bottom = 392.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="SlotLabel" type="Label" parent="."]
+layout_mode = 0
+offset_top = 364.0
+offset_right = 280.0
+offset_bottom = 392.0
+theme_override_colors/font_color = Color(1, 1, 1, 0.5)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
