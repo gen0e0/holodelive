@@ -26,6 +26,9 @@ const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_vi
 @export_group("Selection Effect")
 @export var selected_offset_y: float = 260.0
 @export var selected_scale: float = 1.15
+@export var showcase_offset: Vector2 = Vector2(200.0, -580.0)
+@export var showcase_scale: float = 1.3
+@export var unselected_push_y: float = 200.0
 
 @export_group("Animation")
 @export var animation_duration: float = 0.2
@@ -166,8 +169,10 @@ func _reposition(animate: bool) -> void:
 	var pitch: float = gap_pitch if count > 2 else few_cards_pitch
 	var dynamic_arc: float = minf(arc_angle * (float(count) / pitch), arc_angle)
 
-	# 隣接カードシフト用: selected > hover の順で active_index を決定
-	var active_index: int = _selected_index if _selected_index >= 0 else _hover_index
+	# 隣接カードシフト用: 選択なし時のみ hover で退避
+	var active_index: int = -1
+	if _selected_index < 0:
+		active_index = _hover_index
 
 	for i in range(count):
 		var t: float = float(i) / float(count - 1) if count > 1 else 0.5
@@ -179,12 +184,16 @@ func _reposition(animate: bool) -> void:
 		var extra_x: float = 0.0
 		var target_angle: float = angle
 
-		# selected が hover より優先
 		if _selected_index >= 0 and i == _selected_index:
-			card_y = -selected_offset_y
-			target_scale = Vector2(selected_scale, selected_scale)
+			# ショーケース: 選択カードを中央に大きく浮かせる
+			card_x = showcase_offset.x
+			card_y = showcase_offset.y
+			target_scale = Vector2(showcase_scale, showcase_scale)
 			target_angle = 0.0
-		elif _hover_index >= 0 and i == _hover_index and i != _selected_index:
+		elif _selected_index >= 0:
+			# 非選択カードを画面外へ押し下げ
+			card_y += unselected_push_y
+		elif _hover_index >= 0 and i == _hover_index:
 			card_y = -hover_offset_y
 			target_scale = Vector2(hover_scale, hover_scale)
 			target_angle = 0.0
