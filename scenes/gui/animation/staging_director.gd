@@ -7,11 +7,12 @@ extends RefCounted
 ## アニメーションが順序通り再生される。
 
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
+const _TurnStartBannerScene: PackedScene = preload("res://scenes/gui/animation/turn_start_banner.tscn")
 const FLY_DURATION: float = 0.35
 const EVENT_DELAY: float = 0.15
 const PIVOT: Vector2 = Vector2(150, 210)  # CardView の pivot_offset
 
-enum _CueType { STATE_UPDATE, ACTIONS }
+enum _CueType { STATE_UPDATE, ACTIONS, BANNER }
 
 # --- UI 参照 (GameScreen が設定) ---
 var hand: HandZone
@@ -62,6 +63,15 @@ func enqueue_actions(actions: Array) -> void:
 	_try_process()
 
 
+## バナー演出をキューに積む。
+func enqueue_banner(banner_scene: PackedScene) -> void:
+	_queue.append({
+		"type": _CueType.BANNER,
+		"banner_scene": banner_scene,
+	})
+	_try_process()
+
+
 ## 初回描画用。prev_cs を設定し、refresh を即実行する。
 func initialize(cs: ClientState) -> void:
 	_prev_cs = cs
@@ -103,6 +113,8 @@ func _process_queue() -> void:
 				await _process_state_cue(entry)
 			_CueType.ACTIONS:
 				_process_actions_cue(entry)
+			_CueType.BANNER:
+				await _process_banner_cue(entry)
 
 
 func _process_state_cue(entry: Dictionary) -> void:
@@ -127,6 +139,15 @@ func _process_actions_cue(entry: Dictionary) -> void:
 		on_actions_ready.call(actions)
 
 
+func _process_banner_cue(entry: Dictionary) -> void:
+	var scene: PackedScene = entry.get("banner_scene")
+	if scene == null:
+		return
+	var banner: Control = scene.instantiate()
+	_anim_layer.add_child(banner)
+	await banner.play()
+
+
 # ===========================================================================
 # イベント演出
 # ===========================================================================
@@ -149,6 +170,8 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 	var is_me: bool = (player == cs.my_player)
 
 	match event_type:
+		"TURN_START":
+			return await _cue_turn_start(is_me)
 		"DRAW":
 			return await _cue_draw(event, is_me, old_positions)
 		"PLAY_CARD":
@@ -160,6 +183,14 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 # ===========================================================================
 # 個別演出
 # ===========================================================================
+
+func _cue_turn_start(is_me: bool) -> bool:
+	var banner: TurnStartBanner = _TurnStartBannerScene.instantiate()
+	banner.set_text("MY TURN" if is_me else "OP TURN")
+	_anim_layer.add_child(banner)
+	await banner.play()
+	return true
+
 
 func _cue_draw(event: Dictionary, is_me: bool,
 		old_positions: Dictionary) -> bool:

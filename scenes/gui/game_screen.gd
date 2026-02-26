@@ -15,6 +15,7 @@ extends Control
 
 const DESIGN_W: float = 1920.0
 const DESIGN_H: float = 1080.0
+const _GameStartBannerScene: PackedScene = preload("res://scenes/gui/animation/game_start_banner.tscn")
 
 var session: GameSession
 
@@ -95,6 +96,7 @@ func connect_session(s: GameSession) -> void:
 	session = s
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
+	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
 
 	# 現在の状態で初回描画
@@ -109,6 +111,8 @@ func disconnect_session() -> void:
 			session.state_updated.disconnect(_on_state_updated)
 		if session.actions_received.is_connected(_on_actions_received):
 			session.actions_received.disconnect(_on_actions_received)
+		if session.game_started.is_connected(_on_game_started):
+			session.game_started.disconnect(_on_game_started)
 		if session.game_over.is_connected(_on_game_over):
 			session.game_over.disconnect(_on_game_over)
 		session = null
@@ -118,6 +122,10 @@ func disconnect_session() -> void:
 
 func _on_state_updated(client_state: ClientState, events: Array) -> void:
 	_director.enqueue_state_update(client_state, events)
+
+
+func _on_game_started() -> void:
+	_director.enqueue_banner(_GameStartBannerScene)
 
 
 func _on_game_over(_winner: int) -> void:
