@@ -2,6 +2,8 @@ class_name CardView
 extends Control
 
 signal card_clicked(instance_id: int)
+signal card_hovered(card_data: Dictionary, global_rect: Rect2)
+signal card_unhovered()
 
 ## true の場合、組み込みホバー演出を無効化（HandZone など親が管理）
 var managed_hover: bool = false
@@ -186,12 +188,15 @@ func _notification(what: int) -> void:
 				scale = NORMAL_SCALE
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(1.0)
+			card_unhovered.emit()
 		NOTIFICATION_MOUSE_ENTER:
 			if not managed_hover:
 				_hovered = true
 				scale = OVERSHOOT_SCALE
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(0.0)
+			if _face_up and not _card_data.get("hidden", false):
+				card_hovered.emit(_card_data, get_global_rect())
 
 
 # -- ゲストマスク --

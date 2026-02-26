@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://1ln2b17dg3x"]
+[gd_scene load_steps=9 format=3 uid="uid://1ln2b17dg3x"]
 
 [ext_resource type="Script" uid="uid://dfxn07yl3q4lt" path="res://scenes/gui/game_screen.gd" id="1"]
 [ext_resource type="Script" uid="uid://dlrp37734l02i" path="res://scenes/gui/hud/top_bar.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://ciuon08eqqdab" path="res://scenes/gui/components/hand_zone.gd" id="5"]
 [ext_resource type="Script" path="res://scenes/gui/components/deck_view.gd" id="6"]
 [ext_resource type="Script" path="res://scenes/gui/components/home_view.gd" id="7"]
+[ext_resource type="Script" path="res://scenes/gui/components/card_tooltip.gd" id="8"]
 
 [node name="GameScreen" type="Control"]
 clip_contents = true
@@ -88,6 +89,17 @@ grow_horizontal = 2
 grow_vertical = 2
 z_index = 50
 mouse_filter = 2
+
+[node name="CardTooltip" type="Control" parent="Content"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+z_index = 90
+mouse_filter = 2
+script = ExtResource("8")
 
 [node name="OppHandZone" type="Control" parent="Content"]
 anchors_preset = 0

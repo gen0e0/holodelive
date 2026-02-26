@@ -32,6 +32,7 @@ var _director: StagingDirector
 @onready var _my_hand: HandZone = $Content/MyHandZone
 @onready var _opp_hand: HandZone = $Content/OppHandZone
 @onready var _anim_layer: Control = $Content/AnimationLayer
+@onready var _card_tooltip: CardTooltip = $Content/CardTooltip
 
 var _overlay: Control
 var _btn_stage: OverlayButton
@@ -51,6 +52,10 @@ func _ready() -> void:
 	_director.refresh_fn = _refresh
 	_director.on_actions_ready = _handle_actions_received
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
+	_my_hand.card_hovered.connect(_on_card_hovered)
+	_my_hand.card_unhovered.connect(_on_card_unhovered)
+	_card_layer.card_hovered.connect(_on_card_hovered)
+	_card_layer.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
 
 
@@ -130,6 +135,20 @@ func _on_game_started() -> void:
 
 func _on_game_over(_winner: int) -> void:
 	pass
+
+
+# ---------------------------------------------------------------------------
+# カードツールチップ
+# ---------------------------------------------------------------------------
+
+func _on_card_hovered(card_data: Dictionary, card_global_rect: Rect2) -> void:
+	var local_pos: Vector2 = _content.get_global_transform().affine_inverse() * card_global_rect.position
+	var local_size: Vector2 = card_global_rect.size / _content.scale
+	_card_tooltip.show_tooltip(card_data, Rect2(local_pos, local_size))
+
+
+func _on_card_unhovered() -> void:
+	_card_tooltip.hide_tooltip()
 
 
 func _refresh(cs: ClientState) -> void:

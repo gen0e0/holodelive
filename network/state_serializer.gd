@@ -87,4 +87,5 @@ static func _card_dict(instance_id: int, state: GameState, registry: CardRegistr
 		"icons": icons,
 		"suits": suits,
 		"image_path": image_path,
+		"skills": card_def.skills,
 	}

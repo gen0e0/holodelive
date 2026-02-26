@@ -4,6 +4,8 @@ extends Control
 ## 手札ゾーン。CardView を扇形（円弧）に配置し、ホバー時に拡大・隣接カード退避を行う。
 
 signal card_clicked(instance_id: int)
+signal card_hovered(card_data: Dictionary, global_rect: Rect2)
+signal card_unhovered()
 
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
 
@@ -66,6 +68,8 @@ func sync_cards(cards: Array, face_up: bool) -> void:
 			cv.mouse_entered.connect(_on_card_hover.bind(cv))
 			cv.mouse_exited.connect(_on_card_unhover)
 		cv.card_clicked.connect(func(iid: int) -> void: card_clicked.emit(iid))
+		cv.card_hovered.connect(func(cd: Dictionary, gr: Rect2) -> void: card_hovered.emit(cd, gr))
+		cv.card_unhovered.connect(func() -> void: card_unhovered.emit())
 		add_child(cv)
 		_card_views.append(cv)
 

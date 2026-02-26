@@ -5,6 +5,8 @@ extends Control
 ## ClientState とFieldLayout を受け取り、全カードを正しい位置に同期する。
 
 signal card_clicked(instance_id: int)
+signal card_hovered(card_data: Dictionary, global_rect: Rect2)
+signal card_unhovered()
 
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
 
@@ -56,6 +58,8 @@ func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) 
 		cv.setup(card_data, face_up)
 		cv.position = pos
 		cv.card_clicked.connect(_on_card_clicked)
+		cv.card_hovered.connect(func(cd: Dictionary, gr: Rect2) -> void: card_hovered.emit(cd, gr))
+		cv.card_unhovered.connect(func() -> void: card_unhovered.emit())
 		add_child(cv)
 		_card_views[iid] = cv
 
