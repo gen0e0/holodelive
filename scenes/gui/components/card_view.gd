@@ -8,6 +8,12 @@ signal card_unhovered()
 ## true の場合、組み込みホバー演出を無効化（HandZone など親が管理）
 var managed_hover: bool = false
 
+## 外部から設定する基準スケール。ホバー演出はこの値を基準に適用される。
+var base_scale: Vector2 = Vector2.ONE:
+	set(value):
+		base_scale = value
+		scale = value
+
 var instance_id: int = -1
 var _face_up: bool = true
 var _is_guest: bool = false
@@ -185,14 +191,14 @@ func _notification(what: int) -> void:
 				_animate_release()
 			if not managed_hover:
 				_hovered = false
-				scale = NORMAL_SCALE
+				scale = base_scale
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(1.0)
 			card_unhovered.emit()
 		NOTIFICATION_MOUSE_ENTER:
 			if not managed_hover:
 				_hovered = true
-				scale = OVERSHOOT_SCALE
+				scale = base_scale * OVERSHOOT_SCALE.x
 			if _is_guest and not _card_data.get("hidden", false):
 				_fade_guest_mask(0.0)
 			if _face_up and not _card_data.get("hidden", false):

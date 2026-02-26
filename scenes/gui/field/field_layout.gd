@@ -42,5 +42,3 @@ func get_deck_slot_pos() -> Vector2:
 
 func get_home_slot_pos() -> Vector2:
 	return _home_slot.position
-
-

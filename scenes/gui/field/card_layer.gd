@@ -9,6 +9,7 @@ signal card_hovered(card_data: Dictionary, global_rect: Rect2)
 signal card_unhovered()
 
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
+const FIELD_SCALE: float = 2.0 / 3.0
 
 var _card_views: Dictionary = {}  # instance_id -> CardView
 
@@ -53,10 +54,12 @@ func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, pos: Vector2) 
 		cv = _card_views[iid]
 		cv.setup(card_data, face_up)
 		cv.position = pos
+		cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
 	else:
 		cv = _CardViewScene.instantiate()
 		cv.setup(card_data, face_up)
 		cv.position = pos
+		cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
 		cv.card_clicked.connect(_on_card_clicked)
 		cv.card_hovered.connect(func(cd: Dictionary, gr: Rect2) -> void: card_hovered.emit(cd, gr))
 		cv.card_unhovered.connect(func() -> void: card_unhovered.emit())

@@ -214,18 +214,23 @@ func _show_action_phase_buttons() -> void:
 
 
 func _find_field_card_rect(instance_id: int, cs: ClientState) -> Rect2:
+	# pivot_offset 中心スケールによる視覚オフセットを算出
+	var full_size := Vector2(300, 420)
+	var card_size: Vector2 = full_size * CardLayer.FIELD_SCALE
+	var visual_offset: Vector2 = (full_size - card_size) / 2.0
+
 	# 自分のステージを検索
 	for i in range(cs.stages[cs.my_player].size()):
 		var card: Dictionary = cs.stages[cs.my_player][i]
 		if card.get("instance_id") == instance_id:
 			var pos: Vector2 = _field_layout.get_stage_slot_pos(cs.my_player, i)
-			return Rect2(pos, Vector2(300, 420))
+			return Rect2(pos + visual_offset, card_size)
 	# 自分の楽屋を検索
 	if cs.backstages[cs.my_player] != null:
 		var bs: Dictionary = cs.backstages[cs.my_player]
 		if bs.get("instance_id") == instance_id:
 			var pos: Vector2 = _field_layout.get_backstage_slot_pos(cs.my_player)
-			return Rect2(pos, Vector2(300, 420))
+			return Rect2(pos + visual_offset, card_size)
 	return Rect2(Vector2.ZERO, Vector2.ZERO)
 
 
