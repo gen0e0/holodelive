@@ -66,9 +66,11 @@ scenes/
 	│   ├── effect_layer.tscn     ← カード非追従の全画面エフェクト
 	│   └── effect_layer.gd
 	│
+	├── animation/                ← 演出管理
+	│   └── staging_director.gd   ← 演出キューシステム
+	│
 	└── manager/                  ← 入力・状態管理
-		├── input_manager.gd      ← 入力モード管理、選択状態の制御
-		└── animation_queue.gd    ← アニメーション順序管理
+		└── input_manager.gd      ← 入力モード管理、選択状態の制御
 ```
 
 ---
@@ -186,16 +188,15 @@ state_updated → FieldLayout: SlotMarker 更新
 
 ## アニメーション管理
 
-### AnimationQueue
+### StagingDirector
 
-状態更新のイベントを受け取り、アニメーションを順序実行する。
+`state_updated` / `actions_received` をキューに積み、`await` ベースで直列処理する演出システム。
 
-- `state_updated` で受け取ったイベント列を AnimationQueue に積む
-- 各イベント（ドロー、プレイ、帰宅等）に対応するアニメーションを順次再生
-- アニメーション完了後に次のイベントを処理
-- 全イベント消化後に入力を受け付ける
+- CPU ターンの同期再帰で複数シグナルが 1 フレーム内に発火しても、アニメーションが順序通り再生される
+- 位置キャプチャは処理時に行い、前のキューの refresh 結果が反映された状態でスナップショットを取る
+- `actions_received` もキューに積むことで、全演出完了後にボタン表示される
 
-これにより「ドロー → カード移動 → スキル発動ログ → 効果適用」が自然な順番でプレイヤーに見える。
+詳細は **[docs/staging-system.md](staging-system.md)** を参照。
 
 ---
 

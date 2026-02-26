@@ -20,8 +20,7 @@ var session: GameSession
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
-var _prev_client_state: ClientState
-var _animator: CardAnimator
+var _director: StagingDirector
 
 @onready var _content: Control = $Content
 @onready var _top_bar: TopBar = $Content/TopBar
@@ -41,7 +40,15 @@ var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
 
 
 func _ready() -> void:
-	_animator = CardAnimator.new(_anim_layer)
+	_director = StagingDirector.new(_anim_layer)
+	_director.hand = _my_hand
+	_director.opp_hand = _opp_hand
+	_director.card_layer = _card_layer
+	_director.deck_view = _deck_view
+	_director.home_view = _home_view
+	_director.field_layout = _field_layout
+	_director.refresh_fn = _refresh
+	_director.on_actions_ready = _handle_actions_received
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
 	_setup_buttons()
 
@@ -93,8 +100,7 @@ func connect_session(s: GameSession) -> void:
 	# 現在の状態で初回描画
 	var cs: ClientState = session.get_client_state()
 	if cs != null:
-		_refresh(cs)
-		_prev_client_state = cs
+		_director.initialize(cs)
 
 
 func disconnect_session() -> void:
@@ -106,18 +112,12 @@ func disconnect_session() -> void:
 		if session.game_over.is_connected(_on_game_over):
 			session.game_over.disconnect(_on_game_over)
 		session = null
-	_animator.cancel_all()
+	_director.cancel_all()
 	_clear_interaction_state()
 
 
 func _on_state_updated(client_state: ClientState, events: Array) -> void:
-	var old_positions: Dictionary = _animator.capture_positions(
-		_my_hand, _opp_hand, _card_layer, _deck_view, _home_view, _prev_client_state)
-	_refresh(client_state)
-	_prev_client_state = client_state
-	_animator.animate_events(events, old_positions,
-		_my_hand, _opp_hand, _card_layer, _deck_view, _home_view,
-		_field_layout, client_state)
+	_director.enqueue_state_update(client_state, events)
 
 
 func _on_game_over(_winner: int) -> void:
@@ -140,6 +140,10 @@ func _refresh(cs: ClientState) -> void:
 # ---------------------------------------------------------------------------
 
 func _on_actions_received(actions: Array) -> void:
+	_director.enqueue_actions(actions)
+
+
+func _handle_actions_received(actions: Array) -> void:
 	_current_actions = actions
 	var has_play_card: bool = false
 	var has_field_action: bool = false
