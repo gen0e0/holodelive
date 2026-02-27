@@ -127,10 +127,17 @@ func _process_state_cue(entry: Dictionary) -> void:
 	# 2) UI を新しい状態に即更新
 	if refresh_fn.is_valid():
 		refresh_fn.call(cs)
+
+	# 3) ゾーン移動カードを非表示にする（アニメーション前に見えてしまうのを防ぐ）
+	var hidden_ids: Array = _hide_zone_arrivals(_prev_cs, cs)
+
 	_prev_cs = cs
 
-	# 3) イベント列をアニメーション化
+	# 4) イベント列をアニメーション化
 	await _stage_events(events, old_positions, cs)
+
+	# 5) アニメーションで表示されなかったカードの安全弁
+	_reveal_all(hidden_ids)
 
 
 func _process_actions_cue(entry: Dictionary) -> void:
@@ -288,6 +295,57 @@ func _fly_card(card_data: Dictionary, face_up: bool,
 
 func _delay(seconds: float) -> void:
 	await _anim_layer.get_tree().create_timer(seconds).timeout
+
+
+# ===========================================================================
+# ゾーン到着カードの自動非表示
+# ===========================================================================
+
+## prev_cs と new_cs の各ゾーンを比較し、新たに到着した instance_id を非表示にして返す。
+func _hide_zone_arrivals(old_cs: ClientState, new_cs: ClientState) -> Array:
+	var old_hand_ids: Dictionary = {}
+	var old_field_ids: Dictionary = {}
+
+	if old_cs != null:
+		for card_data in old_cs.my_hand:
+			old_hand_ids[card_data.get("instance_id", -1)] = true
+		for p in range(2):
+			for card_data in old_cs.stages[p]:
+				old_field_ids[card_data.get("instance_id", -1)] = true
+			if old_cs.backstages[p] != null:
+				old_field_ids[old_cs.backstages[p].get("instance_id", -1)] = true
+
+	var hidden: Array = []
+
+	# 手札に新たに到着したカードを非表示
+	for card_data in new_cs.my_hand:
+		var iid: int = card_data.get("instance_id", -1)
+		if not old_hand_ids.has(iid):
+			hand.hide_card(iid)
+			hidden.append(iid)
+
+	# フィールド（ステージ・楽屋）に新たに到着したカードを非表示
+	for p in range(2):
+		for card_data in new_cs.stages[p]:
+			var iid: int = card_data.get("instance_id", -1)
+			if not old_field_ids.has(iid):
+				card_layer.hide_card(iid)
+				hidden.append(iid)
+		if new_cs.backstages[p] != null:
+			var iid: int = new_cs.backstages[p].get("instance_id", -1)
+			if not old_field_ids.has(iid):
+				card_layer.hide_card(iid)
+				hidden.append(iid)
+
+	return hidden
+
+
+## アニメーションで表示されなかったカードの安全弁。
+## 各 _cue_* メソッドは既に show_card() を呼んでいるため、正常時は冪等。
+func _reveal_all(hidden_ids: Array) -> void:
+	for iid in hidden_ids:
+		hand.show_card(iid)
+		card_layer.show_card(iid)
 
 
 # ===========================================================================
