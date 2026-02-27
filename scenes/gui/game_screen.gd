@@ -21,6 +21,8 @@ var session: GameSession
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
+var _waiting_choice: bool = false
+var _choice_data: Dictionary = {}
 var _director: StagingDirector
 
 @onready var _content: Control = $Content
@@ -56,6 +58,9 @@ func _ready() -> void:
 	_my_hand.card_unhovered.connect(_on_card_unhovered)
 	_card_layer.card_hovered.connect(_on_card_hovered)
 	_card_layer.card_unhovered.connect(_on_card_unhovered)
+	_home_view.card_clicked.connect(_on_home_card_clicked)
+	_home_view.card_hovered.connect(_on_card_hovered)
+	_home_view.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
 
 
@@ -101,6 +106,7 @@ func connect_session(s: GameSession) -> void:
 	session = s
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
+	session.choice_requested.connect(_on_choice_requested)
 	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
 
@@ -116,6 +122,8 @@ func disconnect_session() -> void:
 			session.state_updated.disconnect(_on_state_updated)
 		if session.actions_received.is_connected(_on_actions_received):
 			session.actions_received.disconnect(_on_actions_received)
+		if session.choice_requested.is_connected(_on_choice_requested):
+			session.choice_requested.disconnect(_on_choice_requested)
 		if session.game_started.is_connected(_on_game_started):
 			session.game_started.disconnect(_on_game_started)
 		if session.game_over.is_connected(_on_game_over):
@@ -309,12 +317,50 @@ func _on_pass_pressed() -> void:
 func _clear_interaction_state() -> void:
 	_current_actions = []
 	_selected_instance_id = -1
+	_waiting_choice = false
+	_choice_data = {}
 	_my_hand.is_selectable = false
 	_my_hand.deselect()
 	_clear_action_buttons()
+	_home_view.dismiss_popup()
 	if _btn_stage != null:
 		_btn_stage.visible = false
 	if _btn_backstage != null:
 		_btn_backstage.visible = false
 	if _btn_pass != null:
 		_btn_pass.visible = false
+
+
+# ---------------------------------------------------------------------------
+# PendingChoice 処理
+# ---------------------------------------------------------------------------
+
+func _on_choice_requested(choice_data: Dictionary) -> void:
+	_waiting_choice = true
+	_choice_data = choice_data
+	var choice_type: int = choice_data.get("choice_type", -1)
+	if choice_type == Enums.ChoiceType.SELECT_CARD:
+		var valid_targets: Array = choice_data.get("valid_targets", [])
+		var cs: ClientState = session.get_client_state()
+		if cs == null:
+			return
+		var home_ids: Array = []
+		for card in cs.home:
+			home_ids.append(card.get("instance_id", -1))
+		var home_targets: Array = []
+		for tid in valid_targets:
+			if home_ids.has(tid):
+				home_targets.append(tid)
+		if not home_targets.is_empty():
+			_home_view.set_selectable(home_targets)
+			_home_view.open_popup()
+
+
+func _on_home_card_clicked(instance_id: int) -> void:
+	if _waiting_choice:
+		var valid_targets: Array = _choice_data.get("valid_targets", [])
+		if valid_targets.has(instance_id):
+			var choice_index: int = _choice_data.get("choice_index", 0)
+			_clear_interaction_state()
+			session.send_choice(choice_index, instance_id)
+			return
