@@ -10,3 +10,155 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_debug")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HSplit" type="HSplitContainer" parent="Margin"]
+layout_mode = 2
+split_offset = 200
+
+[node name="Left" type="VBoxContainer" parent="Margin/HSplit"]
+layout_mode = 2
+custom_minimum_size = Vector2(180, 0)
+
+[node name="Title" type="Label" parent="Margin/HSplit/Left"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Debug Menu"
+
+[node name="HSeparator" type="HSeparator" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="BtnRestart" type="Button" parent="Margin/HSplit/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Restart Game"
+
+[node name="SeedRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/HSplit/Left/SeedRow"]
+layout_mode = 2
+text = "Seed:"
+
+[node name="SeedInput" type="LineEdit" parent="Margin/HSplit/Left/SeedRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+size_flags_horizontal = 3
+placeholder_text = "random"
+
+[node name="DisplayRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/HSplit/Left/DisplayRow"]
+layout_mode = 2
+text = "Current:"
+
+[node name="SeedDisplay" type="LineEdit" parent="Margin/HSplit/Left/DisplayRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+editable = false
+placeholder_text = "-"
+
+[node name="HSeparator2" type="HSeparator" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="CpuToggle" type="CheckButton" parent="Margin/HSplit/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "CPU Auto-Play"
+
+[node name="SpeedRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/HSplit/Left/SpeedRow"]
+layout_mode = 2
+text = "Speed (s):"
+
+[node name="CpuSpeedInput" type="LineEdit" parent="Margin/HSplit/Left/SpeedRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(50, 0)
+size_flags_horizontal = 3
+text = "5"
+
+[node name="HSeparator3" type="HSeparator" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="GuiToggle" type="CheckButton" parent="Margin/HSplit/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+text = "GUI Mode"
+
+[node name="Spacer" type="Control" parent="Margin/HSplit/Left"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VSplit" type="VSplitContainer" parent="Margin/HSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatePanel" type="PanelContainer" parent="Margin/HSplit/VSplit"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.5
+
+[node name="StateDisplay" type="RichTextLabel" parent="Margin/HSplit/VSplit/StatePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+bbcode_enabled = true
+selection_enabled = true
+
+[node name="GuiContainer" type="Control" parent="Margin/HSplit/VSplit"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Bottom" type="VBoxContainer" parent="Margin/HSplit/VSplit"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LogPanel" type="PanelContainer" parent="Margin/HSplit/VSplit/Bottom"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LogDisplay" type="RichTextLabel" parent="Margin/HSplit/VSplit/Bottom/LogPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+bbcode_enabled = true
+scroll_following = true
+selection_enabled = true
+
+[node name="InputRow" type="HBoxContainer" parent="Margin/HSplit/VSplit/Bottom"]
+layout_mode = 2
+
+[node name="InputLine" type="LineEdit" parent="Margin/HSplit/VSplit/Bottom/InputRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Enter number..."
+
+[node name="BtnSend" type="Button" parent="Margin/HSplit/VSplit/Bottom/InputRow"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Send"

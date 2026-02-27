@@ -4,21 +4,21 @@ extends Control
 var session: LocalGameSession
 
 # --- UI ノード ---
-var _btn_restart: Button
-var _seed_input: LineEdit
-var _seed_display: LineEdit
-var _state_display: RichTextLabel
-var _log_display: RichTextLabel
-var _input_line: LineEdit
-var _btn_send: Button
-var _cpu_toggle: CheckButton
-var _cpu_speed_input: LineEdit
-var _gui_toggle: CheckButton
+@onready var _btn_restart: Button = %BtnRestart
+@onready var _seed_input: LineEdit = %SeedInput
+@onready var _seed_display: LineEdit = %SeedDisplay
+@onready var _state_display: RichTextLabel = %StateDisplay
+@onready var _log_display: RichTextLabel = %LogDisplay
+@onready var _input_line: LineEdit = %InputLine
+@onready var _btn_send: Button = %BtnSend
+@onready var _cpu_toggle: CheckButton = %CpuToggle
+@onready var _cpu_speed_input: LineEdit = %CpuSpeedInput
+@onready var _gui_toggle: CheckButton = %GuiToggle
 
 # --- GUI ペイン ---
-var _vsplit: VSplitContainer
-var _state_panel: PanelContainer
-var _gui_container: Control
+@onready var _vsplit: VSplitContainer = %VSplit
+@onready var _state_panel: PanelContainer = %StatePanel
+@onready var _gui_container: Control = %GuiContainer
 var _game_screen: GameScreen
 
 # --- 内部状態 ---
@@ -30,165 +30,11 @@ var _auto_epoch: int = 0
 
 
 func _ready() -> void:
-	_build_ui()
-	# 自動的にゲームを開始
-	_init_and_start()
-
-
-# =============================================================================
-# UI 構築
-# =============================================================================
-
-func _build_ui() -> void:
-	# ルートを full_rect にする
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-
-	var margin := MarginContainer.new()
-	margin.anchor_right = 1.0
-	margin.anchor_bottom = 1.0
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
-	add_child(margin)
-
-	var hsplit := HSplitContainer.new()
-	hsplit.split_offset = 200
-	margin.add_child(hsplit)
-
-	# --- 左ペイン: メニュー ---
-	var left := VBoxContainer.new()
-	left.custom_minimum_size.x = 180
-	hsplit.add_child(left)
-
-	var title := Label.new()
-	title.text = "Debug Menu"
-	title.add_theme_font_size_override("font_size", 18)
-	left.add_child(title)
-
-	left.add_child(HSeparator.new())
-
-	_btn_restart = Button.new()
-	_btn_restart.text = "Restart Game"
 	_btn_restart.pressed.connect(_on_restart_pressed)
-	left.add_child(_btn_restart)
-
-	var seed_row := HBoxContainer.new()
-	left.add_child(seed_row)
-
-	var seed_label := Label.new()
-	seed_label.text = "Seed:"
-	seed_row.add_child(seed_label)
-
-	_seed_input = LineEdit.new()
-	_seed_input.placeholder_text = "random"
-	_seed_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_seed_input.custom_minimum_size.x = 80
-	seed_row.add_child(_seed_input)
-
-	_seed_display = LineEdit.new()
-	_seed_display.editable = false
-	_seed_display.placeholder_text = "-"
-	_seed_display.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var display_row := HBoxContainer.new()
-	left.add_child(display_row)
-	var current_label := Label.new()
-	current_label.text = "Current:"
-	display_row.add_child(current_label)
-	display_row.add_child(_seed_display)
-
-	# --- CPU Auto-Play ---
-	left.add_child(HSeparator.new())
-
-	_cpu_toggle = CheckButton.new()
-	_cpu_toggle.text = "CPU Auto-Play"
-	_cpu_toggle.button_pressed = false
-	left.add_child(_cpu_toggle)
-
-	var speed_row := HBoxContainer.new()
-	left.add_child(speed_row)
-
-	var speed_label := Label.new()
-	speed_label.text = "Speed (s):"
-	speed_row.add_child(speed_label)
-
-	_cpu_speed_input = LineEdit.new()
-	_cpu_speed_input.text = "5"
-	_cpu_speed_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cpu_speed_input.custom_minimum_size.x = 50
-	speed_row.add_child(_cpu_speed_input)
-
-	# --- GUI Mode Toggle ---
-	left.add_child(HSeparator.new())
-
-	_gui_toggle = CheckButton.new()
-	_gui_toggle.text = "GUI Mode"
-	_gui_toggle.button_pressed = true
-	_gui_toggle.toggled.connect(_on_gui_toggled)
-	left.add_child(_gui_toggle)
-
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.add_child(spacer)
-
-	# --- 右ペイン ---
-	_vsplit = VSplitContainer.new()
-	_vsplit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hsplit.add_child(_vsplit)
-
-	# 上: 状態コンソール (テキスト) — GUI デフォルト ON なので非表示
-	_state_panel = PanelContainer.new()
-	_state_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_state_panel.size_flags_stretch_ratio = 1.5
-	_state_panel.visible = false
-	_vsplit.add_child(_state_panel)
-
-	_state_display = RichTextLabel.new()
-	_state_display.bbcode_enabled = true
-	_state_display.scroll_following = false
-	_state_display.selection_enabled = true
-	_state_display.focus_mode = Control.FOCUS_NONE
-	_state_panel.add_child(_state_display)
-
-	# 上: GUI コンテナ（デフォルト表示）
-	_gui_container = Control.new()
-	_gui_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gui_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_gui_container.visible = true
-	_vsplit.add_child(_gui_container)
-
-	# 下: ログ + 入力（常に表示）
-	var bottom := VBoxContainer.new()
-	bottom.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_vsplit.add_child(bottom)
-
-	var log_panel := PanelContainer.new()
-	log_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bottom.add_child(log_panel)
-
-	_log_display = RichTextLabel.new()
-	_log_display.bbcode_enabled = true
-	_log_display.scroll_following = true
-	_log_display.selection_enabled = true
-	_log_display.focus_mode = Control.FOCUS_NONE
-	log_panel.add_child(_log_display)
-
-	var input_row := HBoxContainer.new()
-	bottom.add_child(input_row)
-
-	_input_line = LineEdit.new()
-	_input_line.placeholder_text = "Enter number..."
-	_input_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_input_line.text_submitted.connect(_on_text_submitted)
-	_input_line.focus_mode = Control.FOCUS_ALL
-	input_row.add_child(_input_line)
-
-	_btn_send = Button.new()
-	_btn_send.text = "Send"
-	_btn_send.disabled = true
 	_btn_send.pressed.connect(_on_send_pressed)
-	input_row.add_child(_btn_send)
+	_input_line.text_submitted.connect(_on_text_submitted)
+	_gui_toggle.toggled.connect(_on_gui_toggled)
+	_init_and_start()
 
 
 # =============================================================================
