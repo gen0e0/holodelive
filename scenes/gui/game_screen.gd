@@ -41,6 +41,8 @@ var _btn_stage: OverlayButton
 var _btn_backstage: OverlayButton
 var _btn_pass: OverlayButton
 var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
+var _my_rank_label: RankLabel
+var _opp_rank_label: RankLabel
 
 
 func _ready() -> void:
@@ -62,6 +64,17 @@ func _ready() -> void:
 	_home_view.card_hovered.connect(_on_card_hovered)
 	_home_view.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
+	_setup_rank_labels()
+
+
+func _setup_rank_labels() -> void:
+	_my_rank_label = RankLabel.new()
+	_my_rank_label.position = Vector2(376, 44)
+	_content.add_child(_my_rank_label)
+
+	_opp_rank_label = RankLabel.new()
+	_opp_rank_label.position = Vector2(1264, 44)
+	_content.add_child(_opp_rank_label)
 
 
 func _setup_buttons() -> void:
@@ -168,6 +181,17 @@ func _refresh(cs: ClientState) -> void:
 	_home_view.update_cards(cs.home)
 	_my_hand.sync_cards(cs.my_hand, true)
 	_opp_hand.sync_hidden(cs.opponent_hand_count)
+	_update_rank_labels(cs)
+
+
+func _update_rank_labels(cs: ClientState) -> void:
+	var my_p: int = cs.my_player
+	var opp_p: int = 1 - my_p
+	var my_rank: Enums.ShowdownRank = _my_rank_label.update_rank(cs.stages[my_p], cs.backstages[my_p])
+	var opp_rank: Enums.ShowdownRank = _opp_rank_label.update_rank(cs.stages[opp_p], cs.backstages[opp_p])
+	# 値が小さいほど強い。同値なら両方明るく表示
+	_my_rank_label.set_superior(my_rank <= opp_rank)
+	_opp_rank_label.set_superior(opp_rank <= my_rank)
 
 
 # ---------------------------------------------------------------------------
