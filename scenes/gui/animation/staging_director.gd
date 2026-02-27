@@ -8,6 +8,7 @@ extends RefCounted
 
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
 const _TurnStartBannerScene: PackedScene = preload("res://scenes/gui/animation/turn_start_banner.tscn")
+const _SkillCutInScene: PackedScene = preload("res://scenes/gui/animation/skill_cutin.tscn")
 const FLY_DURATION: float = 0.35
 const EVENT_DELAY: float = 0.15
 const PIVOT: Vector2 = Vector2(150, 210)  # CardView の pivot_offset
@@ -183,6 +184,8 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 			return await _cue_draw(event, is_me, old_positions)
 		"PLAY_CARD":
 			return await _cue_play_card(event, is_me, old_positions)
+		"SKILL_EFFECT":
+			return await _cue_skill_effect(event, is_me)
 
 	return false
 
@@ -255,6 +258,18 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 	await _fly_card(fly_data, fly_face_up, from_xform, to_xform, FLY_DURATION)
 	card_layer.show_card(iid)
 
+	return true
+
+
+func _cue_skill_effect(event: Dictionary, is_me: bool) -> bool:
+	var skill_name: String = event.get("skill_name", "")
+	var nickname: String = event.get("nickname", "")
+	if skill_name.is_empty():
+		return false
+	var cutin: SkillCutIn = _SkillCutInScene.instantiate()
+	cutin.setup(skill_name, nickname, is_me)
+	_anim_layer.add_child(cutin)
+	await cutin.play()
 	return true
 
 
