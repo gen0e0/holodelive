@@ -15,10 +15,11 @@ func _init(p_state: GameState, p_registry: CardRegistry, p_skill_registry: Skill
 	_recorder = DiffRecorder.new()
 
 
-## ターン開始: ライブチェック → ドロー → ACTION フェーズ。
+## ターン開始: FieldEffect tick → ライブチェック → ドロー → ACTION フェーズ。
 ## ライブが発生した場合は true を返す。
 func start_turn() -> bool:
-	state.turn_flags.clear()
+	# FieldEffect: 期限切れ除去 → デクリメント
+	_tick_field_effects()
 	_log_action(Enums.ActionType.TURN_START, state.current_player, {})
 
 	# ライブチェック（ドロー前）
@@ -29,8 +30,11 @@ func start_turn() -> bool:
 	# ドロー
 	_do_draw(state.current_player)
 
-	# ACTION フェーズへ
-	_set_phase(Enums.Phase.ACTION)
+	# skip_action チェック
+	if state.has_field_effect("skip_action", state.current_player):
+		_set_phase(Enums.Phase.PLAY)
+	else:
+		_set_phase(Enums.Phase.ACTION)
 	return false
 
 
@@ -72,8 +76,9 @@ func get_available_actions() -> Array:
 				# 手札がない場合はスキップ扱い
 				actions.append({"type": Enums.ActionType.PASS})
 			else:
-				# ステージに空きがあればプレイ
-				if state.stages[p].size() < 3:
+				# ステージに空きがあり、no_stage_play でなければプレイ
+				var stage_blocked: bool = state.has_field_effect("no_stage_play", p)
+				if state.stages[p].size() < 3 and not stage_blocked:
 					for card_id in hand:
 						actions.append({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_id, "target": "stage"})
 				# 楽屋にプレイ
@@ -456,6 +461,7 @@ func _fire_trigger(event: Enums.TriggerEvent, details: Dictionary) -> void:
 			_check_counter(details)
 		Enums.TriggerEvent.CARD_LEFT_ZONE:
 			_cleanup_modifiers(details["instance_id"])
+			state.remove_effects_by_source(details["instance_id"])
 		_:
 			pass  # 将来拡張
 
@@ -536,6 +542,17 @@ func _find_passive_skill_index(card_def: CardDef) -> int:
 		if card_def.skills[i].get("type") == Enums.SkillType.PASSIVE:
 			return i
 	return -1
+
+
+## FieldEffect の寿命管理: 期限切れ除去 → デクリメント。
+func _tick_field_effects() -> void:
+	# 1. 期限切れ (lifetime == 0) を除去
+	state.field_effects = state.field_effects.filter(
+		func(fe: FieldEffect) -> bool: return fe.lifetime != 0)
+	# 2. 残りの lifetime をデクリメント (lifetime > 0 のみ、-1 は永続)
+	for fe in state.field_effects:
+		if fe.lifetime > 0:
+			fe.lifetime -= 1
 
 
 func _do_draw(player: int) -> void:

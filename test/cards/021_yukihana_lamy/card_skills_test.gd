@@ -19,4 +19,10 @@ func test_021_lamy_skip_action() -> void:
 
 	var ctx := SkillContext.new(state, env.registry, inst_id, 0, 0, null, DiffRecorder.new())
 	sr.get_skill(21).execute_skill(ctx, 0)
-	assert_int(state.turn_flags.get("skip_action", -1)).is_equal(1)
+
+	assert_bool(state.has_field_effect("skip_action", 1)).is_true()
+	assert_int(state.field_effects.size()).is_equal(1)
+	var fe: FieldEffect = state.field_effects[0]
+	assert_str(fe.type).is_equal("skip_action")
+	assert_int(fe.target_player).is_equal(1)
+	assert_int(fe.source_instance_id).is_equal(inst_id)

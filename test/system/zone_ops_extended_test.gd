@@ -115,16 +115,20 @@ func test_play_to_backstage_from_zone_occupied() -> void:
 	var ok: bool = ZoneOps.play_to_backstage_from_zone(state, 0, id, rec)
 	assert_bool(ok).is_false()
 
-# --- turn_flags ---
+# --- field_effects ---
 
-func test_turn_flags_cleared_on_start_turn() -> void:
+func test_field_effects_tick_on_start_turn() -> void:
 	var registry := CardRegistry.new()
 	var state := GameState.new()
-	state.turn_flags["no_action"] = true
-	state.turn_flags["some_flag"] = 42
+	state.field_effects.append(FieldEffect.new("skip_action", 0, -1, 1))
+	state.field_effects.append(FieldEffect.new("protection", 0, -1, 0))
 	# デッキに1枚入れてドローできるようにする
 	var id: int = state.create_instance(1)
 	state.deck.append(id)
 	var controller := GameController.new(state, registry)
 	controller.start_turn()
-	assert_dict(state.turn_flags).is_empty()
+	# lifetime=0 は除去、lifetime=1 はデクリメントされて 0 に
+	assert_int(state.field_effects.size()).is_equal(1)
+	var fe: FieldEffect = state.field_effects[0]
+	assert_str(fe.type).is_equal("skip_action")
+	assert_int(fe.lifetime).is_equal(0)

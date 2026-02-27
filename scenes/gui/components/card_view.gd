@@ -30,6 +30,7 @@ var _mask_tween: Tween = null
 @onready var _info_label: Label = $CardBody/InfoLabel
 @onready var _icon_container: HBoxContainer = $CardBody/IconContainer
 var _guest_mask: Panel
+var _badge_container: VBoxContainer
 
 const ICON_VIEW_SCENE: PackedScene = preload("res://scenes/gui/components/icon_view.tscn")
 
@@ -54,6 +55,14 @@ static var SUIT_COLORS: Dictionary = {
 const BACK_COLOR := Color(0.35, 0.35, 0.4)
 const GUEST_LABEL_FONT_SIZE: int = 36
 const MASK_FADE_DURATION := 0.2
+const BADGE_FONT_SIZE: int = 12
+
+static var ABILITY_BADGE_CONFIG: Dictionary = {
+	"RANK_UP": {"text": "RANK UP", "color": Color(0.9, 0.75, 0.2)},
+	"FIRST_READY": {"text": "1ST READY", "color": Color(0.3, 0.8, 0.3)},
+	"DOUBLE_WIN": {"text": "x2 WIN", "color": Color(0.9, 0.3, 0.3)},
+	"MATSURI_IMMUNE": {"text": "IMMUNE", "color": Color(0.5, 0.5, 0.9)},
+}
 
 
 func setup(card_data: Dictionary, face_up: bool) -> void:
@@ -71,6 +80,8 @@ func _ready() -> void:
 	var style: StyleBoxFlat = _suit_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	if style:
 		_suit_panel.add_theme_stylebox_override("panel", style.duplicate())
+	_badge_container = _create_badge_container()
+	_card_body.add_child(_badge_container)
 	_guest_mask = _create_guest_mask()
 	add_child(_guest_mask)
 	_update_display()
@@ -86,6 +97,7 @@ func _update_display() -> void:
 		_name_label.text = "?"
 		_info_label.text = ""
 		_clear_icons()
+		_update_ability_badges([])
 		if _guest_mask:
 			_guest_mask.visible = _is_guest
 			_guest_mask.modulate.a = 1.0
@@ -114,6 +126,9 @@ func _update_display() -> void:
 	# アイコン画像
 	_update_icons(_card_data.get("icons", []))
 
+	# アビリティバッジ
+	_update_ability_badges(_card_data.get("ability_flags", []))
+
 	# スート略称
 	var suit_strs: Array[String] = []
 	for su in suits:
@@ -137,6 +152,61 @@ func _update_icons(icons: Array) -> void:
 		var iv: IconView = ICON_VIEW_SCENE.instantiate()
 		iv.icon_name = str(ic)
 		_icon_container.add_child(iv)
+
+
+func _create_badge_container() -> VBoxContainer:
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	vbox.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	vbox.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	vbox.offset_left = -110.0
+	vbox.offset_top = -10.0
+	vbox.offset_right = -10.0
+	vbox.offset_bottom = -10.0
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.alignment = BoxContainer.ALIGNMENT_END
+	return vbox
+
+
+func _update_ability_badges(flags: Array) -> void:
+	if _badge_container == null:
+		return
+	for child in _badge_container.get_children():
+		child.queue_free()
+	for flag in flags:
+		var flag_str: String = str(flag)
+		var config: Dictionary = ABILITY_BADGE_CONFIG.get(flag_str, {})
+		if config.is_empty():
+			continue
+		var badge: Panel = _create_badge(config["text"], config["color"])
+		_badge_container.add_child(badge)
+
+
+func _create_badge(text: String, bg_color: Color) -> Panel:
+	var badge := Panel.new()
+	badge.custom_minimum_size = Vector2(100, 24)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	style.content_margin_left = 4.0
+	style.content_margin_right = 4.0
+	badge.add_theme_stylebox_override("panel", style)
+
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.add_theme_font_size_override("font_size", BADGE_FONT_SIZE)
+	lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.95))
+	badge.add_child(lbl)
+	return badge
 
 
 func _set_bg_color(color: Color) -> void:

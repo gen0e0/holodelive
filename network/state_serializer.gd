@@ -1,6 +1,8 @@
 class_name StateSerializer
 extends RefCounted
 
+const ABILITY_FLAGS: Array[String] = ["RANK_UP", "FIRST_READY", "DOUBLE_WIN", "MATSURI_IMMUNE"]
+
 
 static func serialize_for_player(state: GameState, player: int, registry: CardRegistry) -> ClientState:
 	var cs := ClientState.new()
@@ -67,6 +69,12 @@ static func serialize_for_player(state: GameState, player: int, registry: CardRe
 	cs.live_ready = [state.live_ready[0], state.live_ready[1]]
 	cs.live_ready_turn = [state.live_ready_turn[0], state.live_ready_turn[1]]
 
+	# FieldEffects
+	var effects: Array = []
+	for fe in state.field_effects:
+		effects.append(fe.to_dict())
+	cs.field_effects = effects
+
 	return cs
 
 
@@ -77,15 +85,24 @@ static func _card_dict(instance_id: int, state: GameState, registry: CardRegistr
 	var card_def: CardDef = registry.get_card(inst.card_id)
 	if card_def == null:
 		return {"instance_id": instance_id, "card_id": inst.card_id, "nickname": "?", "icons": [], "suits": []}
-	var icons: Array[String] = inst.effective_icons(card_def)
+	var all_icons: Array[String] = inst.effective_icons(card_def)
 	var suits: Array[String] = inst.effective_suits(card_def)
 	var image_path: String = card_def.dir_path + "/img_card.png"
+	# ABILITY_FLAGS をアイコン列から分離
+	var icons: Array[String] = []
+	var ability_flags: Array[String] = []
+	for ic in all_icons:
+		if ABILITY_FLAGS.has(ic):
+			ability_flags.append(ic)
+		else:
+			icons.append(ic)
 	return {
 		"instance_id": instance_id,
 		"card_id": inst.card_id,
 		"nickname": card_def.nickname,
 		"icons": icons,
 		"suits": suits,
+		"ability_flags": ability_flags,
 		"image_path": image_path,
 		"skills": card_def.skills,
 	}

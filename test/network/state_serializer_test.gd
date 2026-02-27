@@ -181,6 +181,65 @@ func test_to_dict_from_dict_roundtrip() -> void:
 		assert_int(copy["card_id"]).is_equal(orig["card_id"])
 
 
+func test_field_effects_serialized() -> void:
+	var data: Dictionary = _create_state()
+	var state: GameState = data["state"]
+	var registry: CardRegistry = data["registry"]
+
+	state.field_effects.append(FieldEffect.new("skip_action", 0, 42, 1))
+	state.field_effects.append(FieldEffect.new("protection", 1, -1, 3))
+
+	var cs: ClientState = StateSerializer.serialize_for_player(state, 0, registry)
+	assert_int(cs.field_effects.size()).is_equal(2)
+
+	var fe0: Dictionary = cs.field_effects[0]
+	assert_str(fe0["type"]).is_equal("skip_action")
+	assert_int(fe0["target_player"]).is_equal(0)
+	assert_int(fe0["source_instance_id"]).is_equal(42)
+	assert_int(fe0["lifetime"]).is_equal(1)
+
+	var fe1: Dictionary = cs.field_effects[1]
+	assert_str(fe1["type"]).is_equal("protection")
+	assert_int(fe1["target_player"]).is_equal(1)
+
+
+func test_field_effects_roundtrip() -> void:
+	var data: Dictionary = _create_state()
+	var state: GameState = data["state"]
+	var registry: CardRegistry = data["registry"]
+
+	state.field_effects.append(FieldEffect.new("no_stage_play", 1, 10, 2))
+
+	var cs: ClientState = StateSerializer.serialize_for_player(state, 0, registry)
+	var dict: Dictionary = cs.to_dict()
+	var cs2: ClientState = ClientState.from_dict(dict)
+
+	assert_int(cs2.field_effects.size()).is_equal(1)
+	var fe: Dictionary = cs2.field_effects[0]
+	assert_str(fe["type"]).is_equal("no_stage_play")
+	assert_int(fe["lifetime"]).is_equal(2)
+
+
+func test_ability_flags_separated_from_icons() -> void:
+	var registry := CardRegistry.new()
+	var state := GameState.new()
+
+	# RANK_UP はアビリティフラグ、VOCAL はアイコン
+	var card_def := CardDef.new(99, "TestCard", ["VOCAL", "RANK_UP"], ["COOL"], [])
+	registry.register(card_def)
+
+	var inst_id: int = state.create_instance(99)
+	state.hands[0].append(inst_id)
+
+	var cs: ClientState = StateSerializer.serialize_for_player(state, 0, registry)
+	var card_dict: Dictionary = cs.my_hand[0]
+
+	# VOCAL はアイコン列に残り、RANK_UP は ability_flags に分離
+	assert_array(card_dict["icons"]).contains(["VOCAL"])
+	assert_bool(card_dict["icons"].has("RANK_UP")).is_false()
+	assert_array(card_dict["ability_flags"]).contains(["RANK_UP"])
+
+
 func test_modifier_reflected() -> void:
 	var data: Dictionary = _create_state()
 	var state: GameState = data["state"]

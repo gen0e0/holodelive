@@ -5,6 +5,6 @@ extends BaseCardSkill
 ## 角巻わためが場を離れた時、この効果は消失する。
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	var opp: int = 1 - ctx.player
-	ctx.state.turn_flags["no_stage_play"] = opp
-	ctx.state.turn_flags["no_stage_play_source"] = ctx.source_instance_id
+	var effect := FieldEffect.new("no_stage_play", opp, ctx.source_instance_id, 1)
+	ctx.state.field_effects.append(effect)
 	return SkillResult.done()

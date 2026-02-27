@@ -22,8 +22,8 @@ var round_wins: Array[int] = [0, 0]
 var live_ready: Array = [false, false]
 var live_ready_turn: Array[int] = [-1, -1]
 
-# --- ターンフラグ（ターン開始時にクリア）---
-var turn_flags: Dictionary = {}
+# --- フィールドエフェクト（寿命ベース）---
+var field_effects: Array = []  # Array[FieldEffect]
 
 # --- スキル解決スタック ---
 var skill_stack: Array = []  # Array[SkillStackEntry]
@@ -86,3 +86,17 @@ func find_zone(instance_id: int) -> Dictionary:
 ## プレイヤーのステージに配置されているカード数を返す。
 func stage_count(player: int) -> int:
 	return stages[player].size()
+
+
+## 指定タイプの FieldEffect が target_player に対してアクティブか判定。
+func has_field_effect(type: String, player: int) -> bool:
+	for fe in field_effects:
+		if fe.type == type and fe.target_player == player:
+			return true
+	return false
+
+
+## 指定 source_instance_id に紐づく FieldEffect を全除去。
+func remove_effects_by_source(source_id: int) -> void:
+	field_effects = field_effects.filter(func(fe: FieldEffect) -> bool:
+		return fe.source_instance_id != source_id)

@@ -132,12 +132,24 @@ func _process_state_cue(entry: Dictionary) -> void:
 	# 3) ゾーン移動カードを非表示にする（アニメーション前に見えてしまうのを防ぐ）
 	var hidden_ids: Array = _hide_zone_arrivals(_prev_cs, cs)
 
+	# 4) トークン消滅検知（_prev_cs を更新する前に比較）
+	var consumed_keys: Array = []
+	if _prev_cs != null:
+		consumed_keys = field_layout.get_consumed_token_keys(
+			_prev_cs.field_effects, cs.field_effects)
+
 	_prev_cs = cs
 
-	# 4) イベント列をアニメーション化
+	# 5) トークン消滅アニメーション
+	for key in consumed_keys:
+		if _cancelled:
+			break
+		await field_layout.play_consume_animation(key)
+
+	# 6) イベント列をアニメーション化
 	await _stage_events(events, old_positions, cs)
 
-	# 5) アニメーションで表示されなかったカードの安全弁
+	# 7) アニメーションで表示されなかったカードの安全弁
 	_reveal_all(hidden_ids)
 
 

@@ -5,8 +5,8 @@
 [ext_resource type="PackedScene" uid="uid://ihit7oce7gem" path="res://scenes/gui/field/field_layout.tscn" id="3"]
 [ext_resource type="Script" uid="uid://7knxut1m742f" path="res://scenes/gui/field/card_layer.gd" id="4"]
 [ext_resource type="Script" uid="uid://ciuon08eqqdab" path="res://scenes/gui/components/hand_zone.gd" id="5"]
-[ext_resource type="Script" path="res://scenes/gui/components/deck_view.gd" id="6"]
-[ext_resource type="Script" path="res://scenes/gui/components/home_view.gd" id="7"]
+[ext_resource type="Script" uid="uid://diqnklt386826" path="res://scenes/gui/components/deck_view.gd" id="6"]
+[ext_resource type="Script" uid="uid://d070sas4nhi2t" path="res://scenes/gui/components/home_view.gd" id="7"]
 [ext_resource type="Script" path="res://scenes/gui/components/card_tooltip.gd" id="8"]
 
 [node name="GameScreen" type="Control"]
@@ -82,23 +82,23 @@ offset_bottom = 1080.0
 script = ExtResource("5")
 
 [node name="AnimationLayer" type="Control" parent="Content"]
+z_index = 50
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-z_index = 50
 mouse_filter = 2
 
 [node name="CardTooltip" type="Control" parent="Content"]
+z_index = 90
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-z_index = 90
 mouse_filter = 2
 script = ExtResource("8")
 
