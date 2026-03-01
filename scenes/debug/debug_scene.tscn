@@ -103,6 +103,64 @@ layout_mode = 2
 button_pressed = true
 text = "GUI Mode"
 
+[node name="HSeparator4" type="HSeparator" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="ZoneEditLabel" type="Label" parent="Margin/HSplit/Left"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Zone Edit"
+
+[node name="ZoneSelectRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="PlayerSelect" type="OptionButton" parent="Margin/HSplit/Left/ZoneSelectRow"]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 2
+selected = 0
+popup/item_0/text = "P0"
+popup/item_1/text = "P1"
+popup/item_1/id = 1
+
+[node name="ZoneSelect" type="OptionButton" parent="Margin/HSplit/Left/ZoneSelectRow"]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Hand"
+popup/item_1/text = "Stage"
+popup/item_1/id = 1
+popup/item_2/text = "Backstage"
+popup/item_2/id = 2
+
+[node name="CardIdRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/HSplit/Left/CardIdRow"]
+layout_mode = 2
+text = "Card#"
+
+[node name="CardIdInput" type="LineEdit" parent="Margin/HSplit/Left/CardIdRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(60, 0)
+size_flags_horizontal = 3
+placeholder_text = "1-69"
+
+[node name="ZoneActionRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
+layout_mode = 2
+
+[node name="BtnAddCard" type="Button" parent="Margin/HSplit/Left/ZoneActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add"
+
+[node name="BtnClearZone" type="Button" parent="Margin/HSplit/Left/ZoneActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear"
+
 [node name="Spacer" type="Control" parent="Margin/HSplit/Left"]
 layout_mode = 2
 size_flags_vertical = 3

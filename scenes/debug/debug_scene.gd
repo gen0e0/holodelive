@@ -15,6 +15,13 @@ var session: LocalGameSession
 @onready var _cpu_speed_input: LineEdit = %CpuSpeedInput
 @onready var _gui_toggle: CheckButton = %GuiToggle
 
+# --- Zone Edit ---
+@onready var _player_select: OptionButton = %PlayerSelect
+@onready var _zone_select: OptionButton = %ZoneSelect
+@onready var _card_id_input: LineEdit = %CardIdInput
+@onready var _btn_add_card: Button = %BtnAddCard
+@onready var _btn_clear_zone: Button = %BtnClearZone
+
 # --- GUI ペイン ---
 @onready var _vsplit: VSplitContainer = %VSplit
 @onready var _state_panel: PanelContainer = %StatePanel
@@ -34,6 +41,8 @@ func _ready() -> void:
 	_btn_send.pressed.connect(_on_send_pressed)
 	_input_line.text_submitted.connect(_on_text_submitted)
 	_gui_toggle.toggled.connect(_on_gui_toggled)
+	_btn_add_card.pressed.connect(_on_add_card_pressed)
+	_btn_clear_zone.pressed.connect(_on_clear_zone_pressed)
 	_init_and_start()
 
 
@@ -295,6 +304,65 @@ func _handle_choice_input(num: int) -> void:
 	_log("> %d" % num)
 	_waiting_choice = false
 	session.send_choice(choice_index, chosen_value)
+
+
+# =============================================================================
+# Zone Edit
+# =============================================================================
+
+const ZONE_KEYS: Array[String] = ["Hand", "Stage", "Backstage"]
+
+
+func _on_add_card_pressed() -> void:
+	if session == null:
+		_log("[color=red]No active session.[/color]")
+		return
+	var text: String = _card_id_input.text.strip_edges()
+	if not text.is_valid_int():
+		_log("[color=red]Invalid card ID.[/color]")
+		return
+	var card_id: int = text.to_int()
+	var state: GameState = session.state
+	var card_def: CardDef = session.registry.get_card(card_id)
+	if card_def == null:
+		_log("[color=red]Card ID %d not found in registry.[/color]" % card_id)
+		return
+
+	var p: int = _player_select.selected
+	var zone_idx: int = _zone_select.selected
+	var instance_id: int = state.create_instance(card_id)
+
+	match zone_idx:
+		0:  # Hand
+			state.hands[p].append(instance_id)
+		1:  # Stage
+			state.stages[p].append(instance_id)
+		2:  # Backstage
+			state.backstages[p] = instance_id
+
+	_log("[color=cyan][ZoneEdit] Added %s (inst#%d) to P%d %s[/color]" % [
+		card_def.nickname, instance_id, p, ZONE_KEYS[zone_idx]])
+	session._flush_updates()
+
+
+func _on_clear_zone_pressed() -> void:
+	if session == null:
+		_log("[color=red]No active session.[/color]")
+		return
+	var p: int = _player_select.selected
+	var zone_idx: int = _zone_select.selected
+	var state: GameState = session.state
+
+	match zone_idx:
+		0:  # Hand
+			state.hands[p].clear()
+		1:  # Stage
+			state.stages[p].clear()
+		2:  # Backstage
+			state.backstages[p] = -1
+
+	_log("[color=cyan][ZoneEdit] Cleared P%d %s[/color]" % [p, ZONE_KEYS[zone_idx]])
+	session._flush_updates()
 
 
 # =============================================================================
