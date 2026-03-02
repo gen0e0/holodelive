@@ -54,6 +54,20 @@ static func _serialize_action(
 			# Pass through all params for skill effects
 			for key in ga.params:
 				event[key] = ga.params[key]
+			# diffs からカード移動情報を抽出
+			var moves: Array = []
+			for diff in ga.diffs:
+				var d: StateDiff = diff
+				if d.type == Enums.DiffType.CARD_MOVE:
+					var inst_id: int = d.details.get("instance_id", -1)
+					moves.append({
+						"instance_id": inst_id,
+						"card": StateSerializer._card_dict(inst_id, state, registry),
+						"from_zone": d.details.get("from_zone", ""),
+						"to_zone": d.details.get("to_zone", ""),
+					})
+			if not moves.is_empty():
+				event["moves"] = moves
 
 		Enums.ActionType.ROUND_END:
 			event["winner"] = ga.params.get("winner", -1)

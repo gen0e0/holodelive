@@ -197,7 +197,7 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 		"PLAY_CARD":
 			return await _cue_play_card(event, is_me, old_positions)
 		"SKILL_EFFECT":
-			return await _cue_skill_effect(event, is_me)
+			return await _cue_skill_effect(event, is_me, old_positions)
 
 	return false
 
@@ -273,16 +273,78 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 	return true
 
 
-func _cue_skill_effect(event: Dictionary, is_me: bool) -> bool:
+func _cue_skill_effect(event: Dictionary, is_me: bool,
+		old_positions: Dictionary) -> bool:
+	# 1) カットイン演出
 	var skill_name: String = event.get("skill_name", "")
 	var nickname: String = event.get("nickname", "")
-	if skill_name.is_empty():
-		return false
-	var cutin: SkillCutIn = _SkillCutInScene.instantiate()
-	cutin.setup(skill_name, nickname, is_me)
-	_anim_layer.add_child(cutin)
-	await cutin.play()
-	return true
+	if not skill_name.is_empty():
+		var cutin: SkillCutIn = _SkillCutInScene.instantiate()
+		cutin.setup(skill_name, nickname, is_me)
+		_anim_layer.add_child(cutin)
+		await cutin.play()
+
+	# 2) 移動アニメーション
+	var moves: Array = event.get("moves", [])
+	for move in moves:
+		if _cancelled:
+			break
+		await _cue_card_move(move, old_positions)
+
+	return not skill_name.is_empty() or not moves.is_empty()
+
+
+func _cue_card_move(move: Dictionary, old_positions: Dictionary) -> void:
+	var iid: int = move.get("instance_id", -1)
+	var card_data: Dictionary = move.get("card", {})
+	var from_zone: String = move.get("from_zone", "")
+	var to_zone: String = move.get("to_zone", "")
+
+	# from: old_positions にあればそれを使う（移動前のスナップショット）
+	var from_xform: Dictionary = old_positions.get(iid, {})
+	if from_xform.is_empty():
+		from_xform = old_positions.get(from_zone, {})
+	if from_xform.is_empty():
+		return
+
+	# to: 現在の UI 上の位置（refresh 後）
+	var to_xform: Dictionary = _get_zone_position(to_zone, iid)
+	if to_xform.is_empty():
+		return
+
+	# 到着先のカードを一時非表示（飛行中に重複表示を防ぐ）
+	var hide_in_hand: bool = (to_zone == "hand")
+	var hide_in_field: bool = (to_zone == "stage" or to_zone == "backstage")
+
+	if hide_in_hand:
+		hand.hide_card(iid)
+	if hide_in_field:
+		card_layer.hide_card(iid)
+
+	var face_up: bool = not card_data.get("face_down", false) \
+		and not card_data.get("hidden", false)
+	await _fly_card(card_data, face_up, from_xform, to_xform, FLY_DURATION)
+
+	if hide_in_hand:
+		hand.show_card(iid)
+	if hide_in_field:
+		card_layer.show_card(iid)
+
+
+func _get_zone_position(zone: String, instance_id: int) -> Dictionary:
+	match zone:
+		"deck":
+			return deck_view.get_card_content_transform()
+		"home":
+			return home_view.get_card_content_transform()
+		"hand":
+			var xform: Dictionary = hand.get_card_content_transform(instance_id)
+			if not xform.is_empty():
+				return xform
+			return _get_opp_hand_center()
+		"stage", "backstage":
+			return card_layer.get_card_content_transform(instance_id)
+	return {}
 
 
 # ===========================================================================

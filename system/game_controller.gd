@@ -386,20 +386,26 @@ func _resolve_skill_stack() -> void:
 		# PENDING → RESOLVING
 		top.state = Enums.SkillState.RESOLVING
 
-		# スキル発動時にログ出力（初回フェーズのみ）
-		if top.phase == 0:
+		# スキル情報を事前取得（ログは実行後に出力する）
+		var log_skill_effect: bool = (top.phase == 0)
+		var skill_params: Dictionary = {}
+		if log_skill_effect:
 			var card_def: CardDef = registry.get_card(top.card_id)
 			if card_def and top.skill_index < card_def.skills.size():
 				var sk: Dictionary = card_def.skills[top.skill_index]
-				_log_action(Enums.ActionType.SKILL_EFFECT, top.player, {
+				skill_params = {
 					"card_id": card_def.card_id,
 					"nickname": card_def.nickname,
 					"skill_name": sk["name"],
 					"skill_description": sk["description"],
-				})
+				}
+			else:
+				log_skill_effect = false
 
 		var skill_script: BaseCardSkill = skill_registry.get_skill(top.card_id)
 		if not skill_script:
+			if log_skill_effect:
+				_log_action(Enums.ActionType.SKILL_EFFECT, top.player, skill_params)
 			top.state = Enums.SkillState.RESOLVED
 			state.skill_stack.pop_back()
 			continue
@@ -424,6 +430,10 @@ func _resolve_skill_stack() -> void:
 
 		var result: SkillResult = skill_script.execute_skill(ctx, top.skill_index)
 		top.data = ctx.data
+
+		# スキル実行後にログ出力（実際の diffs をキャプチャ）
+		if log_skill_effect:
+			_log_action(Enums.ActionType.SKILL_EFFECT, top.player, skill_params)
 
 		if result.status == SkillResult.Status.WAITING_FOR_CHOICE:
 			# 中断: PendingChoice を作成
@@ -572,3 +582,4 @@ func _log_action(type: Enums.ActionType, player: int, params: Dictionary) -> voi
 	var ga := GameAction.new(type, player, params)
 	ga.diffs = _recorder.diffs.duplicate()
 	state.action_log.append(ga)
+	_recorder.clear()
