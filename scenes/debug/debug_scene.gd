@@ -19,6 +19,7 @@ var session: LocalGameSession
 @onready var _player_select: OptionButton = %PlayerSelect
 @onready var _zone_select: OptionButton = %ZoneSelect
 @onready var _card_id_input: LineEdit = %CardIdInput
+@onready var _card_preview: Label = %CardPreview
 @onready var _btn_add_card: Button = %BtnAddCard
 @onready var _btn_clear_zone: Button = %BtnClearZone
 
@@ -43,6 +44,8 @@ func _ready() -> void:
 	_gui_toggle.toggled.connect(_on_gui_toggled)
 	_btn_add_card.pressed.connect(_on_add_card_pressed)
 	_btn_clear_zone.pressed.connect(_on_clear_zone_pressed)
+	_card_id_input.text_changed.connect(_on_card_id_text_changed)
+	_card_id_input.text_submitted.connect(_on_card_id_submitted)
 	_init_and_start()
 
 
@@ -313,6 +316,19 @@ func _handle_choice_input(num: int) -> void:
 const ZONE_KEYS: Array[String] = ["Hand", "Stage", "Backstage"]
 
 
+func _on_card_id_text_changed(new_text: String) -> void:
+	var text: String = new_text.strip_edges()
+	if session == null or not text.is_valid_int():
+		_card_preview.text = ""
+		return
+	var card_def: CardDef = session.registry.get_card(text.to_int())
+	_card_preview.text = card_def.nickname if card_def else ""
+
+
+func _on_card_id_submitted(_text: String) -> void:
+	_on_add_card_pressed()
+
+
 func _on_add_card_pressed() -> void:
 	if session == null:
 		_log("[color=red]No active session.[/color]")
@@ -343,6 +359,7 @@ func _on_add_card_pressed() -> void:
 	_log("[color=cyan][ZoneEdit] Added %s (inst#%d) to P%d %s[/color]" % [
 		card_def.nickname, instance_id, p, ZONE_KEYS[zone_idx]])
 	session._flush_updates()
+	session._emit_actions()
 
 
 func _on_clear_zone_pressed() -> void:
@@ -363,6 +380,7 @@ func _on_clear_zone_pressed() -> void:
 
 	_log("[color=cyan][ZoneEdit] Cleared P%d %s[/color]" % [p, ZONE_KEYS[zone_idx]])
 	session._flush_updates()
+	session._emit_actions()
 
 
 # =============================================================================

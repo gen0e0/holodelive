@@ -148,6 +148,12 @@ custom_minimum_size = Vector2(60, 0)
 size_flags_horizontal = 3
 placeholder_text = "1-69"
 
+[node name="CardPreview" type="Label" parent="Margin/HSplit/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+
 [node name="ZoneActionRow" type="HBoxContainer" parent="Margin/HSplit/Left"]
 layout_mode = 2
 
