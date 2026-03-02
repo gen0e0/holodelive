@@ -68,6 +68,22 @@ static func _serialize_action(
 					})
 			if not moves.is_empty():
 				event["moves"] = moves
+			# diffs からカードフリップ情報を抽出
+			var flips: Array = []
+			for diff2 in ga.diffs:
+				var d2: StateDiff = diff2
+				if d2.type == Enums.DiffType.CARD_FLIP:
+					var inst_id2: int = d2.details.get("instance_id", -1)
+					var before: bool = d2.details.get("before", false)
+					var after: bool = d2.details.get("after", false)
+					if before != after:
+						flips.append({
+							"instance_id": inst_id2,
+							"card": StateSerializer._card_dict(inst_id2, state, registry),
+							"to_face_down": after,
+						})
+			if not flips.is_empty():
+				event["flips"] = flips
 
 		Enums.ActionType.ROUND_END:
 			event["winner"] = ga.params.get("winner", -1)

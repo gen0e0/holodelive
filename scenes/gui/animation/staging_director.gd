@@ -10,6 +10,7 @@ const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_vi
 const _TurnStartBannerScene: PackedScene = preload("res://scenes/gui/animation/turn_start_banner.tscn")
 const _SkillCutInScene: PackedScene = preload("res://scenes/gui/animation/skill_cutin.tscn")
 const FLY_DURATION: float = 0.35
+const FLIP_DURATION: float = 0.3
 const EVENT_DELAY: float = 0.15
 const PIVOT: Vector2 = Vector2(150, 210)  # CardView の pivot_offset
 
@@ -35,6 +36,7 @@ var _queue: Array = []          # [{type, cs?, events?, actions?}]
 var _processing: bool = false
 var _prev_cs: ClientState       # 前回の ClientState（位置キャプチャ用）
 var _cancelled: bool = false
+var _flip_placeholders: Dictionary = {}  # instance_id -> entry Dictionary
 
 
 func _init(anim_layer: Control) -> void:
@@ -129,10 +131,19 @@ func _process_state_cue(entry: Dictionary) -> void:
 	if refresh_fn.is_valid():
 		refresh_fn.call(cs)
 
-	# 3) ゾーン移動カードを非表示にする（アニメーション前に見えてしまうのを防ぐ）
+	# 3) ゾーン移動・フリップカードを非表示にする（アニメーション前に見えてしまうのを防ぐ）
 	var hidden_ids: Array = _hide_zone_arrivals(_prev_cs, cs)
 
-	# 4) トークン消滅検知（_prev_cs を更新する前に比較）
+	# 4) フリップ対象のプレースホルダーを即座に作成（先行イベント中も旧面で表示）
+	_flip_placeholders = {}
+	for event in events:
+		if event.get("type", "") == "SKILL_EFFECT":
+			for flip in event.get("flips", []):
+				var fe: Dictionary = _prepare_card_flip(flip)
+				if not fe.is_empty():
+					_flip_placeholders[fe.get("iid", -1)] = fe
+
+	# 5) トークン消滅検知（_prev_cs を更新する前に比較）
 	var consumed_keys: Array = []
 	if _prev_cs != null:
 		consumed_keys = field_layout.get_consumed_token_keys(
@@ -140,16 +151,16 @@ func _process_state_cue(entry: Dictionary) -> void:
 
 	_prev_cs = cs
 
-	# 5) トークン消滅アニメーション
+	# 6) トークン消滅アニメーション
 	for key in consumed_keys:
 		if _cancelled:
 			break
 		await field_layout.play_consume_animation(key)
 
-	# 6) イベント列をアニメーション化
+	# 7) イベント列をアニメーション化
 	await _stage_events(events, old_positions, cs)
 
-	# 7) アニメーションで表示されなかったカードの安全弁
+	# 8) アニメーションで表示されなかったカードの安全弁
 	_reveal_all(hidden_ids)
 
 
@@ -275,7 +286,16 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 
 func _cue_skill_effect(event: Dictionary, is_me: bool,
 		old_positions: Dictionary) -> bool:
-	# 1) カットイン演出
+	# 1) 事前作成済みのフリッププレースホルダーを取得
+	var flips: Array = event.get("flips", [])
+	var flip_entries: Array = []
+	for flip in flips:
+		var iid: int = flip.get("instance_id", -1)
+		if _flip_placeholders.has(iid):
+			flip_entries.append(_flip_placeholders[iid])
+			_flip_placeholders.erase(iid)
+
+	# 2) カットイン演出
 	var skill_name: String = event.get("skill_name", "")
 	var nickname: String = event.get("nickname", "")
 	if not skill_name.is_empty():
@@ -284,14 +304,20 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 		_anim_layer.add_child(cutin)
 		await cutin.play()
 
-	# 2) 移動アニメーション
+	# 3) 移動アニメーション
 	var moves: Array = event.get("moves", [])
 	for move in moves:
 		if _cancelled:
 			break
 		await _cue_card_move(move, old_positions)
 
-	return not skill_name.is_empty() or not moves.is_empty()
+	# 4) フリップアニメーション
+	for entry in flip_entries:
+		if _cancelled:
+			break
+		await _animate_card_flip(entry)
+
+	return not skill_name.is_empty() or not moves.is_empty() or not flip_entries.is_empty()
 
 
 func _cue_card_move(move: Dictionary, old_positions: Dictionary) -> void:
@@ -329,6 +355,64 @@ func _cue_card_move(move: Dictionary, old_positions: Dictionary) -> void:
 		hand.show_card(iid)
 	if hide_in_field:
 		card_layer.show_card(iid)
+
+
+## フリッププレースホルダーを作成。実カードは _hide_zone_arrivals で既に非表示。
+## 旧面の一時カードを同じ位置に配置し、カットイン中も見えるようにする。
+func _prepare_card_flip(flip: Dictionary) -> Dictionary:
+	var iid: int = flip.get("instance_id", -1)
+	var card_data: Dictionary = flip.get("card", {})
+	var to_face_down: bool = flip.get("to_face_down", false)
+
+	var xform: Dictionary = card_layer.get_card_content_transform(iid)
+	if xform.is_empty():
+		return {}
+
+	var cv: CardView = _CardViewScene.instantiate()
+	cv.managed_hover = true
+	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cv.setup(card_data, to_face_down)  # フリップ前の面（to_face_down=true→表, =false→裏）
+	cv.position = xform.get("pos", Vector2.ZERO)
+	cv.scale = xform.get("scale", Vector2.ONE)
+	cv.rotation = xform.get("rotation", 0.0)
+	_anim_layer.add_child(cv)
+
+	return {
+		"cv": cv,
+		"iid": iid,
+		"card_data": card_data,
+		"to_face_down": to_face_down,
+		"base_scale_x": xform.get("scale", Vector2.ONE).x,
+	}
+
+
+## プレースホルダーのフリップアニメーションを実行。
+func _animate_card_flip(entry: Dictionary) -> void:
+	var cv: CardView = entry.get("cv")
+	var iid: int = entry.get("iid", -1)
+	var card_data: Dictionary = entry.get("card_data", {})
+	var to_face_down: bool = entry.get("to_face_down", false)
+	var base_scale_x: float = entry.get("base_scale_x", 1.0)
+
+	var half: float = FLIP_DURATION / 2.0
+
+	# 前半: scale.x → 0（カードが閉じる）
+	var tween1: Tween = cv.create_tween()
+	tween1.tween_property(cv, "scale:x", 0.0, half) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await tween1.finished
+
+	# フリップ後の面に切り替え
+	cv.setup(card_data, not to_face_down)
+
+	# 後半: scale.x → 元の値（カードが開く）
+	var tween2: Tween = cv.create_tween()
+	tween2.tween_property(cv, "scale:x", base_scale_x, half) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await tween2.finished
+
+	cv.queue_free()
+	card_layer.show_card(iid)
 
 
 func _get_zone_position(zone: String, instance_id: int) -> Dictionary:
@@ -390,19 +474,25 @@ func _delay(seconds: float) -> void:
 # ゾーン到着カードの自動非表示
 # ===========================================================================
 
-## prev_cs と new_cs の各ゾーンを比較し、新たに到着した instance_id を非表示にして返す。
+## prev_cs と new_cs の各ゾーンを比較し、新たに到着した instance_id や
+## face_down が変わったカードを非表示にして返す。
 func _hide_zone_arrivals(old_cs: ClientState, new_cs: ClientState) -> Array:
 	var old_hand_ids: Dictionary = {}
 	var old_field_ids: Dictionary = {}
+	var old_field_face_down: Dictionary = {}  # instance_id -> face_down
 
 	if old_cs != null:
 		for card_data in old_cs.my_hand:
 			old_hand_ids[card_data.get("instance_id", -1)] = true
 		for p in range(2):
 			for card_data in old_cs.stages[p]:
-				old_field_ids[card_data.get("instance_id", -1)] = true
+				var iid: int = card_data.get("instance_id", -1)
+				old_field_ids[iid] = true
+				old_field_face_down[iid] = card_data.get("face_down", false)
 			if old_cs.backstages[p] != null:
-				old_field_ids[old_cs.backstages[p].get("instance_id", -1)] = true
+				var iid: int = old_cs.backstages[p].get("instance_id", -1)
+				old_field_ids[iid] = true
+				old_field_face_down[iid] = old_cs.backstages[p].get("face_down", false)
 
 	var hidden: Array = []
 
@@ -413,16 +503,18 @@ func _hide_zone_arrivals(old_cs: ClientState, new_cs: ClientState) -> Array:
 			hand.hide_card(iid)
 			hidden.append(iid)
 
-	# フィールド（ステージ・楽屋）に新たに到着したカードを非表示
+	# フィールド（ステージ・楽屋）に新たに到着 or face_down が変わったカードを非表示
 	for p in range(2):
 		for card_data in new_cs.stages[p]:
 			var iid: int = card_data.get("instance_id", -1)
-			if not old_field_ids.has(iid):
+			var new_fd: bool = card_data.get("face_down", false)
+			if not old_field_ids.has(iid) or old_field_face_down.get(iid, new_fd) != new_fd:
 				card_layer.hide_card(iid)
 				hidden.append(iid)
 		if new_cs.backstages[p] != null:
 			var iid: int = new_cs.backstages[p].get("instance_id", -1)
-			if not old_field_ids.has(iid):
+			var new_fd: bool = new_cs.backstages[p].get("face_down", false)
+			if not old_field_ids.has(iid) or old_field_face_down.get(iid, new_fd) != new_fd:
 				card_layer.hide_card(iid)
 				hidden.append(iid)
 

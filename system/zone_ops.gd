@@ -62,6 +62,20 @@ static func open_backstage(state: GameState, player: int, recorder: DiffRecorder
 	return true
 
 
+## 楽屋のカードを裏向きにする（ゲスト化）。
+## 成功時は true。
+static func close_backstage(state: GameState, player: int, recorder: DiffRecorder) -> bool:
+	var id: int = state.backstages[player]
+	if id == -1:
+		return false
+	var inst: CardInstance = state.instances[id]
+	if inst.face_down:
+		return false
+	recorder.record_card_flip(id, false, true)
+	inst.face_down = true
+	return true
+
+
 ## カードを自宅に移動する。
 static func move_to_home(state: GameState, instance_id: int, recorder: DiffRecorder) -> void:
 	var zone := state.find_zone(instance_id)
