@@ -10,6 +10,11 @@ var player: int = 0
 var phase: int = 0
 var choice_result: Variant = null
 var data: Dictionary = {}
+var animation_cues: Array = []  # Array[AnimationCue]
+
+
+func emit_cue(cue: AnimationCue) -> void:
+	animation_cues.append(cue)
 
 
 func _init(

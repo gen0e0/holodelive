@@ -73,8 +73,10 @@ func test_full_game_through_session() -> void:
 	session.skill_registry = SkillRegistry.new()
 	session.state = GameSetup.setup_game(registry, rng)
 	session.controller = GameController.new(session.state, registry, session.skill_registry)
+	session.controller.on_action_logged = session._on_action_logged
 	session._last_log_index = 0
 	session._client_state = null
+	session._action_snapshots.clear()
 
 	session.game_started.emit()
 	session._do_start_turn()
@@ -131,8 +133,10 @@ func test_cpu_vs_cpu_full_game() -> void:
 	session.skill_registry = SkillRegistry.new()
 	session.state = GameSetup.setup_game(registry, rng)
 	session.controller = GameController.new(session.state, registry, session.skill_registry)
+	session.controller.on_action_logged = session._on_action_logged
 	session._last_log_index = 0
 	session._client_state = null
+	session._action_snapshots.clear()
 
 	session.game_started.emit()
 	session._do_start_turn()
@@ -157,8 +161,10 @@ func test_cpu_opponent_human_receives_actions() -> void:
 	session.skill_registry = SkillRegistry.new()
 	session.state = GameSetup.setup_game(registry, rng)
 	session.controller = GameController.new(session.state, registry, session.skill_registry)
+	session.controller.on_action_logged = session._on_action_logged
 	session._last_log_index = 0
 	session._client_state = null
+	session._action_snapshots.clear()
 
 	session.game_started.emit()
 	session._do_start_turn()

@@ -51,20 +51,32 @@ static func _serialize_action(
 			event["skill_index"] = ga.params.get("skill_index", 0)
 
 		Enums.ActionType.SKILL_EFFECT:
-			# Pass through all params for skill effects
+			# Pass through all params for skill effects (except animation_cues)
 			for key in ga.params:
+				if key == "animation_cues":
+					continue
 				event[key] = ga.params[key]
+
+			# Build cue map from animation_cues
+			var cue_map: Dictionary = {}  # instance_id -> AnimationCue
+			for cue in ga.params.get("animation_cues", []):
+				cue_map[cue.instance_id] = cue
+
 			# diffs からカード移動情報を抽出
 			var moves: Array = []
 			for diff in ga.diffs:
 				var d: StateDiff = diff
 				if d.type == Enums.DiffType.CARD_MOVE:
 					var inst_id: int = d.details.get("instance_id", -1)
+					var style_name: String = "DEFAULT"
+					if cue_map.has(inst_id):
+						style_name = AnimationCue.Style.keys()[cue_map[inst_id].style]
 					moves.append({
 						"instance_id": inst_id,
 						"card": StateSerializer._card_dict(inst_id, state, registry),
 						"from_zone": d.details.get("from_zone", ""),
 						"to_zone": d.details.get("to_zone", ""),
+						"style": style_name,
 					})
 			if not moves.is_empty():
 				event["moves"] = moves
@@ -77,10 +89,14 @@ static func _serialize_action(
 					var before: bool = d2.details.get("before", false)
 					var after: bool = d2.details.get("after", false)
 					if before != after:
+						var flip_style: String = "DEFAULT"
+						if cue_map.has(inst_id2):
+							flip_style = AnimationCue.Style.keys()[cue_map[inst_id2].style]
 						flips.append({
 							"instance_id": inst_id2,
 							"card": StateSerializer._card_dict(inst_id2, state, registry),
 							"to_face_down": after,
+							"style": flip_style,
 						})
 			if not flips.is_empty():
 				event["flips"] = flips

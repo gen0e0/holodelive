@@ -146,8 +146,8 @@ func disconnect_session() -> void:
 	_clear_interaction_state()
 
 
-func _on_state_updated(client_state: ClientState, events: Array) -> void:
-	_director.enqueue_state_update(client_state, events)
+func _on_state_updated(client_state: ClientState, event_entries: Array) -> void:
+	_director.enqueue_state_update(client_state, event_entries)
 
 
 func _on_game_started() -> void:

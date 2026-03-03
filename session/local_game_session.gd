@@ -7,6 +7,7 @@ var registry: CardRegistry
 var skill_registry: SkillRegistry
 var _last_log_index: int = 0
 var _client_state: ClientState
+var _action_snapshots: Array = []  # Array[ClientState]
 
 ## CPU strategies keyed by player index (e.g. {1: RandomStrategy}).
 var _cpu_strategies: Dictionary = {}
@@ -34,8 +35,10 @@ func start_game() -> void:
 	skill_registry = loaded["skill_registry"]
 	state = GameSetup.setup_game(registry, rng)
 	controller = GameController.new(state, registry, skill_registry)
+	controller.on_action_logged = _on_action_logged
 	_last_log_index = 0
 	_client_state = null
+	_action_snapshots.clear()
 
 	game_started.emit()
 	_do_start_turn()
@@ -144,6 +147,11 @@ func _do_start_turn(depth: int = 0) -> void:
 	_emit_actions()
 
 
+func _on_action_logged() -> void:
+	_action_snapshots.append(
+		StateSerializer.serialize_for_player(state, human_player, registry))
+
+
 func _flush_updates() -> void:
 	var log_size: int = state.action_log.size()
 	var new_actions: Array = []
@@ -152,9 +160,26 @@ func _flush_updates() -> void:
 	_last_log_index = log_size
 
 	var viewing_player: int = human_player
-	var events: Array = EventSerializer.serialize_events(new_actions, viewing_player, state, registry)
-	_client_state = StateSerializer.serialize_for_player(state, viewing_player, registry)
-	state_updated.emit(_client_state, events)
+	var events: Array = EventSerializer.serialize_events(
+		new_actions, viewing_player, state, registry)
+	assert(events.size() == _action_snapshots.size(),
+		"snapshot count mismatch: %d events vs %d snapshots" %
+		[events.size(), _action_snapshots.size()])
+
+	var event_entries: Array = []
+	for i in range(events.size()):
+		event_entries.append({
+			"event": events[i],
+			"snapshot": _action_snapshots[i],
+		})
+	_action_snapshots.clear()
+
+	if not event_entries.is_empty():
+		_client_state = event_entries.back().get("snapshot")
+	else:
+		_client_state = StateSerializer.serialize_for_player(
+			state, viewing_player, registry)
+	state_updated.emit(_client_state, event_entries)
 
 
 func _emit_actions() -> void:

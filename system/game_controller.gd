@@ -6,6 +6,7 @@ var registry: CardRegistry
 var skill_registry: SkillRegistry
 var _recorder: DiffRecorder
 var _pending_end_turn: bool = false
+var on_action_logged: Callable
 
 
 func _init(p_state: GameState, p_registry: CardRegistry, p_skill_registry: SkillRegistry = null) -> void:
@@ -433,6 +434,8 @@ func _resolve_skill_stack() -> void:
 
 		# スキル実行後にログ出力（実際の diffs をキャプチャ）
 		if log_skill_effect:
+			if not ctx.animation_cues.is_empty():
+				skill_params["animation_cues"] = ctx.animation_cues
 			_log_action(Enums.ActionType.SKILL_EFFECT, top.player, skill_params)
 
 		if result.status == SkillResult.Status.WAITING_FOR_CHOICE:
@@ -583,3 +586,5 @@ func _log_action(type: Enums.ActionType, player: int, params: Dictionary) -> voi
 	ga.diffs = _recorder.diffs.duplicate()
 	state.action_log.append(ga)
 	_recorder.clear()
+	if on_action_logged.is_valid():
+		on_action_logged.call()
