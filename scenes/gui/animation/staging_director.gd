@@ -135,10 +135,12 @@ func _process_state_cue(entry: Dictionary) -> void:
 		if refresh_fn.is_valid() and snapshot != null:
 			refresh_fn.call(snapshot)
 
-		# 3) 変化したカードを非表示（ゾーン移動 or face_down変化）
-		var hidden: Array = _hide_changed_cards(_prev_cs, snapshot)
+		# 3) イベントアニメーション（各 _cue_* が自分のカードの visibility を管理）
+		var played: bool = await _execute_event(event, old_positions, snapshot)
+		if not played:
+			await _delay(EVENT_DELAY)
 
-		# 4) トークン消滅検知＋アニメ
+		# 4) トークン消滅アニメーション
 		if _prev_cs != null and snapshot != null:
 			var consumed: Array = field_layout.get_consumed_token_keys(
 				_prev_cs.field_effects, snapshot.field_effects)
@@ -147,13 +149,6 @@ func _process_state_cue(entry: Dictionary) -> void:
 					break
 				await field_layout.play_consume_animation(key)
 
-		# 5) イベントアニメーション
-		var played: bool = await _execute_event(event, old_positions, snapshot)
-		if not played:
-			await _delay(EVENT_DELAY)
-
-		# 6) 安全弁 + 状態更新
-		_reveal_all(hidden)
 		_prev_cs = snapshot
 
 	# 7) 最終補正
@@ -273,7 +268,27 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 
 func _cue_skill_effect(event: Dictionary, is_me: bool,
 		old_positions: Dictionary) -> bool:
-	# 1) カットイン演出
+	var flips: Array = event.get("flips", [])
+	var moves: Array = event.get("moves", [])
+
+	# 0) フリップ対象のプレースホルダーを事前作成（カットイン中も旧面で表示）
+	#    実カードは _create_flip_placeholder 内で非表示にする
+	var flip_entries: Array = []
+	for flip in flips:
+		var fe: Dictionary = _create_flip_placeholder(flip)
+		if not fe.is_empty():
+			flip_entries.append(fe)
+
+	# 1) 移動先カードを即座に非表示（カットイン中に見えないように）
+	for move in moves:
+		var iid: int = move.get("instance_id", -1)
+		var to_zone: String = move.get("to_zone", "")
+		if to_zone == "hand":
+			hand.hide_card(iid)
+		elif to_zone == "stage" or to_zone == "backstage":
+			card_layer.hide_card(iid)
+
+	# 2) カットイン演出
 	var skill_name: String = event.get("skill_name", "")
 	var nickname: String = event.get("nickname", "")
 	if not skill_name.is_empty():
@@ -282,21 +297,28 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 		_anim_layer.add_child(cutin)
 		await cutin.play()
 
-	# 2) 移動アニメーション
-	var moves: Array = event.get("moves", [])
+	# 3) 移動アニメーション（_cue_card_move が show する）
 	for move in moves:
 		if _cancelled:
 			break
 		await _cue_card_move(move, old_positions)
 
-	# 3) フリップアニメーション
-	var flips: Array = event.get("flips", [])
-	for flip in flips:
+	# 4) フリップアニメーション（_animate_flip_placeholder が show する）
+	for fe in flip_entries:
 		if _cancelled:
 			break
-		await _cue_card_flip(flip)
+		await _animate_flip_placeholder(fe)
 
-	return not skill_name.is_empty() or not moves.is_empty() or not flips.is_empty()
+	# 5) 安全弁: _cue_card_move が早期リターンした場合に備え全 move 先を表示
+	for move in moves:
+		var iid: int = move.get("instance_id", -1)
+		var to_zone: String = move.get("to_zone", "")
+		if to_zone == "hand":
+			hand.show_card(iid)
+		elif to_zone == "stage" or to_zone == "backstage":
+			card_layer.show_card(iid)
+
+	return not skill_name.is_empty() or not moves.is_empty() or not flip_entries.is_empty()
 
 
 func _cue_card_move(move: Dictionary, old_positions: Dictionary) -> void:
@@ -340,17 +362,20 @@ func _cue_card_move(move: Dictionary, old_positions: Dictionary) -> void:
 		card_layer.show_card(iid)
 
 
-## フリップアニメーションを一括実行（プレースホルダー作成 + アニメ + show）。
-func _cue_card_flip(flip: Dictionary) -> void:
+## フリッププレースホルダーを作成。旧面の一時カードを同じ位置に配置し、
+## 実カードを非表示にする。カットイン中も旧面が見えるよう、アニメーション前に呼ぶ。
+func _create_flip_placeholder(flip: Dictionary) -> Dictionary:
 	var iid: int = flip.get("instance_id", -1)
 	var card_data: Dictionary = flip.get("card", {})
 	var to_face_down: bool = flip.get("to_face_down", false)
 
 	var xform: Dictionary = card_layer.get_card_content_transform(iid)
 	if xform.is_empty():
-		return
+		return {}
 
-	# プレースホルダー作成（旧面で表示）
+	# プレースホルダーが代わりに表示するので実カードは非表示
+	card_layer.hide_card(iid)
+
 	var cv: CardView = _CardViewScene.instantiate()
 	cv.managed_hover = true
 	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -360,7 +385,23 @@ func _cue_card_flip(flip: Dictionary) -> void:
 	cv.rotation = xform.get("rotation", 0.0)
 	_anim_layer.add_child(cv)
 
-	var base_scale_x: float = xform.get("scale", Vector2.ONE).x
+	return {
+		"cv": cv,
+		"iid": iid,
+		"card_data": card_data,
+		"to_face_down": to_face_down,
+		"base_scale_x": xform.get("scale", Vector2.ONE).x,
+	}
+
+
+## プレースホルダーのフリップアニメーションを実行し、完了後に実カードを表示する。
+func _animate_flip_placeholder(entry: Dictionary) -> void:
+	var cv: CardView = entry.get("cv")
+	var iid: int = entry.get("iid", -1)
+	var card_data: Dictionary = entry.get("card_data", {})
+	var to_face_down: bool = entry.get("to_face_down", false)
+	var base_scale_x: float = entry.get("base_scale_x", 1.0)
+
 	var half: float = FLIP_DURATION / 2.0
 
 	# 前半: scale.x → 0（カードが閉じる）
@@ -436,67 +477,6 @@ func _fly_card(card_data: Dictionary, face_up: bool,
 func _delay(seconds: float) -> void:
 	await _anim_layer.get_tree().create_timer(seconds).timeout
 
-
-# ===========================================================================
-# ゾーン変化カードの自動非表示
-# ===========================================================================
-
-## prev_cs と new_cs の各ゾーンを比較し、新たに到着した instance_id や
-## face_down が変わったカードを非表示にして返す。
-func _hide_changed_cards(old_cs: ClientState, new_cs: ClientState) -> Array:
-	var old_hand_ids: Dictionary = {}
-	var old_field_ids: Dictionary = {}
-	var old_field_face_down: Dictionary = {}  # instance_id -> face_down
-
-	if old_cs != null:
-		for card_data in old_cs.my_hand:
-			old_hand_ids[card_data.get("instance_id", -1)] = true
-		for p in range(2):
-			for card_data in old_cs.stages[p]:
-				var iid: int = card_data.get("instance_id", -1)
-				old_field_ids[iid] = true
-				old_field_face_down[iid] = card_data.get("face_down", false)
-			if old_cs.backstages[p] != null:
-				var iid: int = old_cs.backstages[p].get("instance_id", -1)
-				old_field_ids[iid] = true
-				old_field_face_down[iid] = old_cs.backstages[p].get("face_down", false)
-
-	if new_cs == null:
-		return []
-
-	var hidden: Array = []
-
-	# 手札に新たに到着したカードを非表示
-	for card_data in new_cs.my_hand:
-		var iid: int = card_data.get("instance_id", -1)
-		if not old_hand_ids.has(iid):
-			hand.hide_card(iid)
-			hidden.append(iid)
-
-	# フィールド（ステージ・楽屋）に新たに到着 or face_down が変わったカードを非表示
-	for p in range(2):
-		for card_data in new_cs.stages[p]:
-			var iid: int = card_data.get("instance_id", -1)
-			var new_fd: bool = card_data.get("face_down", false)
-			if not old_field_ids.has(iid) or old_field_face_down.get(iid, new_fd) != new_fd:
-				card_layer.hide_card(iid)
-				hidden.append(iid)
-		if new_cs.backstages[p] != null:
-			var iid: int = new_cs.backstages[p].get("instance_id", -1)
-			var new_fd: bool = new_cs.backstages[p].get("face_down", false)
-			if not old_field_ids.has(iid) or old_field_face_down.get(iid, new_fd) != new_fd:
-				card_layer.hide_card(iid)
-				hidden.append(iid)
-
-	return hidden
-
-
-## アニメーションで表示されなかったカードの安全弁。
-## 各 _cue_* メソッドは既に show_card() を呼んでいるため、正常時は冪等。
-func _reveal_all(hidden_ids: Array) -> void:
-	for iid in hidden_ids:
-		hand.show_card(iid)
-		card_layer.show_card(iid)
 
 
 # ===========================================================================
