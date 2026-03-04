@@ -9,5 +9,6 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 	if ctx.state.stages[ctx.player].size() >= 3:
 		return SkillResult.done()
 	var opp_first: int = ctx.state.stages[opp][0]
+	ctx.emit_cue(AnimationCue.move(opp_first, AnimationCue.Style.SPIN_OUT))
 	ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, opp_first, ctx.recorder)
 	return SkillResult.done()

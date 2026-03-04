@@ -65,6 +65,19 @@ func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, slot: Control)
 		_card_views[iid] = cv
 	cv.position = (slot.size - cv.size) / 2.0
 	cv.base_scale = Vector2(FIELD_SCALE, FIELD_SCALE)
+	cv.visible = true
+
+
+func get_slot_content_transform(slot: Control) -> Dictionary:
+	if slot == null:
+		return {}
+	var card_size: Vector2 = Vector2(300, 420)
+	var cv_pos: Vector2 = (slot.size - card_size) / 2.0
+	return {
+		"pos": slot.position + cv_pos,
+		"scale": Vector2(FIELD_SCALE, FIELD_SCALE),
+		"rotation": 0.0,
+	}
 
 
 func get_card_content_transform(instance_id: int) -> Dictionary:
