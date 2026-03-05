@@ -35,6 +35,7 @@ var _current_actions: Array = []
 var _waiting_choice: bool = false
 var _choice_data: Dictionary = {}
 var _auto_epoch: int = 0
+var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 
 
 func _ready() -> void:
@@ -54,6 +55,9 @@ func _ready() -> void:
 # =============================================================================
 
 func _init_and_start() -> void:
+	# コマンドライン引数からゾーンオーバーライドをパース
+	_zone_overrides = _parse_zone_args(OS.get_cmdline_user_args())
+
 	# RNG 作成（シード指定があれば固定、なければランダム）
 	_rng = RandomNumberGenerator.new()
 	var seed_text: String = _seed_input.text.strip_edges()
@@ -131,6 +135,9 @@ func _on_text_submitted(_text: String) -> void:
 
 func _on_game_started() -> void:
 	_log("[color=yellow]--- Game Started ---[/color]")
+	if not _zone_overrides.is_empty():
+		_apply_zone_overrides()
+		_zone_overrides = {}
 
 
 func _on_state_updated(client_state: ClientState, events: Array) -> void:
@@ -307,6 +314,108 @@ func _handle_choice_input(num: int) -> void:
 	_log("> %d" % num)
 	_waiting_choice = false
 	session.send_choice(choice_index, chosen_value)
+
+
+# =============================================================================
+# コマンドライン引数によるゾーンオーバーライド
+# =============================================================================
+
+## コマンドライン引数をパースしてゾーンオーバーライド辞書を返す。
+## 引数形式: h0=6,3 s1=40 b0=10  (-- セパレータ以降)
+## 戻り値: {"h0": [6, 3], "s1": [40], "b0": [10]}
+static func _parse_zone_args(args: Array) -> Dictionary:
+	var result: Dictionary = {}
+	var valid_keys: Array[String] = ["h0", "h1", "s0", "s1", "b0", "b1"]
+	for arg in args:
+		var parts: PackedStringArray = arg.split("=", true, 1)
+		if parts.size() != 2:
+			continue
+		var key: String = parts[0].strip_edges().to_lower()
+		if key not in valid_keys:
+			continue
+		var val_str: String = parts[1].strip_edges()
+		var card_ids: Array[int] = []
+		for token in val_str.split(","):
+			var t: String = token.strip_edges()
+			if t.is_valid_int():
+				card_ids.append(t.to_int())
+		if not card_ids.is_empty():
+			result[key] = card_ids
+	return result
+
+
+## _zone_overrides に基づいて session.state のゾーンを上書きする。
+## デッキにある同一 card_id のインスタンスを優先移動し、なければ新規生成。
+func _apply_zone_overrides() -> void:
+	var state: GameState = session.state
+	_log("[color=cyan][ZoneOverride] Applying overrides...[/color]")
+
+	for key in _zone_overrides:
+		var card_ids: Array = _zone_overrides[key]
+		var zone_char: String = key[0]  # h, s, b
+		var player: int = key[1].to_int()  # 0 or 1
+
+		# ターゲットゾーンをクリア
+		match zone_char:
+			"h":
+				state.hands[player].clear()
+			"s":
+				state.stages[player].clear()
+			"b":
+				state.backstages[player] = -1
+
+		# 各カードを配置
+		for card_id in card_ids:
+			var instance_id: int = _find_and_remove_from_current_zone(state, card_id)
+			if instance_id == -1:
+				instance_id = state.create_instance(card_id)
+
+			match zone_char:
+				"h":
+					state.hands[player].append(instance_id)
+				"s":
+					state.stages[player].append(instance_id)
+				"b":
+					state.backstages[player] = instance_id
+
+			var card_def: CardDef = session.registry.get_card(card_id)
+			var name: String = card_def.nickname if card_def else "???"
+			var zone_name: String = {"h": "Hand", "s": "Stage", "b": "Backstage"}[zone_char]
+			_log("[color=cyan][ZoneOverride] #%d %s → P%d %s[/color]" % [
+				card_id, name, player, zone_name])
+
+
+## state 内の全ゾーンから指定 card_id のインスタンスを探し、見つかれば除去して instance_id を返す。
+## 見つからなければ -1。
+static func _find_and_remove_from_current_zone(state: GameState, card_id: int) -> int:
+	# デッキから探す（最も一般的）
+	for i in range(state.deck.size()):
+		var iid: int = state.deck[i]
+		if state.instances[iid].card_id == card_id:
+			state.deck.remove_at(i)
+			return iid
+	# 手札から探す
+	for p in range(2):
+		for i in range(state.hands[p].size()):
+			var iid: int = state.hands[p][i]
+			if state.instances[iid].card_id == card_id:
+				state.hands[p].remove_at(i)
+				return iid
+	# ステージから探す
+	for p in range(2):
+		for i in range(state.stages[p].size()):
+			var iid: int = state.stages[p][i]
+			if state.instances[iid].card_id == card_id:
+				state.stages[p].remove_at(i)
+				return iid
+	# バックステージから探す
+	for p in range(2):
+		if state.backstages[p] != -1:
+			var iid: int = state.backstages[p]
+			if state.instances[iid].card_id == card_id:
+				state.backstages[p] = -1
+				return iid
+	return -1
 
 
 # =============================================================================
