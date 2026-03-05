@@ -321,11 +321,12 @@ func _handle_choice_input(num: int) -> void:
 # =============================================================================
 
 ## コマンドライン引数をパースしてゾーンオーバーライド辞書を返す。
-## 引数形式: h0=6,3 s1=40 b0=10  (-- セパレータ以降)
-## 戻り値: {"h0": [6, 3], "s1": [40], "b0": [10]}
+## 引数形式: p0=6,3 s1=40 b0=10 h=1,2  (-- セパレータ以降)
+## キー: p0/p1=手札, s0/s1=ステージ, b0/b1=バックステージ, h=自宅(共有)
+## 戻り値: {"p0": [6, 3], "s1": [40], "h": [1, 2]}
 static func _parse_zone_args(args: Array) -> Dictionary:
 	var result: Dictionary = {}
-	var valid_keys: Array[String] = ["h0", "h1", "s0", "s1", "b0", "b1"]
+	var valid_keys: Array[String] = ["p0", "p1", "s0", "s1", "b0", "b1", "h"]
 	for arg in args:
 		var parts: PackedStringArray = arg.split("=", true, 1)
 		if parts.size() != 2:
@@ -352,17 +353,20 @@ func _apply_zone_overrides() -> void:
 
 	for key in _zone_overrides:
 		var card_ids: Array = _zone_overrides[key]
-		var zone_char: String = key[0]  # h, s, b
-		var player: int = key[1].to_int()  # 0 or 1
+		var is_home: bool = (key == "h")
+		var zone_char: String = key[0]  # p, s, b, h
+		var player: int = key[1].to_int() if not is_home else -1
 
 		# ターゲットゾーンをクリア
 		match zone_char:
-			"h":
+			"p":
 				state.hands[player].clear()
 			"s":
 				state.stages[player].clear()
 			"b":
 				state.backstages[player] = -1
+			"h":
+				state.home.clear()
 
 		# 各カードを配置
 		for card_id in card_ids:
@@ -371,18 +375,24 @@ func _apply_zone_overrides() -> void:
 				instance_id = state.create_instance(card_id)
 
 			match zone_char:
-				"h":
+				"p":
 					state.hands[player].append(instance_id)
 				"s":
 					state.stages[player].append(instance_id)
 				"b":
 					state.backstages[player] = instance_id
+				"h":
+					state.home.append(instance_id)
 
 			var card_def: CardDef = session.registry.get_card(card_id)
-			var name: String = card_def.nickname if card_def else "???"
-			var zone_name: String = {"h": "Hand", "s": "Stage", "b": "Backstage"}[zone_char]
-			_log("[color=cyan][ZoneOverride] #%d %s → P%d %s[/color]" % [
-				card_id, name, player, zone_name])
+			var card_name: String = card_def.nickname if card_def else "???"
+			var zone_name: String = {"p": "Hand", "s": "Stage", "b": "Backstage", "h": "Home"}[zone_char]
+			if is_home:
+				_log("[color=cyan][ZoneOverride] #%d %s → %s[/color]" % [
+					card_id, card_name, zone_name])
+			else:
+				_log("[color=cyan][ZoneOverride] #%d %s → P%d %s[/color]" % [
+					card_id, card_name, player, zone_name])
 
 
 ## state 内の全ゾーンから指定 card_id のインスタンスを探し、見つかれば除去して instance_id を返す。
@@ -415,6 +425,12 @@ static func _find_and_remove_from_current_zone(state: GameState, card_id: int) -
 			if state.instances[iid].card_id == card_id:
 				state.backstages[p] = -1
 				return iid
+	# 自宅から探す
+	for i in range(state.home.size()):
+		var iid: int = state.home[i]
+		if state.instances[iid].card_id == card_id:
+			state.home.remove_at(i)
+			return iid
 	return -1
 
 

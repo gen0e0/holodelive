@@ -20,15 +20,15 @@ func test_parse_empty_args() -> void:
 
 
 func test_parse_single_hand() -> void:
-	var result: Dictionary = _scene_script._parse_zone_args(["h0=6,3"])
+	var result: Dictionary = _scene_script._parse_zone_args(["p0=6,3"])
 	assert_dict(result).has_size(1)
-	assert_array(result["h0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([6, 3])
 
 
 func test_parse_multiple_zones() -> void:
-	var result: Dictionary = _scene_script._parse_zone_args(["h0=6,3", "s1=40"])
+	var result: Dictionary = _scene_script._parse_zone_args(["p0=6,3", "s1=40"])
 	assert_dict(result).has_size(2)
-	assert_array(result["h0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([6, 3])
 	assert_array(result["s1"]).contains_exactly([40])
 
 
@@ -38,11 +38,17 @@ func test_parse_backstage() -> void:
 	assert_array(result["b0"]).contains_exactly([10])
 
 
+func test_parse_home() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["h=1,2,3"])
+	assert_dict(result).has_size(1)
+	assert_array(result["h"]).contains_exactly([1, 2, 3])
+
+
 func test_parse_all_zones() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args([
-		"h0=1,2", "h1=3", "s0=10,20,30", "s1=40", "b0=50", "b1=60"
+		"p0=1,2", "p1=3", "s0=10,20,30", "s1=40", "b0=50", "b1=60", "h=7"
 	])
-	assert_dict(result).has_size(6)
+	assert_dict(result).has_size(7)
 
 
 func test_parse_ignores_invalid_key() -> void:
@@ -51,20 +57,20 @@ func test_parse_ignores_invalid_key() -> void:
 
 
 func test_parse_ignores_bad_format() -> void:
-	var result: Dictionary = _scene_script._parse_zone_args(["h0", "=5", ""])
+	var result: Dictionary = _scene_script._parse_zone_args(["p0", "=5", ""])
 	assert_dict(result).is_empty()
 
 
 func test_parse_case_insensitive() -> void:
-	var result: Dictionary = _scene_script._parse_zone_args(["H0=6,3", "S1=40"])
+	var result: Dictionary = _scene_script._parse_zone_args(["P0=6,3", "S1=40"])
 	assert_dict(result).has_size(2)
-	assert_array(result["h0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([6, 3])
 
 
 func test_parse_with_spaces() -> void:
-	var result: Dictionary = _scene_script._parse_zone_args([" h0 = 6 , 3 "])
+	var result: Dictionary = _scene_script._parse_zone_args([" p0 = 6 , 3 "])
 	assert_dict(result).has_size(1)
-	assert_array(result["h0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([6, 3])
 
 
 # =============================================================================
@@ -109,6 +115,16 @@ func test_find_and_remove_from_backstage() -> void:
 	var found: int = _scene_script._find_and_remove_from_current_zone(state, 30)
 	assert_int(found).is_equal(iid)
 	assert_int(state.backstages[0]).is_equal(-1)
+
+
+func test_find_and_remove_from_home() -> void:
+	var state := GameState.new()
+	var iid: int = state.create_instance(50)
+	state.home.append(iid)
+
+	var found: int = _scene_script._find_and_remove_from_current_zone(state, 50)
+	assert_int(found).is_equal(iid)
+	assert_array(state.home).is_empty()
 
 
 func test_find_and_remove_not_found() -> void:
