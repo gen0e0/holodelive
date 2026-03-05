@@ -44,6 +44,24 @@ func test_parse_home() -> void:
 	assert_array(result["h"]).contains_exactly([1, 2, 3])
 
 
+func test_parse_random_card() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["s0=r,r,r"])
+	assert_dict(result).has_size(1)
+	assert_array(result["s0"]).contains_exactly([-1, -1, -1])
+
+
+func test_parse_random_mixed_with_ids() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["p0=r,6"])
+	assert_dict(result).has_size(1)
+	assert_array(result["p0"]).contains_exactly([-1, 6])
+
+
+func test_parse_random_uppercase() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["s1=R,10,R"])
+	assert_dict(result).has_size(1)
+	assert_array(result["s1"]).contains_exactly([-1, 10, -1])
+
+
 func test_parse_all_zones() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args([
 		"p0=1,2", "p1=3", "s0=10,20,30", "s1=40", "b0=50", "b1=60", "h=7"
