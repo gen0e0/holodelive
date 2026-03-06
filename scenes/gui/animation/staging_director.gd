@@ -331,7 +331,11 @@ func _fire_card_move(move: Dictionary, old_positions: Dictionary,
 
 	var from_xform: Dictionary = old_positions.get(iid, {})
 	if from_xform.is_empty():
-		from_xform = old_positions.get(from_zone, {})
+		# 自分の手札は個別位置あり。見つからない "hand" は相手手札
+		if from_zone == "hand":
+			from_xform = old_positions.get("opp_hand", {})
+		else:
+			from_xform = old_positions.get(from_zone, {})
 	if from_xform.is_empty():
 		return null
 
@@ -634,9 +638,10 @@ func _delay(seconds: float) -> void:
 func _capture_positions(cs: ClientState) -> Dictionary:
 	var result: Dictionary = {}
 
-	# デッキ・ホーム位置は cs に依存しないので常にキャプチャ
+	# ゾーン中心位置（個別カードが見つからない場合のフォールバック）
 	result["deck"] = deck_view.get_card_content_transform()
 	result["home"] = home_view.get_card_content_transform()
+	result["opp_hand"] = _get_hand_center(opp_hand)
 
 	if cs == null:
 		return result
