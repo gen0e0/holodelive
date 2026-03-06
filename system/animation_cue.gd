@@ -8,6 +8,13 @@ var cue_type: CueType
 var style: Style = Style.DEFAULT
 var instance_id: int = -1
 var params: Dictionary = {}
+var delay: float = 0.0
+
+
+## delay を設定して自身を返すビルダーメソッド。
+func with_delay(d: float) -> AnimationCue:
+	delay = d
+	return self
 
 
 static func move(iid: int, p_style: Style = Style.DEFAULT) -> AnimationCue:

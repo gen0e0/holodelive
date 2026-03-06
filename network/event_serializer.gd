@@ -69,14 +69,17 @@ static func _serialize_action(
 				if d.type == Enums.DiffType.CARD_MOVE:
 					var inst_id: int = d.details.get("instance_id", -1)
 					var style_name: String = "DEFAULT"
+					var move_delay: float = 0.0
 					if cue_map.has(inst_id):
 						style_name = AnimationCue.Style.keys()[cue_map[inst_id].style]
+						move_delay = cue_map[inst_id].delay
 					moves.append({
 						"instance_id": inst_id,
 						"card": StateSerializer._card_dict(inst_id, state, registry),
 						"from_zone": d.details.get("from_zone", ""),
 						"to_zone": d.details.get("to_zone", ""),
 						"style": style_name,
+						"delay": move_delay,
 					})
 			if not moves.is_empty():
 				event["moves"] = moves
@@ -90,13 +93,16 @@ static func _serialize_action(
 					var after: bool = d2.details.get("after", false)
 					if before != after:
 						var flip_style: String = "DEFAULT"
+						var flip_delay: float = 0.0
 						if cue_map.has(inst_id2):
 							flip_style = AnimationCue.Style.keys()[cue_map[inst_id2].style]
+							flip_delay = cue_map[inst_id2].delay
 						flips.append({
 							"instance_id": inst_id2,
 							"card": StateSerializer._card_dict(inst_id2, state, registry),
 							"to_face_down": after,
 							"style": flip_style,
+							"delay": flip_delay,
 						})
 			if not flips.is_empty():
 				event["flips"] = flips
