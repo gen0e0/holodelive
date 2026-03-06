@@ -10,6 +10,11 @@ func before() -> void:
 	_scene_script = load("res://scenes/debug/debug_scene.gd")
 
 
+## ヘルパー: パース結果の entry を作成
+func _e(card_id: int, guest: bool = false) -> Dictionary:
+	return {"card_id": card_id, "guest": guest}
+
+
 # =============================================================================
 # _parse_zone_args
 # =============================================================================
@@ -22,44 +27,62 @@ func test_parse_empty_args() -> void:
 func test_parse_single_hand() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["p0=6,3"])
 	assert_dict(result).has_size(1)
-	assert_array(result["p0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([_e(6), _e(3)])
 
 
 func test_parse_multiple_zones() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["p0=6,3", "s1=40"])
 	assert_dict(result).has_size(2)
-	assert_array(result["p0"]).contains_exactly([6, 3])
-	assert_array(result["s1"]).contains_exactly([40])
+	assert_array(result["p0"]).contains_exactly([_e(6), _e(3)])
+	assert_array(result["s1"]).contains_exactly([_e(40)])
 
 
 func test_parse_backstage() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["b0=10"])
 	assert_dict(result).has_size(1)
-	assert_array(result["b0"]).contains_exactly([10])
+	assert_array(result["b0"]).contains_exactly([_e(10)])
 
 
 func test_parse_home() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["h=1,2,3"])
 	assert_dict(result).has_size(1)
-	assert_array(result["h"]).contains_exactly([1, 2, 3])
+	assert_array(result["h"]).contains_exactly([_e(1), _e(2), _e(3)])
 
 
 func test_parse_random_card() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["s0=r,r,r"])
 	assert_dict(result).has_size(1)
-	assert_array(result["s0"]).contains_exactly([-1, -1, -1])
+	assert_array(result["s0"]).contains_exactly([_e(-1), _e(-1), _e(-1)])
 
 
 func test_parse_random_mixed_with_ids() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["p0=r,6"])
 	assert_dict(result).has_size(1)
-	assert_array(result["p0"]).contains_exactly([-1, 6])
+	assert_array(result["p0"]).contains_exactly([_e(-1), _e(6)])
 
 
 func test_parse_random_uppercase() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["s1=R,10,R"])
 	assert_dict(result).has_size(1)
-	assert_array(result["s1"]).contains_exactly([-1, 10, -1])
+	assert_array(result["s1"]).contains_exactly([_e(-1), _e(10), _e(-1)])
+
+
+func test_parse_guest_flag() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["b1=1g"])
+	assert_dict(result).has_size(1)
+	assert_array(result["b1"]).contains_exactly([_e(1, true)])
+
+
+func test_parse_guest_random() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["b0=rg"])
+	assert_dict(result).has_size(1)
+	assert_array(result["b0"]).contains_exactly([_e(-1, true)])
+
+
+func test_parse_guest_mixed() -> void:
+	var result: Dictionary = _scene_script._parse_zone_args(["s1=1g,2,3g"])
+	assert_dict(result).has_size(1)
+	assert_array(result["s1"]).contains_exactly([_e(1, true), _e(2), _e(3, true)])
 
 
 func test_parse_all_zones() -> void:
@@ -82,13 +105,13 @@ func test_parse_ignores_bad_format() -> void:
 func test_parse_case_insensitive() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args(["P0=6,3", "S1=40"])
 	assert_dict(result).has_size(2)
-	assert_array(result["p0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([_e(6), _e(3)])
 
 
 func test_parse_with_spaces() -> void:
 	var result: Dictionary = _scene_script._parse_zone_args([" p0 = 6 , 3 "])
 	assert_dict(result).has_size(1)
-	assert_array(result["p0"]).contains_exactly([6, 3])
+	assert_array(result["p0"]).contains_exactly([_e(6), _e(3)])
 
 
 # =============================================================================

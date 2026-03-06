@@ -321,10 +321,12 @@ func _handle_choice_input(num: int) -> void:
 # =============================================================================
 
 ## コマンドライン引数をパースしてゾーンオーバーライド辞書を返す。
-## 引数形式: p0=6,3 s1=r,r,40 b0=r h=1,2  (-- セパレータ以降)
+## 引数形式: p0=6,3 s1=r,rg,40 b0=rg h=1,2  (-- セパレータ以降)
 ## キー: p0/p1=手札, s0/s1=ステージ, b0/b1=バックステージ, h=自宅(共有)
-## 値: カードID (int) または RANDOM_CARD (-1) でランダムカードを表す
-## 戻り値: {"p0": [6, 3], "s1": [-1, -1, 40], "h": [1, 2]}
+## 値: Array[Dictionary] — 各要素 {"card_id": int, "guest": bool}
+##   card_id: カードID または RANDOM_CARD (-1)
+##   guest: true なら face_down（ゲスト状態）で配置
+## トークン末尾に g を付けるとゲスト: 1g, rg
 const RANDOM_CARD: int = -1
 
 static func _parse_zone_args(args: Array) -> Dictionary:
@@ -338,15 +340,18 @@ static func _parse_zone_args(args: Array) -> Dictionary:
 		if key not in valid_keys:
 			continue
 		var val_str: String = parts[1].strip_edges()
-		var card_ids: Array[int] = []
+		var entries: Array = []
 		for token in val_str.split(","):
 			var t: String = token.strip_edges().to_lower()
+			var guest: bool = t.ends_with("g")
+			if guest:
+				t = t.substr(0, t.length() - 1)
 			if t == "r":
-				card_ids.append(RANDOM_CARD)
+				entries.append({"card_id": RANDOM_CARD, "guest": guest})
 			elif t.is_valid_int():
-				card_ids.append(t.to_int())
-		if not card_ids.is_empty():
-			result[key] = card_ids
+				entries.append({"card_id": t.to_int(), "guest": guest})
+		if not entries.is_empty():
+			result[key] = entries
 	return result
 
 
@@ -357,7 +362,7 @@ func _apply_zone_overrides() -> void:
 	_log("[color=cyan][ZoneOverride] Applying overrides...[/color]")
 
 	for key in _zone_overrides:
-		var card_ids: Array = _zone_overrides[key]
+		var card_entries: Array = _zone_overrides[key]
 		var is_home: bool = (key == "h")
 		var zone_char: String = key[0]  # p, s, b, h
 		var player: int = key[1].to_int() if not is_home else -1
@@ -374,7 +379,9 @@ func _apply_zone_overrides() -> void:
 				state.home.clear()
 
 		# 各カードを配置
-		for card_id in card_ids:
+		for entry in card_entries:
+			var card_id: int = entry["card_id"]
+			var guest: bool = entry["guest"]
 			var instance_id: int = -1
 			var actual_card_id: int = card_id
 
@@ -392,6 +399,9 @@ func _apply_zone_overrides() -> void:
 				if instance_id == -1:
 					instance_id = state.create_instance(card_id)
 
+			if guest:
+				state.instances[instance_id].face_down = true
+
 			match zone_char:
 				"p":
 					state.hands[player].append(instance_id)
@@ -404,13 +414,14 @@ func _apply_zone_overrides() -> void:
 
 			var card_def: CardDef = session.registry.get_card(actual_card_id)
 			var card_name: String = card_def.nickname if card_def else "???"
+			var guest_label: String = " [guest]" if guest else ""
 			var zone_name: String = {"p": "Hand", "s": "Stage", "b": "Backstage", "h": "Home"}[zone_char]
 			if is_home:
-				_log("[color=cyan][ZoneOverride] #%d %s → %s[/color]" % [
-					actual_card_id, card_name, zone_name])
+				_log("[color=cyan][ZoneOverride] #%d %s → %s%s[/color]" % [
+					actual_card_id, card_name, zone_name, guest_label])
 			else:
-				_log("[color=cyan][ZoneOverride] #%d %s → P%d %s[/color]" % [
-					actual_card_id, card_name, player, zone_name])
+				_log("[color=cyan][ZoneOverride] #%d %s → P%d %s%s[/color]" % [
+					actual_card_id, card_name, player, zone_name, guest_label])
 
 
 ## state 内の全ゾーンから指定 card_id のインスタンスを探し、見つかれば除去して instance_id を返す。
