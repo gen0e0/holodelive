@@ -16,7 +16,10 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		if bs_id != -1 and bs_id != ctx.source_instance_id:
 			if _has_seiso(ctx, bs_id):
 				to_remove.append(bs_id)
+	var delay: float = 0.0
 	for id in to_remove:
+		ctx.emit_cue(AnimationCue.find_card(id).move().to_home().with_delay(delay))
+		delay += 0.1
 		ZoneOps.move_to_home(ctx.state, id, ctx.recorder)
 	# 1枚でも帰宅→WILD付与
 	if not to_remove.is_empty():

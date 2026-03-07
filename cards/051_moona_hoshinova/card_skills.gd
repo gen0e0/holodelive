@@ -14,6 +14,9 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		var bs_id: int = ctx.state.backstages[p]
 		if bs_id != -1 and ctx.state.instances[bs_id].card_id in TARGET_IDS:
 			to_remove.append(bs_id)
+	var delay: float = 0.0
 	for id in to_remove:
+		ctx.emit_cue(AnimationCue.find_card(id).move().to_home().with_delay(delay))
+		delay += 0.1
 		ZoneOps.move_to_home(ctx.state, id, ctx.recorder)
 	return SkillResult.done()
