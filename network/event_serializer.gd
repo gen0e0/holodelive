@@ -57,55 +57,12 @@ static func _serialize_action(
 					continue
 				event[key] = ga.params[key]
 
-			# Build cue map from animation_cues
-			var cue_map: Dictionary = {}  # instance_id -> AnimationCue
+			# animation_cues を直接シリアライズ
+			var cues: Array = []
 			for cue in ga.params.get("animation_cues", []):
-				cue_map[cue.instance_id] = cue
-
-			# diffs からカード移動情報を抽出
-			var moves: Array = []
-			for diff in ga.diffs:
-				var d: StateDiff = diff
-				if d.type == Enums.DiffType.CARD_MOVE:
-					var inst_id: int = d.details.get("instance_id", -1)
-					var style_name: String = "DEFAULT"
-					var move_delay: float = 0.0
-					if cue_map.has(inst_id):
-						style_name = AnimationCue.Style.keys()[cue_map[inst_id].style]
-						move_delay = cue_map[inst_id].delay
-					moves.append({
-						"instance_id": inst_id,
-						"card": StateSerializer._card_dict(inst_id, state, registry),
-						"from_zone": d.details.get("from_zone", ""),
-						"to_zone": d.details.get("to_zone", ""),
-						"style": style_name,
-						"delay": move_delay,
-					})
-			if not moves.is_empty():
-				event["moves"] = moves
-			# diffs からカードフリップ情報を抽出
-			var flips: Array = []
-			for diff2 in ga.diffs:
-				var d2: StateDiff = diff2
-				if d2.type == Enums.DiffType.CARD_FLIP:
-					var inst_id2: int = d2.details.get("instance_id", -1)
-					var before: bool = d2.details.get("before", false)
-					var after: bool = d2.details.get("after", false)
-					if before != after:
-						var flip_style: String = "DEFAULT"
-						var flip_delay: float = 0.0
-						if cue_map.has(inst_id2):
-							flip_style = AnimationCue.Style.keys()[cue_map[inst_id2].style]
-							flip_delay = cue_map[inst_id2].delay
-						flips.append({
-							"instance_id": inst_id2,
-							"card": StateSerializer._card_dict(inst_id2, state, registry),
-							"to_face_down": after,
-							"style": flip_style,
-							"delay": flip_delay,
-						})
-			if not flips.is_empty():
-				event["flips"] = flips
+				cues.append(_serialize_cue(cue, ga.player, state, registry))
+			if not cues.is_empty():
+				event["cues"] = cues
 
 		Enums.ActionType.ROUND_END:
 			event["winner"] = ga.params.get("winner", -1)
@@ -117,6 +74,47 @@ static func _serialize_action(
 			event["round_number"] = ga.params.get("round_number", 1)
 
 	return event
+
+
+static func _serialize_cue(
+	cue: AnimationCue,
+	skill_player: int,
+	state: GameState,
+	registry: CardRegistry
+) -> Dictionary:
+	var d: Dictionary = {
+		"source": cue.source,
+		"instance_id": cue.instance_id,
+		"action": cue.action,
+		"card": StateSerializer._card_dict(cue.instance_id, state, registry),
+		"style": AnimationCue.Style.keys()[cue.style],
+		"from_zone": _resolve_zone(cue.from_zone, skill_player),
+		"from_player": _resolve_player(cue.from_zone, skill_player),
+		"to_zone": _resolve_zone(cue.to_zone, skill_player),
+		"to_player": _resolve_player(cue.to_zone, skill_player),
+		"face_up": cue.face_up_override,
+		"delay": cue.delay,
+		"duration": cue.anim_duration,
+	}
+	if cue.action == "flip":
+		d["to_face_down"] = cue.to_face_down
+	return d
+
+
+## "my_hand" → "hand", "op_stage" → "stage" など、プレフィックスを除いたゾーン名を返す。
+static func _resolve_zone(zone: String, _skill_player: int) -> String:
+	if zone.begins_with("my_") or zone.begins_with("op_"):
+		return zone.substr(zone.find("_") + 1)
+	return zone  # "auto", "deck", "home", ""
+
+
+## "my_*" → skill_player, "op_*" → 1-skill_player, それ以外 → -1。
+static func _resolve_player(zone: String, skill_player: int) -> int:
+	if zone.begins_with("my_"):
+		return skill_player
+	if zone.begins_with("op_"):
+		return 1 - skill_player
+	return -1
 
 
 static func _action_type_name(action_type: Enums.ActionType) -> String:

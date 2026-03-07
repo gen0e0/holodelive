@@ -266,16 +266,16 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 
 func _cue_skill_effect(event: Dictionary, is_me: bool,
 		old_positions: Dictionary, cs: ClientState) -> bool:
-	var flips: Array = event.get("flips", [])
-	var moves: Array = event.get("moves", [])
+	var cues: Array = event.get("cues", [])
 
-	# 0) フリッププレースホルダー事前作成（カットイン中も旧面で表示）
+	# 0) flip キューのプレースホルダー事前作成（カットイン中も旧面で表示）
 	var flip_entries: Array = []
-	for flip in flips:
-		var fe: Dictionary = _create_flip_placeholder(flip)
-		if not fe.is_empty():
-			fe["delay"] = flip.get("delay", 0.0)
-			flip_entries.append(fe)
+	for cue_dict in cues:
+		if cue_dict.get("action", "") == "flip" and cue_dict.get("source", "") == "find":
+			var fe: Dictionary = _create_flip_placeholder(cue_dict)
+			if not fe.is_empty():
+				fe["delay"] = cue_dict.get("delay", 0.0)
+				flip_entries.append(fe)
 
 	# 1) カットイン演出（await で先に完了させる）
 	var skill_name: String = event.get("skill_name", "")
@@ -286,16 +286,19 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 		_anim_layer.add_child(cutin)
 		await cutin.play()
 
-	# 2) 移動元カードを一括非表示（発火前に全部隠す）
-	for move in moves:
-		_hide_move_source(move)
+	# 2) find_card + move の移動元カードを一括非表示
+	for cue_dict in cues:
+		if cue_dict.get("action", "") == "move" and cue_dict.get("source", "") == "find":
+			_hide_cue_source(cue_dict, old_positions, cs)
 
-	# 3) 全 move/flip を fire-and-forget で同時発火
+	# 3) 全キューを fire-and-forget で同時発火
 	var anim_nodes: Array = []
-	for move in moves:
-		var node: CardView = _fire_card_move(move, old_positions, cs)
-		if node != null:
-			anim_nodes.append(node)
+	for cue_dict in cues:
+		var cue_action: String = cue_dict.get("action", "")
+		if cue_action == "move":
+			var node: CardView = _fire_cue_move(cue_dict, old_positions, cs)
+			if node != null:
+				anim_nodes.append(node)
 	for fe in flip_entries:
 		var node: CardView = _fire_flip_animation(fe)
 		if node != null:
@@ -306,72 +309,133 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 		var max_dur: float = event.get("max_animation_duration", MAX_SKILL_DURATION)
 		await _wait_for_animations(anim_nodes, max_dur)
 
-	return not skill_name.is_empty() or not moves.is_empty() or not flip_entries.is_empty()
+	return not skill_name.is_empty() or not cues.is_empty()
 
 
-## 移動元カードを非表示にする（アニメーション発火前に一括呼び出し用）。
-func _hide_move_source(move: Dictionary) -> void:
-	var iid: int = move.get("instance_id", -1)
-	var from_zone: String = move.get("from_zone", "")
-	if from_zone == "hand":
-		hand.hide_card(iid)
+## find_card の移動元カードを非表示にする。
+func _hide_cue_source(cue_dict: Dictionary, old_positions: Dictionary,
+		cs: ClientState) -> void:
+	var iid: int = cue_dict.get("instance_id", -1)
+	var from_zone: String = cue_dict.get("from_zone", "auto")
+
+	if from_zone == "auto":
+		# old_positions に iid があればフィールド/手札上のカード
+		if old_positions.has(iid):
+			# 手札かフィールドかを判定して非表示
+			if _is_my_card_in_hand(iid, _prev_cs):
+				hand.hide_card(iid)
+			else:
+				card_layer.hide_card(iid)
+	elif from_zone == "hand":
+		var from_player: int = cue_dict.get("from_player", -1)
+		if from_player >= 0 and cs != null and from_player == cs.my_player:
+			hand.hide_card(iid)
+		# 相手手札は個別カード非表示不要（中心座標からアニメーション）
 	elif from_zone == "stage" or from_zone == "backstage":
 		card_layer.hide_card(iid)
 
 
-## move を fire-and-forget で発火。自己廃棄する CardView を返す。
-func _fire_card_move(move: Dictionary, old_positions: Dictionary,
+## move キューを fire-and-forget で発火。自己廃棄する CardView を返す。
+func _fire_cue_move(cue_dict: Dictionary, old_positions: Dictionary,
 		cs: ClientState) -> CardView:
-	var iid: int = move.get("instance_id", -1)
-	var card_data: Dictionary = move.get("card", {})
-	var from_zone: String = move.get("from_zone", "")
-	var to_zone: String = move.get("to_zone", "")
-	var style: String = move.get("style", "DEFAULT")
-	var delay: float = move.get("delay", 0.0)
+	var iid: int = cue_dict.get("instance_id", -1)
+	var card_data: Dictionary = cue_dict.get("card", {})
+	var style: String = cue_dict.get("style", "DEFAULT")
+	var delay: float = cue_dict.get("delay", 0.0)
+	var dur: float = cue_dict.get("duration", -1.0)
 
-	var from_xform: Dictionary = old_positions.get(iid, {})
-	if from_xform.is_empty():
-		# 自分の手札は個別位置あり。見つからない "hand" は相手手札
-		if from_zone == "hand":
-			from_xform = old_positions.get("opp_hand", {})
-		else:
-			from_xform = old_positions.get(from_zone, {})
+	var from_xform: Dictionary = _resolve_from(cue_dict, old_positions, cs)
 	if from_xform.is_empty():
 		return null
 
-	var to_xform: Dictionary = _compute_to_xform(to_zone, iid, cs)
+	var to_xform: Dictionary = _resolve_to(cue_dict, cs)
 	if to_xform.is_empty():
 		return null
 
-	var face_up: bool = not card_data.get("face_down", false) \
-		and not card_data.get("hidden", false)
+	# face_up: 明示指定 > カードの face_down 状態
+	var face_up_val: Variant = cue_dict.get("face_up", null)
+	var face_up: bool
+	if face_up_val != null:
+		face_up = face_up_val as bool
+	else:
+		face_up = not card_data.get("face_down", false) \
+			and not card_data.get("hidden", false)
+
+	if dur < 0:
+		dur = SPIN_OUT_DURATION if style == "SPIN_OUT" else FLY_DURATION
 
 	match style:
 		"SPIN_OUT":
 			return _fire_spin_out_card(card_data, face_up, from_xform, to_xform, delay)
 		_:
-			return _fire_fly_card(card_data, face_up, from_xform, to_xform, FLY_DURATION, delay)
+			return _fire_fly_card(card_data, face_up, from_xform, to_xform, dur, delay)
 	return null
+
+
+## from ゾーンを画面座標に解決する。
+func _resolve_from(cue_dict: Dictionary, old_positions: Dictionary,
+		cs: ClientState) -> Dictionary:
+	var iid: int = cue_dict.get("instance_id", -1)
+	var from_zone: String = cue_dict.get("from_zone", "auto")
+	var from_player: int = cue_dict.get("from_player", -1)
+
+	if from_zone == "auto":
+		# old_positions から iid で検索
+		var xform: Dictionary = old_positions.get(iid, {})
+		if not xform.is_empty():
+			return xform
+		# フォールバック: opp_hand 中心
+		return old_positions.get("opp_hand", {})
+
+	return _resolve_zone_xform(from_zone, from_player, iid, cs, old_positions)
+
+
+## to ゾーンを画面座標に解決する。
+func _resolve_to(cue_dict: Dictionary, cs: ClientState) -> Dictionary:
+	var iid: int = cue_dict.get("instance_id", -1)
+	var to_zone: String = cue_dict.get("to_zone", "")
+	var to_player: int = cue_dict.get("to_player", -1)
+
+	return _resolve_zone_xform(to_zone, to_player, iid, cs, {})
+
+
+## ゾーン名 + player → 画面座標。
+func _resolve_zone_xform(zone: String, player: int, iid: int,
+		cs: ClientState, old_positions: Dictionary) -> Dictionary:
+	match zone:
+		"deck":
+			return deck_view.get_card_content_transform()
+		"home":
+			return home_view.get_card_content_transform()
+		"hand":
+			if cs != null and player == cs.my_player:
+				return _get_hand_center(hand)
+			return _get_hand_center(opp_hand)
+		"stage":
+			# snapshot から iid のスロットを検索
+			return _find_field_slot_xform(iid, cs, true)
+		"backstage":
+			return _find_field_slot_xform(iid, cs, false)
+	return {}
 
 
 ## フリッププレースホルダーを作成。旧面の一時カードを同じ位置に配置し、
 ## 実カードを非表示にする。カットイン中も旧面が見えるよう、アニメーション前に呼ぶ。
-func _create_flip_placeholder(flip: Dictionary) -> Dictionary:
-	var iid: int = flip.get("instance_id", -1)
-	var card_data: Dictionary = flip.get("card", {})
-	var to_face_down: bool = flip.get("to_face_down", false)
+func _create_flip_placeholder(cue_dict: Dictionary) -> Dictionary:
+	var iid: int = cue_dict.get("instance_id", -1)
+	var card_data: Dictionary = cue_dict.get("card", {})
+	var p_to_face_down: bool = cue_dict.get("to_face_down", false)
 
 	var xform: Dictionary = card_layer.get_card_content_transform(iid)
 	if xform.is_empty():
 		return {}
 
-	# プレースホルダーが代わりに表示するので実カードは非表示
 	card_layer.hide_card(iid)
 
 	var cv: CardView = _CardViewScene.instantiate()
 	cv.managed_hover = true
 	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cv.setup(card_data, to_face_down)  # フリップ前の面
+	cv.setup(card_data, p_to_face_down)  # フリップ前の面
 	cv.position = xform.get("pos", Vector2.ZERO)
 	cv.scale = xform.get("scale", Vector2.ONE)
 	cv.rotation = xform.get("rotation", 0.0)
@@ -381,7 +445,7 @@ func _create_flip_placeholder(flip: Dictionary) -> Dictionary:
 		"cv": cv,
 		"iid": iid,
 		"card_data": card_data,
-		"to_face_down": to_face_down,
+		"to_face_down": p_to_face_down,
 		"base_scale_x": xform.get("scale", Vector2.ONE).x,
 	}
 
@@ -390,7 +454,7 @@ func _create_flip_placeholder(flip: Dictionary) -> Dictionary:
 func _fire_flip_animation(entry: Dictionary) -> CardView:
 	var cv: CardView = entry.get("cv")
 	var card_data: Dictionary = entry.get("card_data", {})
-	var to_face_down: bool = entry.get("to_face_down", false)
+	var p_to_face_down: bool = entry.get("to_face_down", false)
 	var base_scale_x: float = entry.get("base_scale_x", 1.0)
 	var delay: float = entry.get("delay", 0.0)
 
@@ -401,7 +465,7 @@ func _fire_flip_animation(entry: Dictionary) -> CardView:
 	tween.tween_property(cv, "scale:x", 0.0, half) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN).set_delay(delay)
 	# フリップ後の面に切り替え
-	tween.tween_callback(func() -> void: cv.setup(card_data, not to_face_down))
+	tween.tween_callback(func() -> void: cv.setup(card_data, not p_to_face_down))
 	# 後半: scale.x → 元の値（カードが開く）
 	tween.tween_property(cv, "scale:x", base_scale_x, half) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -641,6 +705,7 @@ func _capture_positions(cs: ClientState) -> Dictionary:
 	# ゾーン中心位置（個別カードが見つからない場合のフォールバック）
 	result["deck"] = deck_view.get_card_content_transform()
 	result["home"] = home_view.get_card_content_transform()
+	result["my_hand"] = _get_hand_center(hand)
 	result["opp_hand"] = _get_hand_center(opp_hand)
 
 	if cs == null:
