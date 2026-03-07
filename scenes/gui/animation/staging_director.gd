@@ -556,10 +556,11 @@ func _wait_for_animations(items: Array, max_duration: float) -> void:
 	while timer.time_left > 0.0:
 		var all_done: bool = true
 		for item in items:
+			if not is_instance_valid(item):
+				continue
 			if item is Node:
-				if is_instance_valid(item):
-					all_done = false
-					break
+				all_done = false
+				break
 			elif item is Tween:
 				if item.is_running():
 					all_done = false
@@ -568,7 +569,9 @@ func _wait_for_animations(items: Array, max_duration: float) -> void:
 			break
 		await _anim_layer.get_tree().process_frame
 	for item in items:
-		if item is Node and is_instance_valid(item):
+		if not is_instance_valid(item):
+			continue
+		if item is Node:
 			item.queue_free()
 		elif item is Tween and item.is_running():
 			item.kill()

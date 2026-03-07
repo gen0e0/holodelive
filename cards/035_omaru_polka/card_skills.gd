@@ -4,13 +4,16 @@ extends BaseCardSkill
 ## ポルカおるか？(play): 山札から1枚カードを引き、手札に加える。その後、手札から1枚山札の上に置く。
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	if ctx.phase == 0:
-		ZoneOps.draw_card(ctx.state, ctx.player, ctx.recorder)
+		var drawn_iid: int = ZoneOps.draw_card(ctx.state, ctx.player, ctx.recorder)
+		if drawn_iid >= 0:
+			ctx.emit_cue(AnimationCue.make_card(drawn_iid).move().from_deck().to_my_hand())
 		var hand: Array = ctx.state.hands[ctx.player]
 		if hand.is_empty():
 			return SkillResult.done()
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
 	else:
 		var chosen: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(chosen).move().to_deck())
 		ZoneOps.move_to_deck_top(ctx.state, chosen, ctx.recorder)
 		return SkillResult.done()
 
@@ -25,11 +28,14 @@ func _skill_1(ctx: SkillContext) -> SkillResult:
 	var player: int = ctx.player
 	# デッキ最下部のカードを取得
 	var bottom_id: int = ctx.state.deck.back()
-	# 自身をデッキ最下部に移動
+	# 自身をデッキへ
+	ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_deck())
 	ZoneOps.move_to_deck_bottom(ctx.state, ctx.source_instance_id, ctx.recorder)
 	# デッキ最下部だったカードを元の位置にプレイ
 	if was_on_stage:
+		ctx.emit_cue(AnimationCue.make_card(bottom_id).move().from_deck().to_my_stage().with_delay(0.1))
 		ZoneOps.play_to_stage_from_zone(ctx.state, player, bottom_id, ctx.recorder)
 	else:
+		ctx.emit_cue(AnimationCue.make_card(bottom_id).move().from_deck().to_my_backstage().face_up(false).with_delay(0.1))
 		ZoneOps.play_to_backstage_from_zone(ctx.state, player, bottom_id, ctx.recorder)
 	return SkillResult.done()
