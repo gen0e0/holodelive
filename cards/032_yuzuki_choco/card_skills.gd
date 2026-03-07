@@ -10,5 +10,6 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 	if not ctx.state.instances[bs_id].face_down:
 		return SkillResult.done()
 	# オープン（play skill は発動しない）
+	ctx.emit_cue(AnimationCue.find_card(bs_id).flip(false))
 	ZoneOps.open_backstage(ctx.state, opp, ctx.recorder)
 	return SkillResult.done()
