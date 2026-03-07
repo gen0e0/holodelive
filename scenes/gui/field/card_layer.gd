@@ -92,6 +92,10 @@ func get_card_content_transform(instance_id: int) -> Dictionary:
 	return {}
 
 
+func get_card_view(instance_id: int) -> CardView:
+	return _card_views.get(instance_id, null)
+
+
 func hide_card(instance_id: int) -> void:
 	if _card_views.has(instance_id):
 		_card_views[instance_id].visible = false

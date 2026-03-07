@@ -8,5 +8,6 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.done()
 	if ctx.state.instances[bs_id].face_down:
 		return SkillResult.done()
+	ctx.emit_cue(AnimationCue.find_card(bs_id).flip(true))
 	ZoneOps.close_backstage(ctx.state, ctx.player, ctx.recorder)
 	return SkillResult.done()

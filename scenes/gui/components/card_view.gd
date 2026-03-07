@@ -55,6 +55,8 @@ static var SUIT_COLORS: Dictionary = {
 const BACK_COLOR := Color(0.35, 0.35, 0.4)
 const GUEST_LABEL_FONT_SIZE: int = 36
 const MASK_FADE_DURATION := 0.2
+const FLIP_DURATION := 0.15
+const FLIP_HOP_HEIGHT := 30.0  # ホップの高さ (px)
 const BADGE_FONT_SIZE: int = 12
 
 static var ABILITY_BADGE_CONFIG: Dictionary = {
@@ -73,6 +75,41 @@ func setup(card_data: Dictionary, face_up: bool) -> void:
 	# @onready 完了前に呼ばれた場合は _ready() で描画
 	if is_node_ready():
 		_update_display()
+
+
+## フリップアニメーションを再生する。完了追跡用の Tween を返す。
+## new_card_data が指定された場合、フリップ時にカードデータも更新する。
+func play_flip(new_face_up: bool, new_card_data: Dictionary = {},
+		delay: float = 0.0) -> Tween:
+	var base_sx: float = scale.x
+	var base_y: float = position.y
+	var flip_data: Dictionary = new_card_data if not new_card_data.is_empty() else _card_data
+	var swapped: Array[bool] = [false]
+
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+
+	# Y: 山なりホップ（放物線）
+	tween.tween_method(
+		func(t: float) -> void:
+			position.y = base_y - 4.0 * FLIP_HOP_HEIGHT * t * (1.0 - t),
+		0.0, 1.0, FLIP_DURATION
+	).set_delay(delay)
+
+	# Scale.x: 前半 1→0、中間で面切替、後半 0→1
+	tween.tween_method(
+		func(t: float) -> void:
+			if t < 0.5:
+				scale.x = base_sx * (1.0 - 2.0 * t)
+			else:
+				if not swapped[0]:
+					swapped[0] = true
+					setup(flip_data, new_face_up)
+				scale.x = base_sx * (2.0 * t - 1.0),
+		0.0, 1.0, FLIP_DURATION
+	).set_delay(delay)
+
+	return tween
 
 
 func _ready() -> void:
