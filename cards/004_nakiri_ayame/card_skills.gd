@@ -1,6 +1,10 @@
 extends BaseCardSkill
 
 
+func _is_continuous_passive() -> bool:
+	return true
+
+
 ## なんも聞いとらんかった: このカードを役に含むと、先にライブ準備をしたとして扱う。
 ## ShowdownCalculator が参照するフラグを Modifier として付与。
 func _skill_0(ctx: SkillContext) -> SkillResult:

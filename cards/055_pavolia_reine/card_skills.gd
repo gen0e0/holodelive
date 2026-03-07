@@ -1,6 +1,10 @@
 extends BaseCardSkill
 
 
+func _is_continuous_passive() -> bool:
+	return true
+
+
 ## レイネの教室: このカードの前後に接しているカードに、一時的にID☽を加える。
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	var adjacent: Array = _get_adjacent_ids(ctx)

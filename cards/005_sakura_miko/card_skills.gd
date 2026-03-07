@@ -1,6 +1,10 @@
 extends BaseCardSkill
 
 
+func _is_continuous_passive() -> bool:
+	return true
+
+
 ## サクラカゼ: このカードを役に含んで勝利した場合、２勝する。
 ## ShowdownCalculator / GameController が参照するフラグを Modifier として付与。
 func _skill_0(ctx: SkillContext) -> SkillResult:

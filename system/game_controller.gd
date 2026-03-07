@@ -108,8 +108,11 @@ func apply_action(action: Dictionary) -> void:
 			var inst_id: int = action["instance_id"]
 			ZoneOps.open_backstage(state, p, _recorder)
 			_log_action(Enums.ActionType.OPEN, p, {"instance_id": inst_id})
-			# オープン後、play skill を試行（ACTION フェーズ続行）
+			# オープン後、play skill / 入場時パッシブを試行（ACTION フェーズ続行）
 			_try_trigger_play_skill(inst_id, p)
+			# スキルがなくても継続型パッシブは再計算が必要
+			if state.skill_stack.is_empty():
+				_recalculate_continuous_passives()
 
 		Enums.ActionType.PLAY_CARD:
 			var inst_id: int = action["instance_id"]
@@ -121,10 +124,12 @@ func apply_action(action: Dictionary) -> void:
 				_try_trigger_play_skill(inst_id, p)
 				if _pending_end_turn and state.skill_stack.is_empty() and not is_waiting_for_choice():
 					_pending_end_turn = false
+					_recalculate_continuous_passives()
 					end_turn()
 			elif target == "backstage":
 				ZoneOps.play_to_backstage(state, p, inst_id, _recorder)
 				_log_action(Enums.ActionType.PLAY_CARD, p, action)
+				_recalculate_continuous_passives()
 				end_turn()
 
 		Enums.ActionType.ACTIVATE_SKILL:
@@ -344,27 +349,34 @@ func _push_skill(card_id: int, skill_index: int, instance_id: int, player: int) 
 	state.skill_stack.append(entry)
 
 
-## play skill のトリガーを試みる。
+## play skill と入場時パッシブのトリガーを試みる。
+## ゲスト（face_down）の場合はパッシブをトリガーしない。
 func _try_trigger_play_skill(instance_id: int, player: int) -> void:
 	var inst: CardInstance = state.instances[instance_id]
 	var card_def: CardDef = registry.get_card(inst.card_id)
 	if not card_def or card_def.skills.is_empty():
+		return
+	if not skill_registry.has_skill(inst.card_id):
 		return
 
 	# 最初の play skill を探す
 	for i in range(card_def.skills.size()):
 		var skill_meta: Dictionary = card_def.skills[i]
 		if skill_meta.get("type") == Enums.SkillType.PLAY:
-			if skill_registry.has_skill(inst.card_id):
-				_push_skill(inst.card_id, i, instance_id, player)
-				_fire_trigger(Enums.TriggerEvent.SKILL_ACTIVATED, {
-					"card_id": inst.card_id,
-					"skill_index": i,
-					"instance_id": instance_id,
-					"player": player,
-				})
-				_resolve_skill_stack()
-				return
+			_push_skill(inst.card_id, i, instance_id, player)
+			_fire_trigger(Enums.TriggerEvent.SKILL_ACTIVATED, {
+				"card_id": inst.card_id,
+				"skill_index": i,
+				"instance_id": instance_id,
+				"player": player,
+			})
+			_resolve_skill_stack()
+			return
+
+	# play skill がない場合、入場時一回型パッシブを探す（ゲスト除外）
+	if inst.face_down:
+		return
+	_try_trigger_on_enter_passive(instance_id, player)
 
 
 ## スキルスタックを LIFO で解決する。
@@ -411,6 +423,9 @@ func _resolve_skill_stack() -> void:
 			state.skill_stack.pop_back()
 			continue
 
+		# スキル実行前にフィールドスナップショットを取得（入場検出用）
+		var pre_snap: Dictionary = _snapshot_field_ids()
+
 		# SkillContext を構築
 		var ctx := SkillContext.new(
 			state,
@@ -455,6 +470,9 @@ func _resolve_skill_stack() -> void:
 		top.state = Enums.SkillState.RESOLVED
 		state.skill_stack.pop_back()
 
+		# スキル解決後、新規入場カードの入場時パッシブをチェック
+		_check_new_field_entries(pre_snap)
+
 	# スタック空 → 完了
 	_on_skill_stack_resolved()
 
@@ -462,6 +480,7 @@ func _resolve_skill_stack() -> void:
 ## スキルスタック解決完了後の後処理。
 func _on_skill_stack_resolved() -> void:
 	state.pending_choices.clear()
+	_recalculate_continuous_passives()
 	if _pending_end_turn:
 		_pending_end_turn = false
 		end_turn()
@@ -555,6 +574,105 @@ func _find_passive_skill_index(card_def: CardDef) -> int:
 		if card_def.skills[i].get("type") == Enums.SkillType.PASSIVE:
 			return i
 	return -1
+
+
+## 入場時一回型パッシブのトリガーを試みる。
+func _try_trigger_on_enter_passive(instance_id: int, player: int) -> void:
+	var inst: CardInstance = state.instances[instance_id]
+	var card_def: CardDef = registry.get_card(inst.card_id)
+	if not card_def or not skill_registry.has_skill(inst.card_id):
+		return
+	var skill_script: BaseCardSkill = skill_registry.get_skill(inst.card_id)
+	if not skill_script or skill_script._is_continuous_passive():
+		return
+	for i in range(card_def.skills.size()):
+		var skill_meta: Dictionary = card_def.skills[i]
+		if skill_meta.get("type") == Enums.SkillType.PASSIVE:
+			_push_skill(inst.card_id, i, instance_id, player)
+			_fire_trigger(Enums.TriggerEvent.SKILL_ACTIVATED, {
+				"card_id": inst.card_id,
+				"skill_index": i,
+				"instance_id": instance_id,
+				"player": player,
+			})
+			_resolve_skill_stack()
+			return
+
+
+## フィールド上の表向きカードの instance_id セットを返す（スナップショット用）。
+func _snapshot_field_ids() -> Dictionary:
+	var ids: Dictionary = {}
+	for p in range(2):
+		for id in state.stages[p]:
+			if not state.instances[id].face_down:
+				ids[id] = true
+		var bs_id: int = state.backstages[p]
+		if bs_id != -1 and not state.instances[bs_id].face_down:
+			ids[bs_id] = true
+	return ids
+
+
+## スナップショット比較で新規入場カードの入場時パッシブをトリガーする。
+func _check_new_field_entries(old_snapshot: Dictionary) -> void:
+	var current: Dictionary = _snapshot_field_ids()
+	for id in current:
+		if not old_snapshot.has(id):
+			# 新規カード — 所有プレイヤーを特定
+			var player: int = _find_card_player(id)
+			if player >= 0:
+				_try_trigger_on_enter_passive(id, player)
+
+
+## instance_id のカードがどちらのプレイヤーのフィールドにいるかを返す。見つからなければ -1。
+func _find_card_player(instance_id: int) -> int:
+	for p in range(2):
+		if state.stages[p].has(instance_id):
+			return p
+		if state.backstages[p] == instance_id:
+			return p
+	return -1
+
+
+## 継続型パッシブスキルを全て再計算する。
+## 1. 継続型パッシブソースの非永続 Modifier を全除去
+## 2. フィールド上の表向きカードで継続型パッシブを再実行
+func _recalculate_continuous_passives() -> void:
+	# 1. 継続型パッシブカードの source_instance_id を収集
+	var continuous_sources: Dictionary = {}
+	for inst_id in state.instances:
+		var inst: CardInstance = state.instances[inst_id]
+		var card_def: CardDef = registry.get_card(inst.card_id)
+		if not card_def:
+			continue
+		var skill_script: BaseCardSkill = skill_registry.get_skill(inst.card_id)
+		if skill_script and skill_script._is_continuous_passive():
+			continuous_sources[inst_id] = true
+
+	# 2. 全 CardInstance から継続型パッシブソースの非永続 Modifier を除去
+	for inst_id in state.instances:
+		var inst: CardInstance = state.instances[inst_id]
+		var i: int = inst.modifiers.size() - 1
+		while i >= 0:
+			var mod: Modifier = inst.modifiers[i]
+			if continuous_sources.has(mod.source_instance_id) and not mod.persistent:
+				inst.modifiers.remove_at(i)
+			i -= 1
+
+	# 3. フィールド上の表向きカードで継続型パッシブを直接実行
+	for p in range(2):
+		var field_ids: Array = _get_face_up_field_ids(p)
+		for inst_id in field_ids:
+			if not continuous_sources.has(inst_id):
+				continue
+			var inst: CardInstance = state.instances[inst_id]
+			var card_def: CardDef = registry.get_card(inst.card_id)
+			var skill_script: BaseCardSkill = skill_registry.get_skill(inst.card_id)
+			if not skill_script:
+				continue
+			for i in range(card_def.skills.size()):
+				if card_def.skills[i].get("type") == Enums.SkillType.PASSIVE:
+					var ctx := SkillContext.new(state, registry, inst_id, p, 0, null, _recorder)
+					skill_script.execute_skill(ctx, i)
 
 
 ## FieldEffect の寿命管理: 期限切れ除去 → デクリメント。

@@ -18,3 +18,9 @@ func execute_skill(ctx: SkillContext, skill_index: int) -> SkillResult:
 ## オーバーライドして true を返すとカウンター候補になる。
 func _can_counter(_ctx: SkillContext) -> bool:
 	return false
+
+
+## 継続型パッシブかどうか。true の場合、状態変化のたびに再計算される。
+## false（デフォルト）の場合、場に出た時に一度だけトリガーされる。
+func _is_continuous_passive() -> bool:
+	return false
