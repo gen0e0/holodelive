@@ -378,7 +378,13 @@ func _resolve_from(cue_dict: Dictionary, old_positions: Dictionary,
 		# フォールバック: opp_hand 中心
 		return old_positions.get("opp_hand", {})
 
-	return _resolve_zone_xform(from_zone, from_player, iid, cs, old_positions)
+	# ゾーン指定で解決を試みる
+	var result: Dictionary = _resolve_zone_xform(
+		from_zone, from_player, iid, cs, old_positions)
+	# stage/backstage は新 cs では既に移動済みの場合がある → old_positions にフォールバック
+	if result.is_empty() and old_positions.has(iid):
+		return old_positions[iid]
+	return result
 
 
 ## to ゾーンを画面座標に解決する。
