@@ -56,7 +56,10 @@ func _ready() -> void:
 
 func _init_and_start() -> void:
 	# コマンドライン引数からゾーンオーバーライドをパース
-	_zone_overrides = _parse_zone_args(OS.get_cmdline_user_args())
+	# test=ID 形式ならプリセットから展開
+	var user_args: Array = OS.get_cmdline_user_args()
+	var resolved_args: Array = _resolve_test_preset(user_args)
+	_zone_overrides = _parse_zone_args(resolved_args)
 
 	# RNG 作成（シード指定があれば固定、なければランダム）
 	_rng = RandomNumberGenerator.new()
@@ -319,6 +322,36 @@ func _handle_choice_input(num: int) -> void:
 # =============================================================================
 # コマンドライン引数によるゾーンオーバーライド
 # =============================================================================
+
+## test=ID 引数があればプリセットJSONから展開、なければ引数をそのまま返す。
+static func _resolve_test_preset(args: Array) -> Array:
+	for arg in args:
+		var a: String = str(arg)
+		if a.begins_with("test="):
+			var id: String = a.substr(5)
+			var presets: Dictionary = _load_test_presets()
+			if presets.has(id):
+				var preset_args: Array = presets[id]
+				print("[TestPreset] test=%s → %s" % [id, str(preset_args)])
+				return preset_args
+			push_warning("Test preset '%s' not found in test_presets.json" % id)
+			return []
+	return args
+
+
+static func _load_test_presets() -> Dictionary:
+	var path: String = "res://scenes/debug/test_presets.json"
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning("Cannot open %s" % path)
+		return {}
+	var json := JSON.new()
+	var err: Error = json.parse(file.get_as_text())
+	if err != OK:
+		push_warning("Failed to parse %s: %s" % [path, json.get_error_message()])
+		return {}
+	return json.data if json.data is Dictionary else {}
+
 
 ## コマンドライン引数をパースしてゾーンオーバーライド辞書を返す。
 ## 引数形式: p0=6,3 s1=r,rg,40 b0=rg h=1,2  (-- セパレータ以降)
