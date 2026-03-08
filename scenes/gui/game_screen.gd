@@ -55,9 +55,11 @@ func _ready() -> void:
 	_director.field_layout = _field_layout
 	_director.refresh_fn = _refresh
 	_director.on_actions_ready = _handle_actions_received
+	_director.on_state_processed = _on_state_processed
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
 	_my_hand.card_hovered.connect(_on_card_hovered)
 	_my_hand.card_unhovered.connect(_on_card_unhovered)
+	_card_layer.card_clicked.connect(_on_field_card_clicked)
 	_card_layer.card_hovered.connect(_on_card_hovered)
 	_card_layer.card_unhovered.connect(_on_card_unhovered)
 	_home_view.card_clicked.connect(_on_home_card_clicked)
@@ -117,6 +119,8 @@ func _fit_content() -> void:
 
 func connect_session(s: GameSession) -> void:
 	session = s
+	if session is LocalGameSession:
+		(session as LocalGameSession).set_defer_interactions(true)
 	session.state_updated.connect(_on_state_updated)
 	session.actions_received.connect(_on_actions_received)
 	session.choice_requested.connect(_on_choice_requested)
@@ -131,6 +135,8 @@ func connect_session(s: GameSession) -> void:
 
 func disconnect_session() -> void:
 	if session != null:
+		if session is LocalGameSession:
+			(session as LocalGameSession).set_defer_interactions(false)
 		if session.state_updated.is_connected(_on_state_updated):
 			session.state_updated.disconnect(_on_state_updated)
 		if session.actions_received.is_connected(_on_actions_received):
@@ -148,6 +154,11 @@ func disconnect_session() -> void:
 
 func _on_state_updated(client_state: ClientState, event_entries: Array) -> void:
 	_director.enqueue_state_update(client_state, event_entries)
+
+
+func _on_state_processed() -> void:
+	if session != null:
+		session.flush_pending_interaction()
 
 
 func _on_game_started() -> void:
@@ -347,6 +358,7 @@ func _clear_interaction_state() -> void:
 	_my_hand.deselect()
 	_clear_action_buttons()
 	_home_view.dismiss_popup()
+	_card_layer.clear_selectable()
 	if _btn_stage != null:
 		_btn_stage.visible = false
 	if _btn_backstage != null:
@@ -368,6 +380,26 @@ func _on_choice_requested(choice_data: Dictionary) -> void:
 		var cs: ClientState = session.get_client_state()
 		if cs == null:
 			return
+
+		# フィールドカード（ステージ＋楽屋）の対象を抽出
+		var field_ids: Array = _get_field_instance_ids(cs)
+		var field_targets: Array = []
+		for tid in valid_targets:
+			if field_ids.has(tid):
+				field_targets.append(tid)
+
+		# フィールド対象が1枚だけなら自動選択
+		if field_targets.size() == 1:
+			var choice_index: int = choice_data.get("choice_index", 0)
+			_clear_interaction_state()
+			session.send_choice(choice_index, field_targets[0])
+			return
+
+		# フィールド対象があればグロー表示
+		if not field_targets.is_empty():
+			_card_layer.set_selectable(field_targets)
+
+		# 自宅カードの対象を抽出
 		var home_ids: Array = []
 		for card in cs.home:
 			home_ids.append(card.get("instance_id", -1))
@@ -378,6 +410,26 @@ func _on_choice_requested(choice_data: Dictionary) -> void:
 		if not home_targets.is_empty():
 			_home_view.set_selectable(home_targets)
 			_home_view.open_popup()
+
+
+func _get_field_instance_ids(cs: ClientState) -> Array:
+	var ids: Array = []
+	for p in range(2):
+		for card in cs.stages[p]:
+			ids.append(card.get("instance_id", -1))
+		if cs.backstages[p] != null:
+			ids.append(cs.backstages[p].get("instance_id", -1))
+	return ids
+
+
+func _on_field_card_clicked(instance_id: int) -> void:
+	if _waiting_choice:
+		var valid_targets: Array = _choice_data.get("valid_targets", [])
+		if valid_targets.has(instance_id):
+			var choice_index: int = _choice_data.get("choice_index", 0)
+			_clear_interaction_state()
+			session.send_choice(choice_index, instance_id)
+			return
 
 
 func _on_home_card_clicked(instance_id: int) -> void:

@@ -8,6 +8,8 @@ var skill_registry: SkillRegistry
 var _last_log_index: int = 0
 var _client_state: ClientState
 var _action_snapshots: Array = []  # Array[ClientState]
+var _pending_interaction: Dictionary = {}  # {"type": "choice"/"actions", "data": ...}
+var _defer_interactions: bool = false  # true の場合、choice/actions を即 emit せず保留
 
 ## CPU strategies keyed by player index (e.g. {1: RandomStrategy}).
 var _cpu_strategies: Dictionary = {}
@@ -15,6 +17,12 @@ var _cpu_strategies: Dictionary = {}
 var human_player: int = 0
 ## Shared RNG for deterministic replay. If null, uses random seed.
 var rng: RandomNumberGenerator
+
+## アニメーション付きUIが接続されている場合に呼ぶ。
+## choice_requested / actions_received をアニメーション完了後まで保留する。
+func set_defer_interactions(enabled: bool) -> void:
+	_defer_interactions = enabled
+
 
 ## Register a player index as CPU-controlled with the given strategy.
 ## If strategy is null, defaults to RandomStrategy sharing this session's RNG.
@@ -190,7 +198,33 @@ func _emit_actions() -> void:
 	if _is_pass_only(actions):
 		send_action({"type": Enums.ActionType.PASS})
 		return
-	actions_received.emit(actions)
+	_emit_or_defer_actions(actions)
+
+
+func _emit_or_defer_choice(choice_data: Dictionary) -> void:
+	if _defer_interactions:
+		_pending_interaction = {"type": "choice", "data": choice_data}
+	else:
+		choice_requested.emit(choice_data)
+
+
+func _emit_or_defer_actions(actions: Array) -> void:
+	if _defer_interactions:
+		_pending_interaction = {"type": "actions", "data": actions}
+	else:
+		actions_received.emit(actions)
+
+
+func flush_pending_interaction() -> void:
+	var pending: Dictionary = _pending_interaction
+	_pending_interaction = {}
+	if pending.is_empty():
+		return
+	match pending.get("type", ""):
+		"choice":
+			choice_requested.emit(pending["data"])
+		"actions":
+			actions_received.emit(pending["data"])
 
 
 func _advance(prev_turn: int) -> void:
@@ -205,7 +239,7 @@ func _advance(prev_turn: int) -> void:
 			if _is_cpu_player(pc.target_player):
 				_cpu_take_choice(choice_data)
 			else:
-				choice_requested.emit(choice_data)
+				_emit_or_defer_choice(choice_data)
 		return
 
 	if state.turn_number != prev_turn:
@@ -228,7 +262,7 @@ func _advance_cpu(prev_turn: int, depth: int) -> void:
 			if _is_cpu_player(pc.target_player):
 				_cpu_take_choice(choice_data, depth + 1)
 			else:
-				choice_requested.emit(choice_data)
+				_emit_or_defer_choice(choice_data)
 		return
 
 	if state.turn_number != prev_turn:
@@ -239,8 +273,4 @@ func _advance_cpu(prev_turn: int, depth: int) -> void:
 		_cpu_take_action(depth + 1)
 		return
 
-	var actions: Array = controller.get_available_actions()
-	if _is_pass_only(actions):
-		send_action({"type": Enums.ActionType.PASS})
-		return
-	actions_received.emit(actions)
+	_emit_actions()

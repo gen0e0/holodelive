@@ -30,3 +30,10 @@ func is_my_turn() -> bool:
 
 func start_game() -> void:
 	pass
+
+
+## state_updated に伴う後続シグナル（actions_received / choice_requested）を発火する。
+## StagingDirector のアニメーション完了後に呼ぶことで、正しい順序を保証する。
+## デフォルト実装は何もしない（NetworkGameSession 等は自然なタイミングで発火するため）。
+func flush_pending_interaction() -> void:
+	pass

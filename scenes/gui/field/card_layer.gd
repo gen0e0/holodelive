@@ -106,5 +106,17 @@ func show_card(instance_id: int) -> void:
 		_card_views[instance_id].visible = true
 
 
+func set_selectable(ids: Array) -> void:
+	for iid in _card_views:
+		var cv: CardView = _card_views[iid]
+		cv.set_selectable(ids.has(iid))
+
+
+func clear_selectable() -> void:
+	for iid in _card_views:
+		var cv: CardView = _card_views[iid]
+		cv.set_selectable(false)
+
+
 func _on_card_clicked(iid: int) -> void:
 	card_clicked.emit(iid)

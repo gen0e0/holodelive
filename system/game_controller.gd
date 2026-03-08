@@ -452,6 +452,10 @@ func _resolve_skill_stack() -> void:
 			if not ctx.animation_cues.is_empty():
 				skill_params["animation_cues"] = ctx.animation_cues
 			_log_action(Enums.ActionType.SKILL_EFFECT, top.player, skill_params)
+		elif not ctx.animation_cues.is_empty():
+			# phase >= 1 でもアニメーションキューがあればログに記録（カットインなし）
+			_log_action(Enums.ActionType.SKILL_EFFECT, top.player,
+				{"animation_cues": ctx.animation_cues})
 
 		if result.status == SkillResult.Status.WAITING_FOR_CHOICE:
 			# 中断: PendingChoice を作成

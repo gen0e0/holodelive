@@ -17,11 +17,13 @@ var base_scale: Vector2 = Vector2.ONE:
 var instance_id: int = -1
 var _face_up: bool = true
 var _is_guest: bool = false
+var _is_selectable: bool = false
 var _card_data: Dictionary = {}
 var _hovered: bool = false
 var _pressed: bool = false
 var _click_tween: Tween = null
 var _mask_tween: Tween = null
+var _glow_tween: Tween = null
 
 @onready var _card_body: Panel = $CardBody
 @onready var _suit_panel: Panel = $CardBody/BgSuitPanel
@@ -30,6 +32,7 @@ var _mask_tween: Tween = null
 @onready var _info_label: Label = $CardBody/InfoLabel
 @onready var _icon_container: HBoxContainer = $CardBody/IconContainer
 var _guest_mask: Panel
+var _selectable_glow: Panel
 var _badge_container: VBoxContainer
 
 const ICON_VIEW_SCENE: PackedScene = preload("res://scenes/gui/components/icon_view.tscn")
@@ -121,6 +124,8 @@ func _ready() -> void:
 	_card_body.add_child(_badge_container)
 	_guest_mask = _create_guest_mask()
 	add_child(_guest_mask)
+	_selectable_glow = _create_selectable_glow()
+	add_child(_selectable_glow)
 	_update_display()
 
 
@@ -310,6 +315,57 @@ func _notification(what: int) -> void:
 				_fade_guest_mask(0.0)
 			if _face_up and not _card_data.get("hidden", false):
 				card_hovered.emit(_card_data, get_global_rect())
+
+
+# -- 選択可能グロー --
+
+func set_selectable(val: bool) -> void:
+	_is_selectable = val
+	if _selectable_glow:
+		_selectable_glow.visible = val
+		if val:
+			_start_glow_pulse()
+		else:
+			_stop_glow_pulse()
+
+
+func _start_glow_pulse() -> void:
+	_stop_glow_pulse()
+	_glow_tween = create_tween().set_loops()
+	_glow_tween.tween_property(_selectable_glow, "modulate:a", 0.4, 0.6) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_glow_tween.tween_property(_selectable_glow, "modulate:a", 1.0, 0.6) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+
+func _stop_glow_pulse() -> void:
+	if _glow_tween and _glow_tween.is_valid():
+		_glow_tween.kill()
+	_glow_tween = null
+
+
+func _create_selectable_glow() -> Panel:
+	var glow := Panel.new()
+	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glow.offset_left = -4.0
+	glow.offset_top = -4.0
+	glow.offset_right = 4.0
+	glow.offset_bottom = 4.0
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.visible = false
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	style.border_color = Color(1.0, 0.85, 0.2, 0.9)
+	style.border_width_left = 4
+	style.border_width_top = 4
+	style.border_width_right = 4
+	style.border_width_bottom = 4
+	style.corner_radius_top_left = 18
+	style.corner_radius_top_right = 18
+	style.corner_radius_bottom_left = 18
+	style.corner_radius_bottom_right = 18
+	glow.add_theme_stylebox_override("panel", style)
+	return glow
 
 
 # -- ゲストマスク --

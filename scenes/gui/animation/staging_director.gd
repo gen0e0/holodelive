@@ -31,6 +31,10 @@ var refresh_fn: Callable
 ## actions キュー処理時に呼ばれるコールバック: func(actions: Array) -> void
 var on_actions_ready: Callable
 
+## STATE_UPDATE キュー処理完了後に呼ばれるコールバック: func() -> void
+## アニメーション完了 → refresh 後に保留中のインタラクション（choice / actions）を発火するために使う。
+var on_state_processed: Callable
+
 # --- 内部状態 ---
 var _anim_layer: Control
 var _queue: Array = []          # [{type, cs_final?, event_entries?, actions?}]
@@ -157,6 +161,10 @@ func _process_state_cue(entry: Dictionary) -> void:
 	if cs_final != null and refresh_fn.is_valid():
 		refresh_fn.call(cs_final)
 	_prev_cs = cs_final
+
+	# 8) 保留中のインタラクションを発火
+	if on_state_processed.is_valid():
+		on_state_processed.call()
 
 
 func _process_actions_cue(entry: Dictionary) -> void:
