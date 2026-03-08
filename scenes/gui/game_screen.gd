@@ -21,9 +21,8 @@ var session: GameSession
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
-var _waiting_choice: bool = false
-var _choice_data: Dictionary = {}
 var _director: StagingDirector
+var _choice_manager: ChoiceManager
 
 @onready var _content: Control = $Content
 @onready var _top_bar: TopBar = $Content/TopBar
@@ -56,16 +55,19 @@ func _ready() -> void:
 	_director.refresh_fn = _refresh
 	_director.on_actions_ready = _handle_actions_received
 	_director.on_state_processed = _on_state_processed
+	_choice_manager = ChoiceManager.new()
+	# FieldCardSelector は _setup_buttons() 後に登録（_overlay が必要）
 	_my_hand.card_clicked.connect(_on_hand_card_clicked)
 	_my_hand.card_hovered.connect(_on_card_hovered)
 	_my_hand.card_unhovered.connect(_on_card_unhovered)
-	_card_layer.card_clicked.connect(_on_field_card_clicked)
 	_card_layer.card_hovered.connect(_on_card_hovered)
 	_card_layer.card_unhovered.connect(_on_card_unhovered)
-	_home_view.card_clicked.connect(_on_home_card_clicked)
 	_home_view.card_hovered.connect(_on_card_hovered)
 	_home_view.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
+	_choice_manager.register(FieldCardSelector.new(
+		_card_layer, _home_view, _get_client_state_for_choice, _overlay))
+	_choice_manager.choice_resolved.connect(_on_choice_resolved)
 	_setup_rank_labels()
 
 
@@ -133,6 +135,12 @@ func connect_session(s: GameSession) -> void:
 		_director.initialize(cs)
 
 
+func _get_client_state_for_choice() -> ClientState:
+	if session != null:
+		return session.get_client_state()
+	return null
+
+
 func disconnect_session() -> void:
 	if session != null:
 		if session is LocalGameSession:
@@ -149,7 +157,8 @@ func disconnect_session() -> void:
 			session.game_over.disconnect(_on_game_over)
 		session = null
 	_director.cancel_all()
-	_clear_interaction_state()
+	_clear_action_state()
+	_choice_manager.cancel()
 
 
 func _on_state_updated(client_state: ClientState, event_entries: Array) -> void:
@@ -184,7 +193,7 @@ func _on_card_unhovered() -> void:
 
 
 func _refresh(cs: ClientState) -> void:
-	_clear_interaction_state()
+	_clear_action_state()
 	_top_bar.update_display(cs)
 	_field_layout.update_layout(cs)
 	_card_layer.sync_state(cs, _field_layout)
@@ -270,7 +279,8 @@ func _find_field_card_rect(instance_id: int, _cs: ClientState) -> Rect2:
 func _on_action_button_pressed(action: Dictionary) -> void:
 	if session == null:
 		return
-	_clear_interaction_state()
+	_clear_action_state()
+	_choice_manager.cancel()
 	session.send_action(action)
 
 
@@ -322,7 +332,7 @@ func _on_stage_pressed() -> void:
 	if session == null or _selected_instance_id < 0:
 		return
 	var iid: int = _selected_instance_id
-	_clear_interaction_state()
+	_clear_action_state()
 	session.send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
@@ -334,7 +344,7 @@ func _on_backstage_pressed() -> void:
 	if session == null or _selected_instance_id < 0:
 		return
 	var iid: int = _selected_instance_id
-	_clear_interaction_state()
+	_clear_action_state()
 	session.send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
@@ -345,20 +355,16 @@ func _on_backstage_pressed() -> void:
 func _on_pass_pressed() -> void:
 	if session == null:
 		return
-	_clear_interaction_state()
+	_clear_action_state()
 	session.send_action({"type": Enums.ActionType.PASS})
 
 
-func _clear_interaction_state() -> void:
+func _clear_action_state() -> void:
 	_current_actions = []
 	_selected_instance_id = -1
-	_waiting_choice = false
-	_choice_data = {}
 	_my_hand.is_selectable = false
 	_my_hand.deselect()
 	_clear_action_buttons()
-	_home_view.dismiss_popup()
-	_card_layer.clear_selectable()
 	if _btn_stage != null:
 		_btn_stage.visible = false
 	if _btn_backstage != null:
@@ -372,71 +378,9 @@ func _clear_interaction_state() -> void:
 # ---------------------------------------------------------------------------
 
 func _on_choice_requested(choice_data: Dictionary) -> void:
-	_waiting_choice = true
-	_choice_data = choice_data
-	var choice_type: int = choice_data.get("choice_type", -1)
-	if choice_type == Enums.ChoiceType.SELECT_CARD:
-		var valid_targets: Array = choice_data.get("valid_targets", [])
-		var cs: ClientState = session.get_client_state()
-		if cs == null:
-			return
-
-		# フィールドカード（ステージ＋楽屋）の対象を抽出
-		var field_ids: Array = _get_field_instance_ids(cs)
-		var field_targets: Array = []
-		for tid in valid_targets:
-			if field_ids.has(tid):
-				field_targets.append(tid)
-
-		# フィールド対象が1枚だけなら自動選択
-		if field_targets.size() == 1:
-			var choice_index: int = choice_data.get("choice_index", 0)
-			_clear_interaction_state()
-			session.send_choice(choice_index, field_targets[0])
-			return
-
-		# フィールド対象があればグロー表示
-		if not field_targets.is_empty():
-			_card_layer.set_selectable(field_targets)
-
-		# 自宅カードの対象を抽出
-		var home_ids: Array = []
-		for card in cs.home:
-			home_ids.append(card.get("instance_id", -1))
-		var home_targets: Array = []
-		for tid in valid_targets:
-			if home_ids.has(tid):
-				home_targets.append(tid)
-		if not home_targets.is_empty():
-			_home_view.set_selectable(home_targets)
-			_home_view.open_popup()
+	_choice_manager.handle_choice(choice_data)
 
 
-func _get_field_instance_ids(cs: ClientState) -> Array:
-	var ids: Array = []
-	for p in range(2):
-		for card in cs.stages[p]:
-			ids.append(card.get("instance_id", -1))
-		if cs.backstages[p] != null:
-			ids.append(cs.backstages[p].get("instance_id", -1))
-	return ids
-
-
-func _on_field_card_clicked(instance_id: int) -> void:
-	if _waiting_choice:
-		var valid_targets: Array = _choice_data.get("valid_targets", [])
-		if valid_targets.has(instance_id):
-			var choice_index: int = _choice_data.get("choice_index", 0)
-			_clear_interaction_state()
-			session.send_choice(choice_index, instance_id)
-			return
-
-
-func _on_home_card_clicked(instance_id: int) -> void:
-	if _waiting_choice:
-		var valid_targets: Array = _choice_data.get("valid_targets", [])
-		if valid_targets.has(instance_id):
-			var choice_index: int = _choice_data.get("choice_index", 0)
-			_clear_interaction_state()
-			session.send_choice(choice_index, instance_id)
-			return
+func _on_choice_resolved(choice_idx: int, value: Variant) -> void:
+	if session != null:
+		session.send_choice(choice_idx, value)

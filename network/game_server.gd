@@ -81,7 +81,7 @@ func receive_action(action: Dictionary, player_index: int) -> void:
 
 
 ## Called by GameClient when a player submits a choice.
-func receive_choice(choice_idx: int, value: int, player_index: int) -> void:
+func receive_choice(choice_idx: int, value: Variant, player_index: int) -> void:
 	if player_index < 0:
 		push_warning("[GameServer] Unknown player index: %d" % player_index)
 		return
@@ -95,8 +95,14 @@ func receive_choice(choice_idx: int, value: int, player_index: int) -> void:
 		push_warning("[GameServer] Choice not for player %d" % player_index)
 		return
 
-	if not pc.valid_targets.has(value):
-		push_warning("[GameServer] Invalid choice value: %d" % value)
+	# バリデーション: 単一選択は valid_targets に含まれるか、複数選択は各要素が含まれるか
+	if value is Array:
+		for v in value:
+			if not pc.valid_targets.has(v):
+				push_warning("[GameServer] Invalid choice value in array: %s" % str(v))
+				return
+	elif not pc.valid_targets.has(value):
+		push_warning("[GameServer] Invalid choice value: %s" % str(value))
 		return
 
 	_stop_choice_timer()
@@ -336,7 +342,7 @@ func _on_choice_timeout() -> void:
 	if pc == null or pc.valid_targets.is_empty():
 		return
 
-	var value: Variant = _pick_by_strategy(pc.timeout_strategy, pc.valid_targets)
+	var value: Variant = _pick_by_strategy(pc.timeout_strategy, pc.valid_targets, pc.select_max)
 	var choice_idx: int = state.pending_choices.find(pc)
 
 	var prev_turn: int = state.turn_number
@@ -345,11 +351,23 @@ func _on_choice_timeout() -> void:
 	_advance(prev_turn)
 
 
-func _pick_by_strategy(strategy: String, targets: Array) -> Variant:
-	match strategy:
-		"last":
-			return targets[targets.size() - 1]
-		"random":
-			return targets[randi() % targets.size()]
-		_:  # "first"
-			return targets[0]
+func _pick_by_strategy(strategy: String, targets: Array, select_max: int = 1) -> Variant:
+	if select_max <= 1:
+		match strategy:
+			"last":
+				return targets[targets.size() - 1]
+			"random":
+				return targets[randi() % targets.size()]
+			_:  # "first"
+				return targets[0]
+	else:
+		var count: int = mini(select_max, targets.size())
+		match strategy:
+			"last":
+				return targets.slice(targets.size() - count)
+			"random":
+				var shuffled: Array = targets.duplicate()
+				shuffled.shuffle()
+				return shuffled.slice(0, count)
+			_:  # "first"
+				return targets.slice(0, count)

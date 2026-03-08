@@ -60,7 +60,7 @@ func _deliver_action(action: Dictionary, player_index: int) -> void:
 		server.receive_action(action, player_index)
 
 
-func _deliver_choice(choice_idx: int, value: int, player_index: int) -> void:
+func _deliver_choice(choice_idx: int, value: Variant, player_index: int) -> void:
 	var nm: Node = get_parent()
 	var server: GameServer = nm.get_server()
 	if server:

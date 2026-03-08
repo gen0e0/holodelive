@@ -202,10 +202,8 @@ func _emit_actions() -> void:
 
 
 func _emit_or_defer_choice(choice_data: Dictionary) -> void:
-	if _defer_interactions:
-		_pending_interaction = {"type": "choice", "data": choice_data}
-	else:
-		choice_requested.emit(choice_data)
+	# 選択UIは ChoiceManager がリフレッシュ耐性を持つため、常に即発火する。
+	choice_requested.emit(choice_data)
 
 
 func _emit_or_defer_actions(actions: Array) -> void:
@@ -220,11 +218,8 @@ func flush_pending_interaction() -> void:
 	_pending_interaction = {}
 	if pending.is_empty():
 		return
-	match pending.get("type", ""):
-		"choice":
-			choice_requested.emit(pending["data"])
-		"actions":
-			actions_received.emit(pending["data"])
+	if pending.get("type", "") == "actions":
+		actions_received.emit(pending["data"])
 
 
 func _advance(prev_turn: int) -> void:

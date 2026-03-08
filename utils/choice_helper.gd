@@ -31,5 +31,7 @@ static func make_choice_data(
 		"choice_type": int(pc.choice_type),
 		"valid_targets": pc.valid_targets,
 		"valid_target_details": details,
+		"select_min": pc.select_min,
+		"select_max": pc.select_max,
 		"timeout": pc.timeout,
 	}

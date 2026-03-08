@@ -11,7 +11,11 @@ signal card_unhovered()
 const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
 const FIELD_SCALE: float = 260.0 / 300.0
 
+const CHOSEN_OFFSET_Y: float = -20.0
+
 var _card_views: Dictionary = {}  # instance_id -> CardView
+var _selectable_ids: Array = []   # set_selectable で保存、sync_state 後に再適用
+var _chosen_ids: Array = []       # 選択済みカード、sync_state 後に再適用
 
 
 func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
@@ -46,6 +50,10 @@ func sync_state(cs: ClientState, field_layout: FieldLayout) -> void:
 		var cv: CardView = _card_views[iid]
 		cv.queue_free()
 		_card_views.erase(iid)
+
+	# --- selectable / chosen 状態を再適用 ---
+	_apply_selectable()
+	_apply_chosen()
 
 
 func _ensure_card(iid: int, card_data: Dictionary, face_up: bool, slot: Control) -> void:
@@ -107,15 +115,50 @@ func show_card(instance_id: int) -> void:
 
 
 func set_selectable(ids: Array) -> void:
-	for iid in _card_views:
-		var cv: CardView = _card_views[iid]
-		cv.set_selectable(ids.has(iid))
+	_selectable_ids = ids
+	_apply_selectable()
 
 
 func clear_selectable() -> void:
+	_selectable_ids = []
+	_apply_selectable()
+
+
+func _apply_selectable() -> void:
 	for iid in _card_views:
 		var cv: CardView = _card_views[iid]
-		cv.set_selectable(false)
+		cv.set_selectable(_selectable_ids.has(iid))
+
+
+## 選択済み状態をセット（アニメーション付き）。
+func toggle_chosen(iid: int, chosen: bool) -> void:
+	if chosen:
+		if not _chosen_ids.has(iid):
+			_chosen_ids.append(iid)
+	else:
+		_chosen_ids.erase(iid)
+	var cv: CardView = _card_views.get(iid, null)
+	if cv == null:
+		return
+	var base_y: float = (cv.get_parent().size.y - cv.size.y) / 2.0
+	var target_y: float = base_y + (CHOSEN_OFFSET_Y if chosen else 0.0)
+	var tween: Tween = cv.create_tween()
+	tween.tween_property(cv, "position:y", target_y, 0.15) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func clear_chosen() -> void:
+	_chosen_ids = []
+	_apply_chosen()
+
+
+## sync_state 後に即座に再適用（アニメーションなし）。
+func _apply_chosen() -> void:
+	for iid in _card_views:
+		var cv: CardView = _card_views[iid]
+		if _chosen_ids.has(iid):
+			var base_y: float = (cv.get_parent().size.y - cv.size.y) / 2.0
+			cv.position.y = base_y + CHOSEN_OFFSET_Y
 
 
 func _on_card_clicked(iid: int) -> void:
