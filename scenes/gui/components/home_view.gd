@@ -25,8 +25,11 @@ var _card_container: HBoxContainer
 var _popup_card_views: Array = []
 var _popup_open: bool = false
 var _selectable_ids: Array = []
+var _chosen_ids: Array = []
 var _highlight_panels: Dictionary = {}
 var _popup_tween: Tween = null
+
+const CHOSEN_OFFSET_Y: float = -15.0
 
 
 func _ready() -> void:
@@ -175,6 +178,10 @@ func _populate_popup() -> void:
 		cv.card_unhovered.connect(func() -> void: card_unhovered.emit())
 		wrapper.add_child(cv)
 
+		# chosen 状態の再適用
+		if _chosen_ids.has(iid):
+			wrapper.position.y = CHOSEN_OFFSET_Y
+
 		_card_container.add_child(wrapper)
 		_popup_card_views.append(wrapper)
 
@@ -274,6 +281,38 @@ func clear_selectable() -> void:
 func dismiss_popup() -> void:
 	close_popup()
 	clear_selectable()
+	clear_chosen()
+
+
+func toggle_chosen(instance_id: int, chosen: bool) -> void:
+	if chosen:
+		if not _chosen_ids.has(instance_id):
+			_chosen_ids.append(instance_id)
+	else:
+		_chosen_ids.erase(instance_id)
+	# ポップアップ内のカードラッパーにアニメーション適用
+	var idx: int = _find_popup_index(instance_id)
+	if idx < 0 or idx >= _popup_card_views.size():
+		return
+	var wrapper: Control = _popup_card_views[idx]
+	var target_y: float = CHOSEN_OFFSET_Y if chosen else 0.0
+	var tw: Tween = create_tween()
+	tw.tween_property(wrapper, "position:y", target_y, 0.15) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func clear_chosen() -> void:
+	_chosen_ids = []
+	for wrapper in _popup_card_views:
+		if is_instance_valid(wrapper):
+			wrapper.position.y = 0.0
+
+
+func _find_popup_index(instance_id: int) -> int:
+	for i in range(_cards.size()):
+		if _cards[i].get("instance_id", -1) == instance_id:
+			return i
+	return -1
 
 
 func _update_highlights() -> void:

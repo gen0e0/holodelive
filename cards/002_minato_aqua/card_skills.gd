@@ -12,6 +12,7 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, targets)
 	else:
 		var chosen: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(chosen).move().from_home().to_my_stage())
 		ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, chosen, ctx.recorder)
 		return SkillResult.done()
 

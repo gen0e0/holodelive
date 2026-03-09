@@ -118,14 +118,21 @@ func _toggle_selection(instance_id: int) -> void:
 	if _selected_ids.has(instance_id):
 		# 選択解除
 		_selected_ids.erase(instance_id)
-		_card_layer.toggle_chosen(instance_id, false)
+		_set_chosen(instance_id, false)
 	else:
 		if _selected_ids.size() >= _required_count:
 			# 既に規定枚数選択済み → 無視
 			return
 		_selected_ids.append(instance_id)
-		_card_layer.toggle_chosen(instance_id, true)
+		_set_chosen(instance_id, true)
 	_update_confirm_button()
+
+
+func _set_chosen(instance_id: int, chosen: bool) -> void:
+	if _home_targets.has(instance_id):
+		_home_view.toggle_chosen(instance_id, chosen)
+	else:
+		_card_layer.toggle_chosen(instance_id, chosen)
 
 
 # ---------------------------------------------------------------------------
