@@ -121,8 +121,9 @@ func _toggle_selection(instance_id: int) -> void:
 		_set_chosen(instance_id, false)
 	else:
 		if _selected_ids.size() >= _required_count:
-			# 既に規定枚数選択済み → 無視
-			return
+			# 最古の選択を解除して入れ替え
+			var oldest: int = _selected_ids.pop_front()
+			_set_chosen(oldest, false)
 		_selected_ids.append(instance_id)
 		_set_chosen(instance_id, true)
 	_update_confirm_button()
