@@ -1,28 +1,33 @@
 extends BaseCardSkill
 
 
-## タイムリープ: このカードを帰宅させる。相手の場にあるカードを２枚選んで手札に戻す。
+## タイムリープ: このカードを帰宅させる。相手の場にあるカードを最大2枚選んで手札に戻す。
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	var opp: int = 1 - ctx.player
 	if ctx.phase == 0:
-		# 自身を帰宅
-		ZoneOps.move_to_home(ctx.state, ctx.source_instance_id, ctx.recorder)
 		var targets: Array = _get_opp_field_ids(ctx)
 		if targets.is_empty():
+			# 対象なし → 自身帰宅のみ
+			ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_home())
+			ZoneOps.move_to_home(ctx.state, ctx.source_instance_id, ctx.recorder)
 			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, targets)
-	elif ctx.phase == 1:
-		# 1枚目を相手手札に
-		var first: int = ctx.choice_result
-		ZoneOps.move_to_hand(ctx.state, first, opp, ctx.recorder)
-		var targets: Array = _get_opp_field_ids(ctx)
-		if targets.is_empty():
-			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, targets)
+		# 選択のみ（自身の帰宅は Phase 1 で同時に演出）
+		var max_pick: int = mini(2, targets.size())
+		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, targets, 1, max_pick)
 	else:
-		# 2枚目を相手手札に
-		var second: int = ctx.choice_result
-		ZoneOps.move_to_hand(ctx.state, second, opp, ctx.recorder)
+		# 自身の帰宅と選択カードの返却を同時に演出
+		ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_home())
+		ZoneOps.move_to_home(ctx.state, ctx.source_instance_id, ctx.recorder)
+		var chosen: Array
+		if ctx.choice_result is Array:
+			chosen = ctx.choice_result
+		else:
+			chosen = [ctx.choice_result]
+		var delay: float = 0.0
+		for iid in chosen:
+			ctx.emit_cue(AnimationCue.find_card(iid).move().to_op_hand().with_delay(delay))
+			ZoneOps.move_to_hand(ctx.state, iid, opp, ctx.recorder)
+			delay += 0.15
 		return SkillResult.done()
 
 
