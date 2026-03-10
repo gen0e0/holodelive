@@ -367,8 +367,8 @@ static func _load_test_presets() -> Dictionary:
 
 
 ## コマンドライン引数をパースしてゾーンオーバーライド辞書を返す。
-## 引数形式: p0=6,3 s1=r,rg,40 b0=rg h=1,2  (-- セパレータ以降)
-## キー: p0/p1=手札, s0/s1=ステージ, b0/b1=バックステージ, h=自宅(共有)
+## 引数形式: p0=6,3 s1=r,rg,40 b0=rg h=1,2 d=3,7,45  (-- セパレータ以降)
+## キー: p0/p1=手札, s0/s1=ステージ, b0/b1=バックステージ, h=自宅(共有), d=デッキ先頭
 ## 値: Array[Dictionary] — 各要素 {"card_id": int, "guest": bool}
 ##   card_id: カードID または RANDOM_CARD (-1)
 ##   guest: true なら face_down（ゲスト状態）で配置
@@ -377,7 +377,7 @@ const RANDOM_CARD: int = -1
 
 static func _parse_zone_args(args: Array) -> Dictionary:
 	var result: Dictionary = {}
-	var valid_keys: Array[String] = ["p0", "p1", "s0", "s1", "b0", "b1", "h"]
+	var valid_keys: Array[String] = ["p0", "p1", "s0", "s1", "b0", "b1", "h", "d"]
 	for arg in args:
 		var parts: PackedStringArray = arg.split("=", true, 1)
 		if parts.size() != 2:
@@ -407,7 +407,13 @@ func _apply_zone_overrides() -> void:
 	var state: GameState = session.state
 	_log("[color=cyan][ZoneOverride] Applying overrides...[/color]")
 
+	# デッキ先頭指定は先に処理（他のゾーン配置でデッキから抜かれる前に順序を確保）
+	if _zone_overrides.has("d"):
+		_apply_deck_override(state, _zone_overrides["d"])
+
 	for key in _zone_overrides:
+		if key == "d":
+			continue
 		var card_entries: Array = _zone_overrides[key]
 		var is_home: bool = (key == "h")
 		var zone_char: String = key[0]  # p, s, b, h
@@ -468,6 +474,33 @@ func _apply_zone_overrides() -> void:
 			else:
 				_log("[color=cyan][ZoneOverride] #%d %s → P%d %s%s[/color]" % [
 					actual_card_id, card_name, player, zone_name, guest_label])
+
+
+## デッキ先頭に指定カードを配置する。指定カードをデッキ内から探して先頭に移動。
+## なければ新規生成してデッキ先頭に挿入。
+func _apply_deck_override(state: GameState, entries: Array) -> void:
+	# 逆順に処理して insert(0) すると、entries の順序がデッキ先頭に反映される
+	for i in range(entries.size() - 1, -1, -1):
+		var entry: Dictionary = entries[i]
+		var card_id: int = entry["card_id"]
+		if card_id == RANDOM_CARD:
+			continue  # デッキ内ランダムは意味がないのでスキップ
+		# デッキ内から探して先頭に移動
+		var found: bool = false
+		for j in range(state.deck.size()):
+			var iid: int = state.deck[j]
+			if state.instances[iid].card_id == card_id:
+				state.deck.remove_at(j)
+				state.deck.insert(0, iid)
+				found = true
+				break
+		if not found:
+			# デッキにない場合は新規生成して先頭に挿入
+			var iid: int = state.create_instance(card_id)
+			state.deck.insert(0, iid)
+		var card_def: CardDef = session.registry.get_card(card_id)
+		var card_name: String = card_def.nickname if card_def else "???"
+		_log("[color=cyan][ZoneOverride] #%d %s → Deck top[/color]" % [card_id, card_name])
 
 
 ## state 内の全ゾーンから指定 card_id のインスタンスを探し、見つかれば除去して instance_id を返す。

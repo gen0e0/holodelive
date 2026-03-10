@@ -25,6 +25,65 @@
   - `--headless --quit` だけでは `global_script_class_cache.cfg` が更新されないので注意
 - 新規コード追加時は対応するテストも作成すること
 
+## デバッグシーン（CLI テスト）
+
+メインシーン (`scenes/debug/debug_scene.tscn`) はコマンドライン引数でゲーム状態と行動を制御できる。
+
+### 実行方法
+
+```bash
+godot res://scenes/debug/debug_scene.tscn -- [ゾーンオーバーライド...] [auto=行動キュー]
+```
+
+### ゾーンオーバーライド
+
+ゲーム開始時のカード配置を指定する。値は card_id のカンマ区切り。`r` でランダム、末尾 `g` でゲスト（伏せ）配置。
+
+| キー | ゾーン |
+|------|--------|
+| `p0/p1` | 手札 |
+| `s0/s1` | ステージ |
+| `b0/b1` | バックステージ |
+| `h` | 自宅（共有） |
+| `d` | デッキ先頭（指定順にドローされる） |
+
+```bash
+godot res://scenes/debug/debug_scene.tscn -- d=3,7 p0=45,10 s1=47 b1=2g h=20
+```
+
+プリセットも使える: `godot res://scenes/debug/debug_scene.tscn -- test=preset_id`（`scenes/debug/test_presets.json` に定義）
+
+### 自動行動キュー (`auto=`)
+
+P0 の行動を事前予約する。P1 は CPU が自動応答。
+
+```bash
+godot res://scenes/debug/debug_scene.tscn -- p0=3,7 s1=47 auto=play:3:stage,select:7:stage,pass
+```
+
+コマンド:
+- `play:CARD_ID:TARGET` — カードをプレイ（TARGET は `stage` または `backstage`）
+- `select:CARD_ID` — スキル選択肢でカードを選択
+- `select:CARD_ID:ZONE` — カード選択 + ゾーン選択の複合（例: カード003のスキル）
+- `pass` — パス
+
+CARD_ID はカード定義の ID（int）。実行時に instance_id に自動解決される。キューが尽きると手動操作に戻る。
+
+### 構造化ログ (GameLog)
+
+ゲーム中の全イベントを構造化フォーマットで標準出力に出力する。
+
+```
+[00:03.241] [EVENT  ] SKILL_EFFECT player=0
+[00:03.241] [ANIM   ] cutin_start skill=カオスそのもの nickname=ハコス
+[00:03.850] [ANIM   ] cutin_end skill=カオスそのもの
+[00:03.851] [ANIM   ] move_start iid=69 from=stage to=stage
+[00:04.251] [ANIM   ] await_done
+[00:04.260] [UI     ] refresh
+```
+
+カテゴリ: `EVENT`, `ANIM`, `CHOICE`, `ACTION`, `UI`
+
 ## コーディング規約
 
 ### 変数宣言: `:=` 推論を避け、型を明示する
