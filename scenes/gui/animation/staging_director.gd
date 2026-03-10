@@ -417,10 +417,9 @@ func _resolve_zone_xform(zone: String, player: int, iid: int,
 				return _get_hand_center(hand)
 			return _get_hand_center(opp_hand)
 		"stage":
-			# snapshot から iid のスロットを検索
-			return _find_field_slot_xform(iid, cs, true)
+			return _find_field_slot_xform(iid, cs, true, player)
 		"backstage":
-			return _find_field_slot_xform(iid, cs, false)
+			return _find_field_slot_xform(iid, cs, false, player)
 	return {}
 
 
@@ -470,10 +469,12 @@ func _is_my_card_in_hand(iid: int, cs: ClientState) -> bool:
 	return false
 
 
-func _find_field_slot_xform(iid: int, cs: ClientState, is_stage: bool) -> Dictionary:
+func _find_field_slot_xform(iid: int, cs: ClientState, is_stage: bool, filter_player: int = -1) -> Dictionary:
 	if cs == null:
 		return {}
 	for p in range(2):
+		if filter_player >= 0 and p != filter_player:
+			continue
 		if is_stage:
 			var stage: Array = cs.stages[p]
 			for i in range(stage.size()):

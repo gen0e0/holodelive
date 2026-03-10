@@ -48,6 +48,18 @@ func _swap_positions(ctx: SkillContext, card_a: int, card_b: int) -> void:
 	elif ctx.state.backstages[opp] == card_b:
 		b_zone = "backstage"
 
+	# アニメーションキュー: card_a → card_b の位置、card_b → card_a の位置
+	var a_from: String = "my_stage" if a_zone == "stage" else "my_backstage"
+	var b_from: String = "op_stage" if b_zone == "stage" else "op_backstage"
+	var cue_a: AnimationCue = AnimationCue.find_card(card_a).move()
+	cue_a.from_zone = a_from
+	cue_a.to_zone = b_from
+	ctx.emit_cue(cue_a)
+	var cue_b: AnimationCue = AnimationCue.find_card(card_b).move()
+	cue_b.from_zone = b_from
+	cue_b.to_zone = a_from
+	ctx.emit_cue(cue_b)
+
 	# 両方を一旦除去
 	if a_zone == "stage":
 		ctx.state.stages[ctx.player].erase(card_a)
