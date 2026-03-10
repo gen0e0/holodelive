@@ -66,7 +66,9 @@ func _ready() -> void:
 	_home_view.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
 	_choice_manager.register(FieldCardSelector.new(
-		_card_layer, _home_view, _get_client_state_for_choice, _overlay))
+		_card_layer, _home_view, _my_hand, _choice_manager,
+		_get_client_state_for_choice, _overlay))
+	_choice_manager.register(ZoneSelector.new(_overlay))
 	_choice_manager.choice_resolved.connect(_on_choice_resolved)
 	_setup_rank_labels()
 

@@ -39,6 +39,10 @@ var is_selectable: bool = false
 var _hover_index: int = -1
 var _selected_index: int = -1
 var _card_views: Array = []  # Array[CardView]
+var _choice_selectable_ids: Array = []  # スキル選択用
+var _choice_chosen_ids: Array = []      # スキル選択用
+
+const CHOSEN_OFFSET_Y: float = -20.0
 
 
 func sync_cards(cards: Array, face_up: bool) -> void:
@@ -77,6 +81,7 @@ func sync_cards(cards: Array, face_up: bool) -> void:
 		_card_views.append(cv)
 
 	_reposition(false)
+	_apply_choice_selectable()
 
 
 func sync_hidden(count: int) -> void:
@@ -134,6 +139,46 @@ func find_card_index(instance_id: int) -> int:
 		if _card_views[i].instance_id == instance_id:
 			return i
 	return -1
+
+
+# ---------------------------------------------------------------------------
+# スキル選択 API（ChoiceHandler 用）
+# ---------------------------------------------------------------------------
+
+func set_choice_selectable(ids: Array) -> void:
+	_choice_selectable_ids = ids
+	_apply_choice_selectable()
+
+
+func clear_choice_selectable() -> void:
+	_choice_selectable_ids = []
+	_apply_choice_selectable()
+
+
+func toggle_chosen(iid: int, chosen: bool) -> void:
+	if chosen:
+		if not _choice_chosen_ids.has(iid):
+			_choice_chosen_ids.append(iid)
+	else:
+		_choice_chosen_ids.erase(iid)
+	for cv in _card_views:
+		if cv.instance_id == iid:
+			var base_pos: Vector2 = cv.position
+			# chosen 時は Y を CHOSEN_OFFSET_Y 分だけ上に
+			# _reposition が管理する位置からの相対オフセットなので、
+			# reposition を呼び直して反映する
+			_reposition(true)
+			return
+
+
+func clear_chosen() -> void:
+	_choice_chosen_ids = []
+	_reposition(false)
+
+
+func _apply_choice_selectable() -> void:
+	for cv in _card_views:
+		cv.set_selectable(_choice_selectable_ids.has(cv.instance_id))
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +248,9 @@ func _reposition(animate: bool) -> void:
 			extra_x = hover_shift_x
 
 		var cv: CardView = _card_views[i]
+		# スキル選択の chosen オフセット
+		if _choice_chosen_ids.has(cv.instance_id):
+			card_y += CHOSEN_OFFSET_Y
 		# pivot_offset 基準で中央配置
 		var target_pos := Vector2(card_x + extra_x, card_y) - cv.pivot_offset
 

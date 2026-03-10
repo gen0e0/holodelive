@@ -10,6 +10,9 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
 	else:
 		var chosen: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(chosen).move().from_my_hand().to_deck())
 		ZoneOps.move_to_deck_bottom(ctx.state, chosen, ctx.recorder)
-		ZoneOps.draw_card(ctx.state, ctx.player, ctx.recorder)
+		var drawn: int = ZoneOps.draw_card(ctx.state, ctx.player, ctx.recorder)
+		if drawn != -1:
+			ctx.emit_cue(AnimationCue.make_card(drawn).move().from_deck().to_my_hand())
 		return SkillResult.done()

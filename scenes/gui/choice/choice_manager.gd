@@ -7,6 +7,8 @@ signal choice_resolved(choice_idx: int, value: Variant)
 
 var _handlers: Array = []  # Array[ChoiceHandler]
 var _active_handler: ChoiceHandler = null
+var _has_queued_response: bool = false
+var _queued_response: Variant  # 次の choice を自動応答する値
 
 
 func register(handler: ChoiceHandler) -> void:
@@ -14,8 +16,20 @@ func register(handler: ChoiceHandler) -> void:
 	handler.resolved.connect(_on_handler_resolved)
 
 
+func queue_response(value: Variant) -> void:
+	_has_queued_response = true
+	_queued_response = value
+
+
 func handle_choice(choice_data: Dictionary) -> void:
 	cancel()
+	# キューされた自動応答があればハンドラを介さず即発火
+	if _has_queued_response:
+		var value: Variant = _queued_response
+		_has_queued_response = false
+		var idx: int = choice_data.get("choice_index", 0)
+		choice_resolved.emit(idx, value)
+		return
 	for handler in _handlers:
 		if handler.can_handle(choice_data):
 			_active_handler = handler
