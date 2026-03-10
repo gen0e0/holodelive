@@ -19,6 +19,7 @@ func register(handler: ChoiceHandler) -> void:
 func queue_response(value: Variant) -> void:
 	_has_queued_response = true
 	_queued_response = value
+	GameLog.log_event("CHOICE", "queue_response", {"value": value})
 
 
 func handle_choice(choice_data: Dictionary) -> void:
@@ -28,6 +29,7 @@ func handle_choice(choice_data: Dictionary) -> void:
 		var value: Variant = _queued_response
 		_has_queued_response = false
 		var idx: int = choice_data.get("choice_index", 0)
+		GameLog.log_event("CHOICE", "auto_respond", {"idx": idx, "value": value})
 		choice_resolved.emit(idx, value)
 		return
 	for handler in _handlers:

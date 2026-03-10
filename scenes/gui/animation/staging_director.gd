@@ -153,6 +153,7 @@ func _process_state_cue(entry: Dictionary) -> void:
 
 		# 4) UI更新（アニメーション後）
 		if refresh_fn.is_valid() and snapshot != null:
+			GameLog.log_event("UI", "refresh")
 			refresh_fn.call(snapshot)
 
 		_prev_cs = snapshot
@@ -191,6 +192,7 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 	var event_type: String = event.get("type", "")
 	var player: int = event.get("player", -1)
 	var is_me: bool = cs != null and (player == cs.my_player)
+	GameLog.log_event("EVENT", event_type, {"player": player})
 
 	match event_type:
 		"TURN_START":
@@ -266,7 +268,9 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 		fly_data = card_data
 		fly_face_up = false
 
+	GameLog.log_event("ANIM", "play_card_start", {"iid": iid, "to": to_zone, "is_me": is_me})
 	await _fly_card(fly_data, fly_face_up, from_xform, to_xform, FLY_DURATION)
+	GameLog.log_event("ANIM", "play_card_end", {"iid": iid})
 
 	return true
 
@@ -280,10 +284,12 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 	var skill_name: String = event.get("skill_name", "")
 	var nickname: String = event.get("nickname", "")
 	if not skill_name.is_empty():
+		GameLog.log_event("ANIM", "cutin_start", {"skill": skill_name, "nickname": nickname})
 		var cutin: SkillCutIn = _SkillCutInScene.instantiate()
 		cutin.setup(skill_name, nickname, is_me)
 		_anim_layer.add_child(cutin)
 		await cutin.play()
+		GameLog.log_event("ANIM", "cutin_end", {"skill": skill_name})
 
 	# 2) find_card + move の移動元カードを一括非表示
 	for cue_dict in cues:
@@ -294,19 +300,30 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 	var anim_items: Array = []  # Node（自己廃棄型）と Tween の混在
 	for cue_dict in cues:
 		var cue_action: String = cue_dict.get("action", "")
+		var cue_iid: int = cue_dict.get("instance_id", -1)
 		if cue_action == "move":
+			GameLog.log_event("ANIM", "move_start", {
+				"iid": cue_iid,
+				"from": cue_dict.get("from_zone", "?"),
+				"to": cue_dict.get("to_zone", "?"),
+			})
 			var node: CardView = _fire_cue_move(cue_dict, old_positions, cs)
 			if node != null:
 				anim_items.append(node)
+			else:
+				GameLog.log_event("ANIM", "move_skip", {"iid": cue_iid, "reason": "resolve_failed"})
 		elif cue_action == "flip":
+			GameLog.log_event("ANIM", "flip_start", {"iid": cue_iid})
 			var tween: Tween = _fire_cue_flip(cue_dict)
 			if tween != null:
 				anim_items.append(tween)
 
 	# 4) 全完了 or タイムアウト待ち
 	if not anim_items.is_empty():
+		GameLog.log_event("ANIM", "await_all", {"count": anim_items.size()})
 		var max_dur: float = event.get("max_animation_duration", MAX_SKILL_DURATION)
 		await _wait_for_animations(anim_items, max_dur)
+		GameLog.log_event("ANIM", "await_done")
 
 	return not skill_name.is_empty() or not cues.is_empty()
 

@@ -225,6 +225,7 @@ func _on_actions_received(actions: Array) -> void:
 
 
 func _handle_actions_received(actions: Array) -> void:
+	GameLog.log_event("ACTION", "actions_ready", {"count": actions.size()})
 	_current_actions = actions
 	var has_play_card: bool = false
 	var has_field_action: bool = false
@@ -283,6 +284,7 @@ func _on_action_button_pressed(action: Dictionary) -> void:
 		return
 	_clear_action_state()
 	_choice_manager.cancel()
+	GameLog.log_event("ACTION", "send", {"type": action.get("type", -1), "iid": action.get("instance_id", -1)})
 	session.send_action(action)
 
 
@@ -335,6 +337,7 @@ func _on_stage_pressed() -> void:
 		return
 	var iid: int = _selected_instance_id
 	_clear_action_state()
+	GameLog.log_event("ACTION", "send", {"type": "PLAY_CARD", "iid": iid, "target": "stage"})
 	session.send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
@@ -347,6 +350,7 @@ func _on_backstage_pressed() -> void:
 		return
 	var iid: int = _selected_instance_id
 	_clear_action_state()
+	GameLog.log_event("ACTION", "send", {"type": "PLAY_CARD", "iid": iid, "target": "backstage"})
 	session.send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
@@ -358,6 +362,7 @@ func _on_pass_pressed() -> void:
 	if session == null:
 		return
 	_clear_action_state()
+	GameLog.log_event("ACTION", "send", {"type": "PASS"})
 	session.send_action({"type": Enums.ActionType.PASS})
 
 
@@ -380,9 +385,14 @@ func _clear_action_state() -> void:
 # ---------------------------------------------------------------------------
 
 func _on_choice_requested(choice_data: Dictionary) -> void:
+	GameLog.log_event("CHOICE", "requested", {
+		"type": choice_data.get("choice_type", -1),
+		"targets": choice_data.get("valid_targets", []),
+	})
 	_choice_manager.handle_choice(choice_data)
 
 
 func _on_choice_resolved(choice_idx: int, value: Variant) -> void:
+	GameLog.log_event("CHOICE", "resolved", {"idx": choice_idx, "value": value})
 	if session != null:
 		session.send_choice(choice_idx, value)

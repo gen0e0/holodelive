@@ -36,6 +36,7 @@ var _waiting_choice: bool = false
 var _choice_data: Dictionary = {}
 var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
+var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
 
 
 func _ready() -> void:
@@ -60,6 +61,8 @@ func _init_and_start() -> void:
 	var user_args: Array = OS.get_cmdline_user_args()
 	var resolved_args: Array = _resolve_test_preset(user_args)
 	_zone_overrides = _parse_zone_args(resolved_args)
+	_auto_queue = _parse_auto_args(resolved_args)
+	GameLog.reset()
 
 	# RNG 作成（シード指定があれば固定、なければランダム）
 	_rng = RandomNumberGenerator.new()
@@ -165,6 +168,11 @@ func _on_actions_received(actions: Array) -> void:
 		_log("  %d. %s" % [i + 1, DisplayHelper.format_action(_current_actions[i], cs)])
 
 	var player: int = cs.current_player if cs else 0
+	# CLI 自動行動キュー（P0 用）
+	if player == 0 and not _auto_queue.is_empty():
+		var entry: Dictionary = _auto_queue.pop_front()
+		_schedule_auto_queue_action(entry)
+		return
 	if _should_auto_respond_for_player(player):
 		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
 		_schedule_auto_action(delay, _auto_epoch)
@@ -196,6 +204,11 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 		else:
 			_log("  %d. %s" % [i + 1, str(target)])
 
+	# CLI 自動行動キュー（P0 用）
+	if target_player == 0 and not _auto_queue.is_empty():
+		var entry: Dictionary = _auto_queue.pop_front()
+		_schedule_auto_queue_choice(entry)
+		return
 	if _should_auto_respond_for_player(target_player):
 		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
 		_schedule_auto_choice(delay, _auto_epoch)
@@ -644,6 +657,129 @@ func _update_state_display(cs: ClientState) -> void:
 
 	_state_display.clear()
 	_state_display.append_text("\n".join(lines))
+
+
+# =============================================================================
+# CLI 自動行動キュー
+# =============================================================================
+
+## auto=play:3:stage,select:7,pass,select:3:stage 形式をパース。
+static func _parse_auto_args(args: Array) -> Array:
+	for arg in args:
+		var a: String = str(arg)
+		if a.begins_with("auto="):
+			var tokens: PackedStringArray = a.substr(5).split(",")
+			var result: Array = []
+			for token in tokens:
+				var entry: Dictionary = _parse_auto_token(token.strip_edges())
+				if not entry.is_empty():
+					result.append(entry)
+			return result
+	return []
+
+
+static func _parse_auto_token(token: String) -> Dictionary:
+	var parts: PackedStringArray = token.split(":")
+	if parts.is_empty():
+		return {}
+	var cmd: String = parts[0].to_lower()
+	match cmd:
+		"play":
+			if parts.size() < 3:
+				return {}
+			return {"cmd": "play", "card_id": parts[1].to_int(), "target": parts[2]}
+		"select":
+			if parts.size() >= 3:
+				return {"cmd": "select", "card_id": parts[1].to_int(), "zone": parts[2]}
+			elif parts.size() >= 2:
+				return {"cmd": "select", "card_id": parts[1].to_int()}
+			return {}
+		"pass":
+			return {"cmd": "pass"}
+	return {}
+
+
+func _schedule_auto_queue_action(entry: Dictionary) -> void:
+	await get_tree().process_frame
+	var cmd: String = entry.get("cmd", "")
+	match cmd:
+		"play":
+			var card_id: int = entry.get("card_id", -1)
+			var target: String = entry.get("target", "stage")
+			var action: Dictionary = _find_play_action(card_id, target)
+			if action.is_empty():
+				_log("[color=red][Auto] No PLAY_CARD for card_id=%d target=%s[/color]" % [card_id, target])
+				return
+			GameLog.log_event("ACTION", "auto_play", {"card_id": card_id, "target": target})
+			_log("[color=magenta](Auto) play:%d:%s[/color]" % [card_id, target])
+			session.send_action(action)
+		"pass":
+			var action: Dictionary = _find_pass_action()
+			if action.is_empty():
+				_log("[color=red][Auto] No PASS action available[/color]")
+				return
+			GameLog.log_event("ACTION", "auto_pass")
+			_log("[color=magenta](Auto) pass[/color]")
+			session.send_action(action)
+		_:
+			_log("[color=red][Auto] Unexpected cmd '%s' for action[/color]" % cmd)
+
+
+func _schedule_auto_queue_choice(entry: Dictionary) -> void:
+	await get_tree().process_frame
+	var cmd: String = entry.get("cmd", "")
+	var choice_index: int = _choice_data.get("choice_index", 0)
+	var valid_targets: Array = _choice_data.get("valid_targets", [])
+
+	if cmd == "select":
+		var card_id: int = entry.get("card_id", -1)
+		# valid_targets から card_id に一致する instance_id を探す
+		for target in valid_targets:
+			if target is int and target >= 0:
+				var inst: CardInstance = session.state.instances.get(target)
+				if inst != null and inst.card_id == card_id:
+					# ゾーン指定があれば次の SELECT_ZONE 用にキューに挿入
+					if entry.has("zone"):
+						_auto_queue.push_front({"cmd": "_zone", "zone": entry["zone"]})
+					GameLog.log_event("CHOICE", "auto_select", {"card_id": card_id, "iid": target})
+					_log("[color=magenta](Auto) select:%d[/color]" % card_id)
+					_waiting_choice = false
+					session.send_choice(choice_index, target)
+					return
+		_log("[color=red][Auto] No matching target for card_id=%d in %s[/color]" % [card_id, str(valid_targets)])
+	elif cmd == "_zone":
+		# 内部コマンド: SELECT_ZONE の自動応答
+		var zone: String = entry.get("zone", "")
+		for target in valid_targets:
+			if str(target) == zone:
+				GameLog.log_event("CHOICE", "auto_zone", {"zone": zone})
+				_log("[color=magenta](Auto) zone:%s[/color]" % zone)
+				_waiting_choice = false
+				session.send_choice(choice_index, target)
+				return
+		_log("[color=red][Auto] Zone '%s' not in valid_targets %s[/color]" % [zone, str(valid_targets)])
+	else:
+		_log("[color=red][Auto] Unexpected cmd '%s' for choice[/color]" % cmd)
+
+
+func _find_play_action(card_id: int, target: String) -> Dictionary:
+	for a in _current_actions:
+		if a.get("type") != Enums.ActionType.PLAY_CARD:
+			continue
+		if a.get("target", "") != target:
+			continue
+		var iid: int = a.get("instance_id", -1)
+		var inst: CardInstance = session.state.instances.get(iid)
+		if inst != null and inst.card_id == card_id:
+			return a
+	return {}
+
+
+func _find_pass_action() -> Dictionary:
+	for a in _current_actions:
+		if a.get("type") == Enums.ActionType.PASS:
+			return a
+	return {}
 
 
 # =============================================================================
