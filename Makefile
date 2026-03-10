@@ -1,4 +1,4 @@
-.PHONY: test cache
+.PHONY: test cache debug
 
 GODOT_BIN ?= /usr/local/bin/godot
 
@@ -9,3 +9,15 @@ cache:
 ## 全テスト実行
 test:
 	GODOT_BIN=$(GODOT_BIN) ./addons/gdUnit4/runtest.sh -a test/
+
+## デバッグシーン起動
+## 使い方:
+##   make debug
+##   make debug test=preset_id
+##   make debug ARGS="p0=3,7 s1=47 auto=play:3:stage"
+debug:
+ifdef test
+	$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- test=$(test)
+else
+	$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(ARGS)
+endif
