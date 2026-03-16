@@ -19,7 +19,7 @@ static func set_enabled(enabled: bool) -> void:
 	_enabled = enabled
 
 
-static func log_event(category: String, message: String, data: Dictionary = {}) -> void:
+func log_event(category: String, message: String, data: Dictionary = {}) -> void:
 	if not _enabled:
 		return
 	var elapsed: int = Time.get_ticks_msec() - _start_time_msec
