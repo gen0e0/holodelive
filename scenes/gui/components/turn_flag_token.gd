@@ -7,6 +7,7 @@ var _token_body: Panel
 var _effect_label: Label
 var _idle_time: float = 0.0
 var _base_y: float = 0.0
+var _floating: bool = false
 
 const TOKEN_SIZE := Vector2(80, 80)
 const CORNER_RADIUS: int = 40
@@ -36,7 +37,6 @@ func setup(p_type: String) -> void:
 func _ready() -> void:
 	_build_ui()
 	_apply_config()
-	_base_y = position.y
 
 
 func _build_ui() -> void:
@@ -71,13 +71,21 @@ func _apply_config() -> void:
 		style.bg_color = config["color"]
 
 
+func set_base_position(pos: Vector2) -> void:
+	position = pos
+	_base_y = pos.y
+
+
 func _process(delta: float) -> void:
+	if not _floating:
+		return
 	_idle_time += delta
 	position.y = _base_y + sin(_idle_time * FLOAT_SPEED) * FLOAT_AMPLITUDE
 
 
 ## 出現アニメーション。
 func appear() -> void:
+	_floating = false
 	scale = Vector2.ZERO
 	modulate.a = 0.0
 	var tw: Tween = create_tween()
@@ -87,6 +95,7 @@ func appear() -> void:
 	tw.tween_property(self, "modulate:a", 1.0, 0.3) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await tw.finished
+	_floating = true
 
 
 ## 消滅アニメーション（シェイク → 拡大フェードアウト → queue_free）。

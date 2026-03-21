@@ -50,6 +50,7 @@ func _sync_tokens(cs: ClientState) -> void:
 		_active_tokens.erase(key)
 
 	# 新しいトークンを追加
+	var new_tokens: Array[TurnFlagToken] = []
 	for key in active_keys:
 		if not _active_tokens.has(key):
 			var fe_dict: Dictionary = active_keys[key]
@@ -57,9 +58,14 @@ func _sync_tokens(cs: ClientState) -> void:
 			token.setup(fe_dict.get("type", ""))
 			add_child(token)
 			_active_tokens[key] = token
+			new_tokens.append(token)
 
 	# トークンを再配置
 	_layout_tokens(cs.my_player)
+
+	# 新規トークンの出現アニメーション（配置後に実行）
+	for token in new_tokens:
+		token.appear()
 
 
 ## トークンを自分側/相手側に振り分けて縦に並べる。
@@ -73,10 +79,10 @@ func _layout_tokens(my_player: int) -> void:
 		var parts: PackedStringArray = key.split(":")
 		var target: int = int(parts[0])
 		if target == my_player:
-			token.position = MY_TOKEN_BASE + Vector2(0, my_idx * TOKEN_SPACING)
+			token.set_base_position(MY_TOKEN_BASE + Vector2(0, my_idx * TOKEN_SPACING))
 			my_idx += 1
 		else:
-			token.position = OPP_TOKEN_BASE + Vector2(0, opp_idx * TOKEN_SPACING)
+			token.set_base_position(OPP_TOKEN_BASE + Vector2(0, opp_idx * TOKEN_SPACING))
 			opp_idx += 1
 
 
