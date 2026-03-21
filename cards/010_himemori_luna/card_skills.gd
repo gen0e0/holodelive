@@ -12,5 +12,6 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.RANDOM_RESULT, opp_hand.duplicate())
 	else:
 		var target_id: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(target_id).move().from_op_hand().to_home())
 		ZoneOps.move_to_home(ctx.state, target_id, ctx.recorder)
 		return SkillResult.done()

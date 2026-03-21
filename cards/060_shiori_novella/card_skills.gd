@@ -10,6 +10,11 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, targets)
 	else:
 		var chosen: int = ctx.choice_result
+		var zone_info: Dictionary = ctx.state.find_zone(chosen)
+		var cue: AnimationCue = AnimationCue.find_card(chosen).move().to_my_hand()
+		if zone_info.get("zone", "") == "home":
+			cue.from_home()
+		ctx.emit_cue(cue)
 		ZoneOps.move_to_hand(ctx.state, chosen, ctx.player, ctx.recorder)
 		return SkillResult.done()
 
