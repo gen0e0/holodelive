@@ -32,6 +32,15 @@ func handle_choice(choice_data: Dictionary) -> void:
 		GameLog.log_event("CHOICE", "auto_respond", {"idx": idx, "value": value})
 		choice_resolved.emit(idx, value)
 		return
+	# RANDOM_RESULT はハンドラ不要: valid_targets からランダムに1つ選んで即解決
+	if choice_data.get("choice_type", -1) == Enums.ChoiceType.RANDOM_RESULT:
+		var targets: Array = choice_data.get("valid_targets", [])
+		if not targets.is_empty():
+			var idx: int = choice_data.get("choice_index", 0)
+			var value: Variant = targets[randi() % targets.size()]
+			GameLog.log_event("CHOICE", "random_auto", {"idx": idx, "value": value})
+			choice_resolved.emit(idx, value)
+		return
 	for handler in _handlers:
 		if handler.can_handle(choice_data):
 			_active_handler = handler
