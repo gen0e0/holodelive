@@ -467,6 +467,7 @@ func _resolve_skill_stack() -> void:
 			pc.valid_targets = result.valid_targets
 			pc.select_min = result.select_min
 			pc.select_max = result.select_max
+			pc.ui_hint = result.ui_hint
 			state.pending_choices.clear()
 			state.pending_choices.append(pc)
 			top.phase += 1

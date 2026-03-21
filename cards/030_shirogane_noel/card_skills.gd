@@ -2,6 +2,7 @@ extends BaseCardSkill
 
 
 ## 入口の女: 山札から2枚引いて手札に加え、その後、手札から2枚選び好きな順番で山札に戻す。
+## choice_result は [slot_a_iid, slot_b_iid]。slot_a がデッキトップ。
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	if ctx.phase == 0:
 		# 2枚ドロー
@@ -13,20 +14,15 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		# ドロー2枚のアニメーション
 		ctx.emit_cue(AnimationCue.make_card(hand[-2]).move().from_deck().to_my_hand())
 		ctx.emit_cue(AnimationCue.make_card(hand[-1]).move().from_deck().to_my_hand().with_delay(0.15))
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
-	elif ctx.phase == 1:
-		# 1枚目をデッキ上に戻す（これが2番目に積まれる）
-		var first: int = ctx.choice_result
-		ctx.data["first_returned"] = first
-		ctx.emit_cue(AnimationCue.find_card(first).move().from_my_hand().to_deck())
-		ZoneOps.move_to_deck_top(ctx.state, first, ctx.recorder)
-		var hand: Array = ctx.state.hands[ctx.player]
-		if hand.is_empty():
-			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
+		return SkillResult.waiting(
+			Enums.ChoiceType.SELECT_CARD, hand.duplicate(), 2, 2, "deck_return")
 	else:
-		# 2枚目をデッキ上に戻す（これが一番上になる）
-		var second: int = ctx.choice_result
-		ctx.emit_cue(AnimationCue.find_card(second).move().from_my_hand().to_deck())
-		ZoneOps.move_to_deck_top(ctx.state, second, ctx.recorder)
+		var chosen: Array = ctx.choice_result
+		var top_iid: int = chosen[0]   # slot A = デッキトップ
+		var second_iid: int = chosen[1] # slot B = 2番目
+		# B を先に積み、A をその上に積む
+		ctx.emit_cue(AnimationCue.find_card(second_iid).move().from_my_hand().to_deck())
+		ZoneOps.move_to_deck_top(ctx.state, second_iid, ctx.recorder)
+		ctx.emit_cue(AnimationCue.find_card(top_iid).move().from_my_hand().to_deck().with_delay(0.15))
+		ZoneOps.move_to_deck_top(ctx.state, top_iid, ctx.recorder)
 		return SkillResult.done()

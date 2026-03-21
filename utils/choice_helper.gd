@@ -34,4 +34,5 @@ static func make_choice_data(
 		"select_min": pc.select_min,
 		"select_max": pc.select_max,
 		"timeout": pc.timeout,
+		"ui_hint": pc.ui_hint,
 	}
