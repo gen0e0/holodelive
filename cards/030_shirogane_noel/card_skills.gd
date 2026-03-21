@@ -10,11 +10,15 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		var hand: Array = ctx.state.hands[ctx.player]
 		if hand.size() < 2:
 			return SkillResult.done()
+		# ドロー2枚のアニメーション
+		ctx.emit_cue(AnimationCue.make_card(hand[-2]).move().from_deck().to_my_hand())
+		ctx.emit_cue(AnimationCue.make_card(hand[-1]).move().from_deck().to_my_hand().with_delay(0.15))
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
 	elif ctx.phase == 1:
 		# 1枚目をデッキ上に戻す（これが2番目に積まれる）
 		var first: int = ctx.choice_result
 		ctx.data["first_returned"] = first
+		ctx.emit_cue(AnimationCue.find_card(first).move().from_my_hand().to_deck())
 		ZoneOps.move_to_deck_top(ctx.state, first, ctx.recorder)
 		var hand: Array = ctx.state.hands[ctx.player]
 		if hand.is_empty():
@@ -23,5 +27,6 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 	else:
 		# 2枚目をデッキ上に戻す（これが一番上になる）
 		var second: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(second).move().from_my_hand().to_deck())
 		ZoneOps.move_to_deck_top(ctx.state, second, ctx.recorder)
 		return SkillResult.done()

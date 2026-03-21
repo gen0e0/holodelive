@@ -31,8 +31,10 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		var chosen: int = ctx.data.get("chosen_card", -1)
 		var target: String = ctx.choice_result
 		if target == "stage":
+			ctx.emit_cue(AnimationCue.find_card(chosen).move().from_my_hand().to_my_stage())
 			ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, chosen, ctx.recorder)
 		elif target == "backstage":
+			ctx.emit_cue(AnimationCue.find_card(chosen).move().from_my_hand().to_my_backstage().face_up(false))
 			ZoneOps.play_to_backstage_from_zone(ctx.state, ctx.player, chosen, ctx.recorder)
 		return SkillResult.done()
 
