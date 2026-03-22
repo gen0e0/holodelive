@@ -23,7 +23,8 @@ CardDef
 ├── nickname: String          # キャラクター名
 ├── base_icons: Array[String] # 基本アイコン（例: VOCAL, SEXY）
 ├── base_suits: Array[String] # 基本スート（例: COOL, HOT）
-├── skills: Array[SkillDef]   # スキル定義（Play / Action / Passive）
+├── skills: Array[Dictionary] # スキル定義（Play / Action / Passive）
+├── dir_path: String          # カードディレクトリパス（例: "res://cards/001_tokino_sora"）
 ```
 
 ### CardInstance（実行時の個体）
@@ -102,6 +103,9 @@ GameState extends RefCounted
 ├── # スキル解決中のプレイヤー選択待ち（スキル専用）
 ├── pending_choices: Array[PendingChoice]           # 0〜2件
 │
+├── # フィールド効果
+├── field_effects: Array[FieldEffect]              # 一時的なゲーム効果（skip_action, protection 等）
+│
 ├── # 履歴
 ├── action_log: Array[GameAction]                  # 全アクションの記録
 ```
@@ -116,9 +120,12 @@ GameState extends RefCounted
 
 ```
 SkillStackEntry
-├── skill_ref: SkillDef               # 発動するスキルの定義
+├── card_id: int                      # 発動元カードの card_id
+├── skill_index: int                  # CardDef.skills 内のインデックス
 ├── source_instance_id: int           # 発動元カードの instance_id
 ├── player: int                       # 発動したプレイヤー
+├── phase: int                        # マルチフェーズ実行の現在フェーズ（PendingChoice跨ぎの再開用）
+├── data: Dictionary                  # スキル実行中の状態データ（フェーズ間で引き継ぎ）
 ├── targets: Array                    # 対象（選択済みの場合）
 ├── state: SkillState                 # PENDING / RESOLVING / RESOLVED / COUNTERED
 ```
@@ -164,8 +171,13 @@ PendingChoice
 ├── stack_index: int                  # 対応する SkillStackEntry のインデックス
 ├── skill_source_instance_id: int     # スキルを発動したカードの instance_id
 ├── target_player: int                # 選択を求められているプレイヤー
-├── choice_type: ChoiceType           # SELECT_CARD / SELECT_ZONE / ...
+├── choice_type: ChoiceType           # SELECT_CARD / SELECT_ZONE / RANDOM_RESULT
 ├── valid_targets: Array              # 選択可能な対象のリスト
+├── select_min: int                   # 最小選択数（デフォルト: 1）
+├── select_max: int                   # 最大選択数（デフォルト: 1）
+├── ui_hint: String                   # UI ハンドラ選択ヒント（例: "deck_return"）
+├── timeout: float                    # タイムアウト秒数（デフォルト: 30.0）
+├── timeout_strategy: String          # タイムアウト時の解決戦略（例: "first"）
 ├── resolved: bool                    # 選択済みかどうか
 ├── result: Variant                   # 選択結果（解決後に格納）
 ```
@@ -181,18 +193,30 @@ GameController
 ├── state: GameState
 │
 ├── # フェーズにおけるプレイヤー行動の算出
-├── get_available_actions(state) → Array[PlayerAction]
+├── get_available_actions() → Array
 │   # phase + 盤面から、今そのプレイヤーが取れる行動を一覧化
 │   # ACTION フェーズ: [ActivateSkill(card_A), Open(backstage), Pass]
 │   # PLAY フェーズ:   [PlayCard(card_X, stage_0), PlayCard(card_X, backstage)]
 │
 ├── # アクション適用
-├── apply_action(action: PlayerAction) → void
+├── apply_action(action: Dictionary) → void
 │   # 状態変更を StateDiff として記録しつつ GameState を更新
 │   # スキル発動時は skill_stack に push しトリガーチェック
 │
-├── # スキルスタック解決
-├── resolve_skill_stack() → void
+├── # 選択待ち判定・応答
+├── is_waiting_for_choice() → bool
+├── submit_choice(choice_index: int, chosen_value: Variant) → void
+│
+├── # ターン制御
+├── start_turn() → bool
+├── end_turn() → void
+│
+├── # ゲーム終了判定
+├── is_game_over() → bool
+├── get_winner() → int
+│
+├── # スキルスタック解決（内部）
+├── _resolve_skill_stack() → void
 │   # スタックを上から順に解決、各段階でトリガーチェック
 │   # PendingChoice が発生したら中断、選択後に再開
 ```
@@ -205,7 +229,10 @@ GameController
 | フェーズの選択肢算出 | GameController.get_available_actions() |
 | スキル中の選択肢提示 | GameState.pending_choices |
 | 状態変更の適用 | GameController.apply_action() |
-| スキル解決・スタック管理 | GameController.resolve_skill_stack() |
+| スキル解決・スタック管理 | GameController._resolve_skill_stack() |
+| 選択待ち判定・応答 | GameController.is_waiting_for_choice() / submit_choice() |
+| ターン制御 | GameController.start_turn() / end_turn() |
+| ゲーム終了判定 | GameController.is_game_over() / get_winner() |
 | 全決定の記録 | GameState.action_log |
 
 ---
@@ -253,15 +280,73 @@ StateDiff extends RefCounted
 ```
 enum Phase { ACTION, PLAY, LIVE, SHOWDOWN }
 
-enum ActionType { DRAW, PLAY_CARD, OPEN, ACTIVATE_SKILL, SKILL_EFFECT, TURN_START, TURN_END, ROUND_START, ROUND_END }
+enum ActionType { DRAW, PLAY_CARD, OPEN, ACTIVATE_SKILL, SKILL_EFFECT, TURN_START, TURN_END, ROUND_START, ROUND_END, PASS }
 
 enum DiffType { CARD_MOVE, CARD_FLIP, MODIFIER_ADD, MODIFIER_REMOVE, PROPERTY_CHANGE, INSTANCE_CREATE, INSTANCE_DESTROY }
 
 enum ModifierType { ICON_ADD, ICON_REMOVE, SUIT_ADD, SUIT_REMOVE }
 
-enum ChoiceType { SELECT_CARD, SELECT_ZONE }
+enum ChoiceType { SELECT_CARD, SELECT_ZONE, RANDOM_RESULT }
 
 enum SkillState { PENDING, RESOLVING, RESOLVED, COUNTERED }
+
+enum SkillType { PLAY, ACTION, PASSIVE }
+
+enum TriggerEvent { SKILL_ACTIVATED, CARD_ENTERED_ZONE, CARD_LEFT_ZONE, CARD_FLIPPED, TURN_START, TURN_END }
+
+enum Icon { SEISO, CHARISMA, OTAKU, VOCAL, ENJOY, REACTION, DUELIST, KUSOGAKI, INTEL, SEXY, ALCOHOL, TRICKSTER }
+
+enum Suit { LOVELY, COOL, HOT, ENGLISH, INDONESIA, STAFF }
+
+enum ShowdownRank { MIRACLE, TRIO, FLASH, DUO, CASUAL }
+```
+
+---
+
+## スキル実行の補助クラス
+
+### FieldEffect（一時的なゲーム効果）
+
+GameState.field_effects に格納され、ターン経過で自動消滅する一時効果。
+
+```
+FieldEffect
+├── type: String                     # 効果種別（"skip_action", "no_stage_play", "protection" 等）
+├── target_player: int               # 効果の対象プレイヤー
+├── source_instance_id: int          # 効果を付与したカードの instance_id
+├── lifetime: int                    # 残りターン数
+```
+
+### SkillContext（スキル実行コンテキスト）
+
+スキル関数に渡される実行コンテキスト。スキルはこのオブジェクトを通じてゲーム状態にアクセスする。
+
+```
+SkillContext
+├── state: GameState
+├── registry: CardRegistry
+├── recorder: DiffRecorder
+├── skill_registry: SkillRegistry
+├── source_instance_id: int          # 発動元カードの instance_id
+├── player: int                      # 発動したプレイヤー
+├── phase: int                       # 現在のスキルフェーズ
+├── choice_result: Variant           # PendingChoice の選択結果（再開時）
+├── data: Dictionary                 # フェーズ間の状態引き継ぎデータ
+├── animation_cues: Array            # アニメーション指示の蓄積先
+```
+
+### SkillResult（スキル実行結果）
+
+スキル関数の戻り値。スキルが完了したか、プレイヤーの選択待ちかを示す。
+
+```
+SkillResult
+├── status: Status                   # DONE / WAITING_FOR_CHOICE
+├── choice_type: ChoiceType          # 選択種別（WAITING_FOR_CHOICE 時）
+├── valid_targets: Array             # 選択可能な対象
+├── select_min: int                  # 最小選択数
+├── select_max: int                  # 最大選択数
+├── ui_hint: String                  # UI ハンドラ選択ヒント
 ```
 
 ---
