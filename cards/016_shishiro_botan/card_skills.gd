@@ -6,20 +6,19 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 	if ctx.phase == 0:
 		if ctx.state.home.size() < 2:
 			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, ctx.state.home.duplicate())
-	elif ctx.phase == 1:
-		# 1枚目を手札に
-		var first: int = ctx.choice_result
-		ZoneOps.move_to_hand(ctx.state, first, ctx.player, ctx.recorder)
-		if ctx.state.home.is_empty():
-			# 自宅が空なら2枚目は選べない → 自身帰宅
-			ZoneOps.move_to_home(ctx.state, ctx.source_instance_id, ctx.recorder)
-			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, ctx.state.home.duplicate())
+		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, ctx.state.home.duplicate(), 2, 2)
 	else:
-		# 2枚目を手札に
-		var second: int = ctx.choice_result
-		ZoneOps.move_to_hand(ctx.state, second, ctx.player, ctx.recorder)
+		var chosen: Array
+		if ctx.choice_result is Array:
+			chosen = ctx.choice_result
+		else:
+			chosen = [ctx.choice_result]
+		var delay: float = 0.0
+		for iid in chosen:
+			ctx.emit_cue(AnimationCue.find_card(iid).move().from_home().to_my_hand().with_delay(delay))
+			ZoneOps.move_to_hand(ctx.state, iid, ctx.player, ctx.recorder)
+			delay += 0.15
 		# 自身を帰宅
+		ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_home().with_delay(delay))
 		ZoneOps.move_to_home(ctx.state, ctx.source_instance_id, ctx.recorder)
 		return SkillResult.done()
