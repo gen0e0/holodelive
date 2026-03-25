@@ -116,7 +116,7 @@ make debug ARGS="p0=NEW_CARD_ID s1=r" cpu=both max_turns=50 speed=50
 [00:04.260] [UI     ] refresh
 ```
 
-カテゴリ: `EVENT`, `ANIM`, `CHOICE`, `ACTION`, `UI`
+カテゴリ: `SESSION`（システム層）, `STAGING`（演出層）, `ANIM`, `CHOICE`, `ACTION`, `UI`
 
 ## コーディング規約
 

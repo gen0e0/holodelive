@@ -192,7 +192,7 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 	var event_type: String = event.get("type", "")
 	var player: int = event.get("player", -1)
 	var is_me: bool = cs != null and (player == cs.my_player)
-	GameLog.log_event("EVENT", event_type, {"player": player})
+	GameLog.log_event("STAGING", event_type, {"player": player})
 
 	match event_type:
 		"TURN_START":

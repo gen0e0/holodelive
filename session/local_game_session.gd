@@ -164,7 +164,10 @@ func _flush_updates() -> void:
 	var log_size: int = state.action_log.size()
 	var new_actions: Array = []
 	for i in range(_last_log_index, log_size):
-		new_actions.append(state.action_log[i])
+		var ga: GameAction = state.action_log[i]
+		new_actions.append(ga)
+		GameLog.log_event("SESSION", Enums.ActionType.keys()[ga.type],
+			{"player": ga.player})
 	_last_log_index = log_size
 
 	var events: Array = EventSerializer.serialize_events(
