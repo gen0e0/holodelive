@@ -22,6 +22,13 @@ func set_text(text: String) -> void:
 	$Band/TitleLabel.text = text
 
 
+func _dur(seconds: float) -> float:
+	var s: float = GameConfig.animation_speed
+	if s <= 0.0:
+		return 0.0
+	return seconds / s
+
+
 ## 演出を再生し、完了まで await する。
 func play() -> void:
 	# 初期状態: Band 透明、Label を右端外に配置
@@ -30,29 +37,31 @@ func play() -> void:
 
 	# 1) Band フェードイン
 	var tween: Tween = create_tween()
-	tween.tween_property(_band, "modulate:a", 1.0, FADE_DURATION)
+	tween.tween_property(_band, "modulate:a", 1.0, _dur(FADE_DURATION))
 	await tween.finished
 
 	# 2) Label スライドイン（右端外 → 中央）
 	var center_x: float = (DESIGN_W - _label.size.x) / 2.0
 	tween = create_tween()
-	tween.tween_property(_label, "position:x", center_x, SLIDE_IN_DURATION) \
+	tween.tween_property(_label, "position:x", center_x, _dur(SLIDE_IN_DURATION)) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await tween.finished
 
 	# 3) 中央で停止
-	await get_tree().create_timer(HOLD_DURATION).timeout
+	var hold: float = _dur(HOLD_DURATION)
+	if hold > 0:
+		await get_tree().create_timer(hold).timeout
 
 	# 4) Label スライドアウト（中央 → 左端外）
 	var out_x: float = -_label.size.x
 	tween = create_tween()
-	tween.tween_property(_label, "position:x", out_x, SLIDE_OUT_DURATION) \
+	tween.tween_property(_label, "position:x", out_x, _dur(SLIDE_OUT_DURATION)) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	await tween.finished
 
 	# 5) Band フェードアウト
 	tween = create_tween()
-	tween.tween_property(_band, "modulate:a", 0.0, FADE_DURATION)
+	tween.tween_property(_band, "modulate:a", 0.0, _dur(FADE_DURATION))
 	await tween.finished
 
 	# 6) 自己破棄

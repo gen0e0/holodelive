@@ -16,5 +16,7 @@ test:
 ##   make debug test=preset_id
 ##   make debug ARGS="p0=3,7 s1=47 auto=play:3:stage"
 ##   make debug test=9 cpu=both max_turns=30
+##   make debug test=9 speed=3            # 3倍速
+##   make debug cpu=both max_turns=30 speed=100
 debug:
-	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(ARGS)
+	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(if $(speed),speed=$(speed)) $(ARGS)

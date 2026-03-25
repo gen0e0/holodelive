@@ -68,6 +68,11 @@ func _init_and_start() -> void:
 	_cpu_both = _parse_flag(resolved_args, "cpu", "") == "both"
 	var max_turns_str: String = _parse_flag(resolved_args, "max_turns", "0")
 	_max_turns = max_turns_str.to_int() if max_turns_str.is_valid_int() else 0
+	var speed_str: String = _parse_flag(resolved_args, "speed", "")
+	if speed_str.is_valid_float() and speed_str.to_float() > 0.0:
+		GameConfig.animation_speed = speed_str.to_float()
+	elif _cpu_both:
+		GameConfig.animation_speed = 50.0  # cpu=both デフォルト高速
 	GameLog.reset()
 
 	# RNG 作成（シード指定があれば固定、なければランダム）
@@ -113,8 +118,6 @@ func _init_and_start() -> void:
 	if _gui_toggle.button_pressed or _cpu_both:
 		_ensure_game_screen()
 		_game_screen.connect_session(session, _p0_controller)
-		if _cpu_both:
-			_game_screen._director.speed_scale = 50.0
 
 	if _max_turns > 0:
 		session.max_turns = _max_turns

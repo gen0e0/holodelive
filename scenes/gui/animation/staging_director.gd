@@ -25,9 +25,6 @@ var deck_view: DeckView
 var home_view: HomeView
 var field_layout: FieldLayout
 
-## アニメーション速度倍率。1.0=通常、50.0=50倍速（統合テスト用）。
-var speed_scale: float = 1.0
-
 ## UI を新しい ClientState で即更新するコールバック: func(cs: ClientState) -> void
 var refresh_fn: Callable
 
@@ -692,9 +689,10 @@ func _fly_card(card_data: Dictionary, face_up: bool,
 
 
 func _dur(seconds: float) -> float:
-	if speed_scale <= 0.0:
+	var s: float = GameConfig.animation_speed
+	if s <= 0.0:
 		return 0.0
-	return seconds / speed_scale
+	return seconds / s
 
 
 func _delay(seconds: float) -> void:

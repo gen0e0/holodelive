@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 NetworkManager="*res://network/network_manager.gd"
 GameLog="*res://system/game_log.gd"
+GameConfig="*res://system/game_config.gd"
 
 [display]
 
