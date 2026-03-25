@@ -97,15 +97,6 @@ text = "5"
 [node name="HSeparator3" type="HSeparator" parent="Margin/HSplit/Left"]
 layout_mode = 2
 
-[node name="GuiToggle" type="CheckButton" parent="Margin/HSplit/Left"]
-unique_name_in_owner = true
-layout_mode = 2
-button_pressed = true
-text = "GUI Mode"
-
-[node name="HSeparator4" type="HSeparator" parent="Margin/HSplit/Left"]
-layout_mode = 2
-
 [node name="ZoneEditLabel" type="Label" parent="Margin/HSplit/Left"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
@@ -178,25 +169,12 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="StatePanel" type="PanelContainer" parent="Margin/HSplit/VSplit"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 1.5
-
-[node name="StateDisplay" type="RichTextLabel" parent="Margin/HSplit/VSplit/StatePanel"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 2
-bbcode_enabled = true
-selection_enabled = true
-
-[node name="GuiContainer" type="Control" parent="Margin/HSplit/VSplit"]
+[node name="ScreenContainer" type="HBoxContainer" parent="Margin/HSplit/VSplit"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 10
 
 [node name="Bottom" type="VBoxContainer" parent="Margin/HSplit/VSplit"]
 layout_mode = 2

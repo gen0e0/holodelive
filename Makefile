@@ -18,5 +18,6 @@ test:
 ##   make debug test=9 cpu=both max_turns=30
 ##   make debug test=9 speed=3            # 3倍速
 ##   make debug cpu=both max_turns=30 speed=100
+##   make debug cpu=none test=9          # ローカル2人対戦
 debug:
 	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(if $(speed),speed=$(speed)) $(ARGS)

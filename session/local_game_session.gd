@@ -7,14 +7,13 @@ var registry: CardRegistry
 var skill_registry: SkillRegistry
 var _last_log_index: int = 0
 var _client_state: ClientState
-var _action_snapshots: Array = []  # Array[ClientState]
 var _pending_interaction: Dictionary = {}  # {"type": "actions", "player": int, "data": ...}
 var _defer_interactions: bool = false  # true の場合、actions を即発行せず保留
 
 ## PlayerController per player slot.
 var _controllers: Array = [null, null]  # [PlayerController?, PlayerController?]
-## The viewing perspective for ClientState serialization.
-var viewing_player: int = 0
+## ビューアーリスト: 各要素 = {player: int, callback: Callable, snapshots: Array}
+var _viewers: Array = []
 ## Shared RNG for deterministic replay. If null, uses random seed.
 var rng: RandomNumberGenerator
 ## ターン制限（0=無制限）。到達時に game_over(-1) を強制発火。
@@ -25,6 +24,18 @@ var max_turns: int = 0
 ## actions を即発行せずアニメーション完了後まで保留する。
 func set_defer_interactions(enabled: bool) -> void:
 	_defer_interactions = enabled
+
+
+## ビューアーを登録する。player 視点で state_updated を callback に配信。
+func add_viewer(player: int, callback: Callable) -> void:
+	_viewers.append({"player": player, "callback": callback, "snapshots": []})
+
+
+## ビューアーを解除する。
+func remove_viewer(callback: Callable) -> void:
+	for i in range(_viewers.size() - 1, -1, -1):
+		if _viewers[i]["callback"] == callback:
+			_viewers.remove_at(i)
 
 
 ## プレイヤーの操作コントローラを登録する。
@@ -42,7 +53,6 @@ func set_cpu_player(player_index: int, strategy: CpuStrategy = null) -> void:
 		var rng_to_use: RandomNumberGenerator = rng if rng else RandomNumberGenerator.new()
 		strategy = RandomStrategy.new(rng_to_use)
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
-	# state/registry は Callable で遅延取得（set_cpu_player 時点で未初期化の場合に対応）
 	var cpu := CpuPlayerController.new(strategy,
 		func() -> GameState: return state,
 		func() -> CardRegistry: return registry,
@@ -62,7 +72,6 @@ func start_game() -> void:
 	controller.on_action_logged = _on_action_logged
 	_last_log_index = 0
 	_client_state = null
-	_action_snapshots.clear()
 
 	game_started.emit()
 	_do_start_turn()
@@ -93,7 +102,9 @@ func get_available_actions() -> Array:
 func is_my_turn() -> bool:
 	if controller.is_game_over() or controller.is_waiting_for_choice():
 		return false
-	return state.current_player == viewing_player
+	# 最初のビューアーの視点で判定
+	var vp: int = _viewers[0]["player"] if not _viewers.is_empty() else 0
+	return state.current_player == vp
 
 
 # =============================================================================
@@ -156,16 +167,20 @@ func _do_start_turn(depth: int = 0) -> void:
 
 
 func _on_action_logged() -> void:
-	_action_snapshots.append(
-		StateSerializer.serialize_for_player(state, viewing_player, registry))
+	for viewer in _viewers:
+		viewer["snapshots"].append(
+			StateSerializer.serialize_for_player(state, viewer["player"], registry))
 
 
 func _flush_updates() -> void:
 	var log_size: int = state.action_log.size()
 	var new_actions: Array = []
 	for i in range(_last_log_index, log_size):
-		var ga: GameAction = state.action_log[i]
-		new_actions.append(ga)
+		new_actions.append(state.action_log[i])
+	_last_log_index = log_size
+
+	# SESSION ログ（ビューアーに依存しない、1回だけ出力）
+	for ga in new_actions:
 		var log_data: Dictionary = {"player": ga.player}
 		if ga.type == Enums.ActionType.PLAY_CARD:
 			var iid: int = ga.params.get("instance_id", -1)
@@ -176,28 +191,38 @@ func _flush_updates() -> void:
 				log_data["name"] = card_def.nickname if card_def else "?"
 				log_data["target"] = ga.params.get("target", "?")
 		GameLog.log_event("SESSION", Enums.ActionType.keys()[ga.type], log_data)
-	_last_log_index = log_size
 
-	var events: Array = EventSerializer.serialize_events(
-		new_actions, viewing_player, state, registry)
-	assert(events.size() == _action_snapshots.size(),
-		"snapshot count mismatch: %d events vs %d snapshots" %
-		[events.size(), _action_snapshots.size()])
+	# 各ビューアーに視点別のイベントを配信
+	for viewer in _viewers:
+		var p: int = viewer["player"]
+		var events: Array = EventSerializer.serialize_events(new_actions, p, state, registry)
+		var snapshots: Array = viewer["snapshots"]
+		assert(events.size() == snapshots.size(),
+			"snapshot count mismatch: %d events vs %d snapshots" %
+			[events.size(), snapshots.size()])
 
-	var event_entries: Array = []
-	for i in range(events.size()):
-		event_entries.append({
-			"event": events[i],
-			"snapshot": _action_snapshots[i],
-		})
-	_action_snapshots.clear()
+		var event_entries: Array = []
+		for i in range(events.size()):
+			event_entries.append({
+				"event": events[i],
+				"snapshot": snapshots[i],
+			})
+		snapshots.clear()
 
-	if not event_entries.is_empty():
-		_client_state = event_entries.back().get("snapshot")
-	else:
+		var cs_final: ClientState
+		if not event_entries.is_empty():
+			cs_final = event_entries.back().get("snapshot")
+		else:
+			cs_final = StateSerializer.serialize_for_player(state, p, registry)
+
+		viewer["callback"].call(cs_final, event_entries)
+
+	# _client_state は最初のビューアー視点（get_client_state 用）
+	if not _viewers.is_empty():
 		_client_state = StateSerializer.serialize_for_player(
-			state, viewing_player, registry)
-	state_updated.emit(_client_state, event_entries)
+			state, _viewers[0]["player"], registry)
+	else:
+		_client_state = null
 
 
 func _request_actions() -> void:

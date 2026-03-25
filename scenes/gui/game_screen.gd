@@ -19,6 +19,7 @@ const _GameStartBannerScene: PackedScene = preload("res://scenes/gui/animation/g
 
 var session: GameSession
 var _my_controller: HumanPlayerController
+var _my_player: int = 0
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
@@ -124,28 +125,40 @@ func _fit_content() -> void:
 	)
 
 
-func connect_session(s: GameSession, my_controller: HumanPlayerController = null) -> void:
+func connect_session(s: GameSession, my_controller: HumanPlayerController = null,
+		my_player: int = 0) -> void:
 	session = s
 	_my_controller = my_controller
+	_my_player = my_player
+
 	if session is LocalGameSession:
-		(session as LocalGameSession).set_defer_interactions(true)
-	session.state_updated.connect(_on_state_updated)
+		var local: LocalGameSession = session as LocalGameSession
+		local.set_defer_interactions(true)
+		local.add_viewer(my_player, _on_state_updated)
+	else:
+		session.state_updated.connect(_on_state_updated)
+
 	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
 
 	if _my_controller:
-		# PlayerController 経由
 		_my_controller.actions_presented.connect(_on_actions_received)
 		_my_controller.choice_presented.connect(_on_choice_requested)
 	else:
-		# レガシー: NetworkGameSession 互換
 		session.actions_received.connect(_on_actions_received)
 		session.choice_requested.connect(_on_choice_requested)
 
-	# 現在の状態で初回描画
-	var cs: ClientState = session.get_client_state()
-	if cs != null:
-		_director.initialize(cs)
+	# 初回描画
+	if session is LocalGameSession:
+		var local: LocalGameSession = session as LocalGameSession
+		if local.state != null:
+			var cs: ClientState = StateSerializer.serialize_for_player(
+				local.state, my_player, local.registry)
+			_director.initialize(cs)
+	else:
+		var cs: ClientState = session.get_client_state()
+		if cs != null:
+			_director.initialize(cs)
 
 
 func _get_client_state_for_choice() -> ClientState:
@@ -157,9 +170,12 @@ func _get_client_state_for_choice() -> ClientState:
 func disconnect_session() -> void:
 	if session != null:
 		if session is LocalGameSession:
-			(session as LocalGameSession).set_defer_interactions(false)
-		if session.state_updated.is_connected(_on_state_updated):
-			session.state_updated.disconnect(_on_state_updated)
+			var local: LocalGameSession = session as LocalGameSession
+			local.set_defer_interactions(false)
+			local.remove_viewer(_on_state_updated)
+		else:
+			if session.state_updated.is_connected(_on_state_updated):
+				session.state_updated.disconnect(_on_state_updated)
 		if session.actions_received.is_connected(_on_actions_received):
 			session.actions_received.disconnect(_on_actions_received)
 		if session.choice_requested.is_connected(_on_choice_requested):

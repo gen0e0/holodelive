@@ -7,13 +7,11 @@ var session: LocalGameSession
 @onready var _btn_restart: Button = %BtnRestart
 @onready var _seed_input: LineEdit = %SeedInput
 @onready var _seed_display: LineEdit = %SeedDisplay
-@onready var _state_display: RichTextLabel = %StateDisplay
 @onready var _log_display: RichTextLabel = %LogDisplay
 @onready var _input_line: LineEdit = %InputLine
 @onready var _btn_send: Button = %BtnSend
 @onready var _cpu_toggle: CheckButton = %CpuToggle
 @onready var _cpu_speed_input: LineEdit = %CpuSpeedInput
-@onready var _gui_toggle: CheckButton = %GuiToggle
 
 # --- Zone Edit ---
 @onready var _player_select: OptionButton = %PlayerSelect
@@ -25,9 +23,9 @@ var session: LocalGameSession
 
 # --- GUI ペイン ---
 @onready var _vsplit: VSplitContainer = %VSplit
-@onready var _state_panel: PanelContainer = %StatePanel
-@onready var _gui_container: Control = %GuiContainer
-var _game_screen: GameScreen
+@onready var _screen_container: HBoxContainer = %ScreenContainer
+var _game_screen_p0: GameScreen
+var _game_screen_p1: GameScreen
 
 # --- 内部状態 ---
 var _rng: RandomNumberGenerator
@@ -38,15 +36,15 @@ var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
 var _p0_controller: HumanPlayerController
-var _cpu_both: bool = false  # 両プレイヤーCPU（CLIテスト用）
-var _max_turns: int = 0      # ターン制限（0=無制限）
+var _cpu_both: bool = false   # 両プレイヤーCPU（CLIテスト用）
+var _cpu_none: bool = false   # 両プレイヤー人間（ローカル2人対戦）
+var _max_turns: int = 0       # ターン制限（0=無制限）
 
 
 func _ready() -> void:
 	_btn_restart.pressed.connect(_on_restart_pressed)
 	_btn_send.pressed.connect(_on_send_pressed)
 	_input_line.text_submitted.connect(_on_text_submitted)
-	_gui_toggle.toggled.connect(_on_gui_toggled)
 	_btn_add_card.pressed.connect(_on_add_card_pressed)
 	_btn_clear_zone.pressed.connect(_on_clear_zone_pressed)
 	_card_id_input.text_changed.connect(_on_card_id_text_changed)
@@ -65,7 +63,9 @@ func _init_and_start() -> void:
 	var resolved_args: Array = _resolve_test_preset(user_args)
 	_zone_overrides = _parse_zone_args(resolved_args)
 	_auto_queue = _parse_auto_args(resolved_args)
-	_cpu_both = _parse_flag(resolved_args, "cpu", "") == "both"
+	var cpu_mode: String = _parse_flag(resolved_args, "cpu", "")
+	_cpu_both = cpu_mode == "both"
+	_cpu_none = cpu_mode == "none"
 	var max_turns_str: String = _parse_flag(resolved_args, "max_turns", "0")
 	_max_turns = max_turns_str.to_int() if max_turns_str.is_valid_int() else 0
 	var speed_str: String = _parse_flag(resolved_args, "speed", "")
@@ -83,9 +83,7 @@ func _init_and_start() -> void:
 	_seed_display.text = str(_rng.seed)
 
 	session = LocalGameSession.new()
-	session.viewing_player = 0
 	session.rng = _rng
-	session.state_updated.connect(_on_state_updated)
 	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
 
@@ -95,7 +93,6 @@ func _init_and_start() -> void:
 	_auto_epoch += 1
 
 	_log_display.clear()
-	_state_display.text = ""
 	_btn_send.disabled = true
 
 	# PlayerController を start_game 前に登録（Callable で state/registry を遅延取得）
@@ -108,13 +105,19 @@ func _init_and_start() -> void:
 	_p0_controller.choice_presented.connect(_on_choice_requested)
 	session.set_player_controller(0, _p0_controller)
 
-	session.set_player_controller(1, CpuPlayerController.new(
-		RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.0))
-
-	# GameScreen 接続: GUI トグル ON または cpu=both（統合テストでは常に UI フロー使用）
-	if _gui_toggle.button_pressed or _cpu_both:
-		_ensure_game_screen()
-		_game_screen.connect_session(session, _p0_controller)
+	# P1: cpu=none なら HumanPlayerController、それ以外は CPU
+	if _cpu_none:
+		var p1_human := HumanPlayerController.new()
+		session.set_player_controller(1, p1_human)
+		_ensure_game_screens()
+		_game_screen_p0.connect_session(session, _p0_controller, 0)
+		_game_screen_p1.connect_session(session, p1_human, 1)
+	else:
+		session.set_player_controller(1, CpuPlayerController.new(
+			RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.0))
+		_ensure_game_screens()
+		_game_screen_p0.connect_session(session, _p0_controller, 0)
+		_game_screen_p1.connect_session(session, null, 1)
 
 	if _max_turns > 0:
 		session.max_turns = _max_turns
@@ -124,8 +127,11 @@ func _init_and_start() -> void:
 
 
 func _on_restart_pressed() -> void:
-	if _game_screen != null and session != null:
-		_game_screen.disconnect_session()
+	if session != null:
+		if _game_screen_p0 != null:
+			_game_screen_p0.disconnect_session()
+		if _game_screen_p1 != null:
+			_game_screen_p1.disconnect_session()
 	_init_and_start()
 
 
@@ -167,15 +173,6 @@ func _on_game_started() -> void:
 	if not _zone_overrides.is_empty():
 		_apply_zone_overrides()
 		_zone_overrides = {}
-
-
-func _on_state_updated(client_state: ClientState, events: Array) -> void:
-	_update_state_display(client_state)
-	for event in events:
-		var cs: ClientState = session.get_client_state()
-		var text: String = DisplayHelper.format_event(event, cs)
-		if not text.is_empty():
-			_log(text)
 
 
 func _on_actions_received(actions: Array) -> void:
@@ -255,8 +252,10 @@ func _on_game_over(winner: int) -> void:
 
 	# cpu=both 時はプロセスを自動終了（ログフラッシュのため1フレーム待つ）
 	if _cpu_both:
-		if _game_screen != null:
-			_game_screen.disconnect_session()
+		if _game_screen_p0 != null:
+			_game_screen_p0.disconnect_session()
+		if _game_screen_p1 != null:
+			_game_screen_p1.disconnect_session()
 		session = null
 		_p0_controller = null
 		await get_tree().process_frame
@@ -264,26 +263,19 @@ func _on_game_over(winner: int) -> void:
 
 
 # =============================================================================
-# GUI モード切替
+# ゲーム画面
 # =============================================================================
 
-func _ensure_game_screen() -> void:
-	if _game_screen == null:
-		var scene: PackedScene = preload("res://scenes/gui/game_screen.tscn")
-		_game_screen = scene.instantiate()
-		_gui_container.add_child(_game_screen)
-
-
-func _on_gui_toggled(enabled: bool) -> void:
-	_state_panel.visible = not enabled
-	_gui_container.visible = enabled
-	if enabled:
-		_ensure_game_screen()
-		if session != null:
-			_game_screen.connect_session(session, _p0_controller)
-	else:
-		if _game_screen != null and session != null:
-			_game_screen.disconnect_session()
+func _ensure_game_screens() -> void:
+	var scene: PackedScene = preload("res://scenes/gui/game_screen.tscn")
+	if _game_screen_p0 == null:
+		_game_screen_p0 = scene.instantiate()
+		_game_screen_p0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_screen_container.add_child(_game_screen_p0)
+	if _game_screen_p1 == null:
+		_game_screen_p1 = scene.instantiate()
+		_game_screen_p1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_screen_container.add_child(_game_screen_p1)
 
 
 # =============================================================================
@@ -311,8 +303,8 @@ func _schedule_auto_action(delay: float, epoch: int) -> void:
 	var idx: int = _rng.randi() % _current_actions.size()
 	var action: Dictionary = _current_actions[idx]
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
-	if _game_screen != null:
-		_game_screen.auto_respond_action(action)
+	if _game_screen_p0 != null:
+		_game_screen_p0.auto_respond_action(action)
 	else:
 		_do_submit_action(action)
 
@@ -332,8 +324,8 @@ func _schedule_auto_choice(delay: float, epoch: int) -> void:
 	var choice_index: int = _choice_data.get("choice_index", 0)
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
 	_waiting_choice = false
-	if _game_screen != null:
-		_game_screen.auto_respond_choice(choice_index, chosen_value)
+	if _game_screen_p0 != null:
+		_game_screen_p0.auto_respond_choice(choice_index, chosen_value)
 	else:
 		_do_submit_choice(choice_index, chosen_value)
 
@@ -368,16 +360,16 @@ func _handle_choice_input(num: int) -> void:
 
 ## アクション送信: GameScreen 経由（UI フロー）or 直接送信
 func _do_submit_action(action: Dictionary) -> void:
-	if _game_screen != null:
-		_game_screen.auto_respond_action(action)
+	if _game_screen_p0 != null:
+		_game_screen_p0.auto_respond_action(action)
 	else:
 		_p0_controller.submit_action(action)
 
 
 ## チョイス送信: GameScreen 経由（UI フロー）or 直接送信
 func _do_submit_choice(choice_idx: int, value: Variant) -> void:
-	if _game_screen != null:
-		_game_screen.auto_respond_choice(choice_idx, value)
+	if _game_screen_p0 != null:
+		_game_screen_p0.auto_respond_choice(choice_idx, value)
 	else:
 		_p0_controller.submit_choice(choice_idx, value)
 
@@ -669,82 +661,6 @@ func _on_clear_zone_pressed() -> void:
 	_log("[color=cyan][ZoneEdit] Cleared P%d %s[/color]" % [p, ZONE_KEYS[zone_idx]])
 	session._flush_updates()
 	session._request_actions()
-
-
-# =============================================================================
-# 表示
-# =============================================================================
-
-func _update_state_display(cs: ClientState) -> void:
-	if cs == null:
-		_state_display.text = ""
-		return
-
-	var phase_name: String = DisplayHelper.get_phase_name(cs.phase)
-
-	var lines: Array[String] = []
-	lines.append("[color=cyan]=== Round %d | Turn %d | P%d | Phase: %s ===[/color]" % [
-		cs.round_number, cs.turn_number, cs.current_player, phase_name
-	])
-	lines.append("Wins: P0=%d P1=%d | Deck: %d | Home: %d | Removed: %d" % [
-		cs.round_wins[0], cs.round_wins[1],
-		cs.deck_count, cs.home.size(), cs.removed.size()
-	])
-	lines.append("")
-
-	for p in range(2):
-		var color: String = "white" if p != cs.current_player else "green"
-		lines.append("[color=%s]--- Player %d ---[/color]" % [color, p])
-
-		# Hand
-		if p == cs.my_player:
-			var hand_str: String = ""
-			if cs.my_hand.is_empty():
-				hand_str = "(empty)"
-			else:
-				var parts: Array[String] = []
-				for d in cs.my_hand:
-					parts.append("[%s]" % DisplayHelper.format_card_dict(d))
-				hand_str = " ".join(parts)
-			lines.append("  Hand: %s" % hand_str)
-		else:
-			lines.append("  Hand: (%d cards)" % cs.opponent_hand_count)
-
-		# Stage
-		var stage_parts: Array[String] = []
-		var stage_cards: Array = cs.stages[p]
-		for d in stage_cards:
-			var dict: Dictionary = d
-			if dict.get("hidden", false):
-				stage_parts.append("[face down]")
-			else:
-				stage_parts.append("[%s]" % DisplayHelper.format_card_dict(dict))
-		var empty_count: int = 3 - stage_cards.size()
-		for i in range(empty_count):
-			stage_parts.append("[empty]")
-		lines.append("  Stage: %s" % " ".join(stage_parts))
-
-		# Backstage
-		var bs: Variant = cs.backstages[p]
-		if bs == null:
-			lines.append("  Backstage: empty")
-		else:
-			var bs_dict: Dictionary = bs
-			if bs_dict.get("hidden", false):
-				lines.append("  Backstage: (face down)")
-			else:
-				lines.append("  Backstage: %s" % DisplayHelper.format_card_dict(bs_dict))
-
-		# Rank
-		lines.append("  Rank: %s" % DisplayHelper.format_stage_rank(stage_cards))
-
-		# Live ready
-		var live_str: String = "Yes (turn %d)" % cs.live_ready_turn[p] if cs.live_ready[p] else "No"
-		lines.append("  Live Ready: %s" % live_str)
-		lines.append("")
-
-	_state_display.clear()
-	_state_display.append_text("\n".join(lines))
 
 
 # =============================================================================
