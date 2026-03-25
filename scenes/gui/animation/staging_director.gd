@@ -5,14 +5,11 @@ extends RefCounted
 ## state_updated / actions_received をキューに積み、await ベースで直列処理する。
 ## イベントを1つずつ処理: アニメーション（旧UI上で実行）→ スナップショットでUI更新。
 
-const _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
 const _TurnStartBannerScene: PackedScene = preload("res://scenes/gui/animation/turn_start_banner.tscn")
 const _SkillCutInScene: PackedScene = preload("res://scenes/gui/animation/skill_cutin.tscn")
 const FLY_DURATION: float = 0.35
 const EVENT_DELAY: float = 0.15
 const PIVOT: Vector2 = Vector2(150, 210)  # CardView の pivot_offset
-const SPIN_OUT_DURATION: float = 0.6
-const SPIN_OUT_JUMP_HEIGHT: float = 120.0  # ジャンプの高さ (px)
 const MAX_SKILL_DURATION: float = 2.0     # スキル演出の最大待ち時間
 
 enum _CueType { STATE_UPDATE, ACTIONS, BANNER }
@@ -91,7 +88,7 @@ func cancel_all() -> void:
 	_cancelled = true
 	_queue.clear()
 
-	# AnimationLayer 上の一時カードを全削除
+	# AnimationLayer 上の一時ノードを全削除
 	for child in _anim_layer.get_children():
 		child.queue_free()
 
@@ -158,12 +155,12 @@ func _process_state_cue(entry: Dictionary) -> void:
 
 		_prev_cs = snapshot
 
-	# 7) 最終補正
+	# 最終補正
 	if cs_final != null and refresh_fn.is_valid():
 		refresh_fn.call(cs_final)
 	_prev_cs = cs_final
 
-	# 8) 保留中のインタラクションを発火
+	# 保留中のインタラクションを発火
 	if on_state_processed.is_valid():
 		on_state_processed.call()
 
@@ -198,7 +195,7 @@ func _execute_event(event: Dictionary, old_positions: Dictionary,
 		"TURN_START":
 			return await _cue_turn_start(is_me)
 		"DRAW":
-			return await _cue_draw(event, is_me, old_positions, cs)
+			return await _cue_draw(event, is_me, old_positions)
 		"PLAY_CARD":
 			return await _cue_play_card(event, is_me, old_positions, cs)
 		"SKILL_EFFECT":
@@ -220,23 +217,24 @@ func _cue_turn_start(is_me: bool) -> bool:
 
 
 func _cue_draw(event: Dictionary, is_me: bool,
-		old_positions: Dictionary, cs: ClientState) -> bool:
+		old_positions: Dictionary) -> bool:
 	var from_xform: Dictionary = old_positions.get("deck", {})
 	if from_xform.is_empty():
 		return false
 
+	var card_data: Dictionary
 	if is_me:
-		var card_data: Dictionary = event.get("card", {})
+		card_data = event.get("card", {})
 		if card_data.is_empty():
 			return false
-		var to_xform: Dictionary = _get_hand_center(hand)
-		await _fly_card(card_data, false,
-			from_xform, to_xform, _dur(FLY_DURATION))
 	else:
-		var to_xform: Dictionary = _get_hand_center(opp_hand)
-		await _fly_card({"instance_id": -9999, "hidden": true}, false,
-			from_xform, to_xform, _dur(FLY_DURATION))
+		card_data = {"instance_id": -9999, "hidden": true}
 
+	var to_xform: Dictionary = _get_hand_center(hand if is_me else opp_hand)
+	var anim: FlyCardAnim = FlyCardAnim.create(card_data, false,
+		from_xform, to_xform, FLY_DURATION)
+	_anim_layer.add_child(anim)
+	await anim.finished
 	return true
 
 
@@ -248,30 +246,29 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 	var iid: int = card_data.get("instance_id", -1)
 	var to_zone: String = event.get("to_zone", "stage")
 
-	var to_xform: Dictionary = _compute_to_xform(to_zone, iid, cs)
+	var to_xform: Dictionary = _resolve_zone_xform(to_zone, -1, iid, cs, {})
 	if to_xform.is_empty():
 		return false
 
 	var from_xform: Dictionary
-	var fly_data: Dictionary
 	var fly_face_up: bool
 
 	if is_me:
 		from_xform = old_positions.get(iid, {})
 		if from_xform.is_empty():
 			return false
-		fly_data = card_data
 		fly_face_up = not card_data.get("face_down", false)
 		hand.hide_card(iid)
 	else:
 		from_xform = _get_hand_center(opp_hand)
-		fly_data = card_data
 		fly_face_up = false
 
 	GameLog.log_event("ANIM", "play_card_start", {"iid": iid, "to": to_zone, "is_me": is_me})
-	await _fly_card(fly_data, fly_face_up, from_xform, to_xform, _dur(FLY_DURATION))
+	var anim: FlyCardAnim = FlyCardAnim.create(card_data, fly_face_up,
+		from_xform, to_xform, FLY_DURATION)
+	_anim_layer.add_child(anim)
+	await anim.finished
 	GameLog.log_event("ANIM", "play_card_end", {"iid": iid})
-
 	return true
 
 
@@ -280,7 +277,6 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 	var cues: Array = event.get("cues", [])
 
 	# 1) カットイン演出（await で先に完了させる）
-	# カットイン中もフィールドのカードはそのまま旧面で見える（プレースホルダー不要）
 	var skill_name: String = event.get("skill_name", "")
 	var nickname: String = event.get("nickname", "")
 	if not skill_name.is_empty():
@@ -297,7 +293,7 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 			_hide_cue_source(cue_dict, old_positions, cs)
 
 	# 3) 全キューを fire-and-forget で同時発火
-	var anim_items: Array = []  # Node（自己廃棄型）と Tween の混在
+	var anim_nodes: Array = []  # Node（自己廃棄型）と Tween の混在
 	for cue_dict in cues:
 		var cue_action: String = cue_dict.get("action", "")
 		var cue_iid: int = cue_dict.get("instance_id", -1)
@@ -307,22 +303,22 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 				"from": cue_dict.get("from_zone", "?"),
 				"to": cue_dict.get("to_zone", "?"),
 			})
-			var node: CardView = _fire_cue_move(cue_dict, old_positions, cs)
+			var node: Node = _fire_cue_move(cue_dict, old_positions, cs)
 			if node != null:
-				anim_items.append(node)
+				anim_nodes.append(node)
 			else:
 				GameLog.log_event("ANIM", "move_skip", {"iid": cue_iid, "reason": "resolve_failed"})
 		elif cue_action == "flip":
 			GameLog.log_event("ANIM", "flip_start", {"iid": cue_iid})
 			var tween: Tween = _fire_cue_flip(cue_dict)
 			if tween != null:
-				anim_items.append(tween)
+				anim_nodes.append(tween)
 
 	# 4) 全完了 or タイムアウト待ち
-	if not anim_items.is_empty():
-		GameLog.log_event("ANIM", "await_all", {"count": anim_items.size()})
+	if not anim_nodes.is_empty():
+		GameLog.log_event("ANIM", "await_all", {"count": anim_nodes.size()})
 		var max_dur: float = _dur(event.get("max_animation_duration", MAX_SKILL_DURATION))
-		await _wait_for_animations(anim_items, max_dur)
+		await _wait_for_animations(anim_nodes, max_dur)
 		GameLog.log_event("ANIM", "await_done")
 
 	return not skill_name.is_empty() or not cues.is_empty()
@@ -335,9 +331,7 @@ func _hide_cue_source(cue_dict: Dictionary, old_positions: Dictionary,
 	var from_zone: String = cue_dict.get("from_zone", "auto")
 
 	if from_zone == "auto":
-		# old_positions に iid があればフィールド/手札上のカード
 		if old_positions.has(iid):
-			# 手札かフィールドかを判定して非表示
 			if _is_my_card_in_hand(iid, _prev_cs):
 				hand.hide_card(iid)
 			else:
@@ -346,15 +340,13 @@ func _hide_cue_source(cue_dict: Dictionary, old_positions: Dictionary,
 		var from_player: int = cue_dict.get("from_player", -1)
 		if from_player >= 0 and cs != null and from_player == cs.my_player:
 			hand.hide_card(iid)
-		# 相手手札は個別カード非表示不要（中心座標からアニメーション）
 	elif from_zone == "stage" or from_zone == "backstage":
 		card_layer.hide_card(iid)
 
 
-## move キューを fire-and-forget で発火。自己廃棄する CardView を返す。
+## move キューを fire-and-forget で発火。自己廃棄する Node を返す。
 func _fire_cue_move(cue_dict: Dictionary, old_positions: Dictionary,
-		cs: ClientState) -> CardView:
-	var iid: int = cue_dict.get("instance_id", -1)
+		cs: ClientState) -> Node:
 	var card_data: Dictionary = cue_dict.get("card", {})
 	var style: String = cue_dict.get("style", "DEFAULT")
 	var delay: float = cue_dict.get("delay", 0.0)
@@ -377,17 +369,35 @@ func _fire_cue_move(cue_dict: Dictionary, old_positions: Dictionary,
 		face_up = not card_data.get("face_down", false) \
 			and not card_data.get("hidden", false)
 
-	if dur < 0:
-		dur = SPIN_OUT_DURATION if style == "SPIN_OUT" else FLY_DURATION
-	dur = _dur(dur)
+	var anim: Node
+	if style == "SPIN_OUT":
+		anim = SpinOutCardAnim.create(card_data, face_up, from_xform, to_xform, delay)
+	else:
+		if dur < 0:
+			dur = FLY_DURATION
+		anim = FlyCardAnim.create(card_data, face_up, from_xform, to_xform, dur, delay)
 
-	match style:
-		"SPIN_OUT":
-			return _fire_spin_out_card(card_data, face_up, from_xform, to_xform, _dur(delay))
-		_:
-			return _fire_fly_card(card_data, face_up, from_xform, to_xform, dur, _dur(delay))
-	return null
+	_anim_layer.add_child(anim)
+	return anim
 
+
+## flip キューを実カードの CardView.play_flip() で発火。Tween を返す。
+func _fire_cue_flip(cue_dict: Dictionary) -> Tween:
+	var iid: int = cue_dict.get("instance_id", -1)
+	var card_data: Dictionary = cue_dict.get("card", {})
+	var p_to_face_down: bool = cue_dict.get("to_face_down", false)
+	var delay: float = cue_dict.get("delay", 0.0)
+
+	var cv: CardView = card_layer.get_card_view(iid)
+	if cv == null:
+		return null
+
+	return cv.play_flip(not p_to_face_down, card_data, delay)
+
+
+# ===========================================================================
+# ゾーン → 画面座標 解決
+# ===========================================================================
 
 ## from ゾーンを画面座標に解決する。
 func _resolve_from(cue_dict: Dictionary, old_positions: Dictionary,
@@ -397,17 +407,13 @@ func _resolve_from(cue_dict: Dictionary, old_positions: Dictionary,
 	var from_player: int = cue_dict.get("from_player", -1)
 
 	if from_zone == "auto":
-		# old_positions から iid で検索
 		var xform: Dictionary = old_positions.get(iid, {})
 		if not xform.is_empty():
 			return xform
-		# フォールバック: opp_hand 中心
 		return old_positions.get("opp_hand", {})
 
-	# ゾーン指定で解決を試みる
 	var result: Dictionary = _resolve_zone_xform(
 		from_zone, from_player, iid, cs, old_positions)
-	# stage/backstage は新 cs では既に移動済みの場合がある → old_positions にフォールバック
 	if result.is_empty() and old_positions.has(iid):
 		return old_positions[iid]
 	return result
@@ -433,6 +439,9 @@ func _resolve_zone_xform(zone: String, player: int, iid: int,
 		"hand":
 			if cs != null and player == cs.my_player:
 				return _get_hand_center(hand)
+			# player 未指定の場合は iid で判定
+			if player < 0 and _is_my_card_in_hand(iid, cs):
+				return _get_hand_center(hand)
 			return _get_hand_center(opp_hand)
 		"stage":
 			return _find_field_slot_xform(iid, cs, true, player)
@@ -441,41 +450,12 @@ func _resolve_zone_xform(zone: String, player: int, iid: int,
 	return {}
 
 
-## flip キューを実カードの CardView.play_flip() で発火。Tween を返す。
-func _fire_cue_flip(cue_dict: Dictionary) -> Tween:
-	var iid: int = cue_dict.get("instance_id", -1)
-	var card_data: Dictionary = cue_dict.get("card", {})
-	var p_to_face_down: bool = cue_dict.get("to_face_down", false)
-	var delay: float = cue_dict.get("delay", 0.0)
-
-	var cv: CardView = card_layer.get_card_view(iid)
-	if cv == null:
-		return null
-
-	return cv.play_flip(not p_to_face_down, card_data, delay)
-
-
 func _get_hand_center(h: HandZone) -> Dictionary:
 	return {
 		"pos": h.position + PIVOT * h.scale - PIVOT,
 		"scale": h.scale,
 		"rotation": 0.0,
 	}
-
-
-func _compute_to_xform(to_zone: String, iid: int, cs: ClientState) -> Dictionary:
-	match to_zone:
-		"deck":
-			return deck_view.get_card_content_transform()
-		"home":
-			return home_view.get_card_content_transform()
-		"hand":
-			return _get_hand_center(hand if _is_my_card_in_hand(iid, cs) else opp_hand)
-		"stage":
-			return _find_field_slot_xform(iid, cs, true)
-		"backstage":
-			return _find_field_slot_xform(iid, cs, false)
-	return {}
 
 
 func _is_my_card_in_hand(iid: int, cs: ClientState) -> bool:
@@ -508,77 +488,11 @@ func _find_field_slot_xform(iid: int, cs: ClientState, is_stage: bool, filter_pl
 
 
 # ===========================================================================
-# fire-and-forget アニメーション（スキル演出用、自己廃棄型）
+# アニメーション完了待ち
 # ===========================================================================
 
-func _fire_fly_card(card_data: Dictionary, face_up: bool,
-		from_xform: Dictionary, to_xform: Dictionary,
-		duration: float, delay: float) -> CardView:
-	var cv: CardView = _CardViewScene.instantiate()
-	cv.managed_hover = true
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cv.setup(card_data, face_up)
-	cv.position = from_xform.get("pos", Vector2.ZERO)
-	cv.scale = from_xform.get("scale", Vector2.ONE)
-	cv.rotation = from_xform.get("rotation", 0.0)
-	_anim_layer.add_child(cv)
-
-	var to_pos: Vector2 = to_xform.get("pos", Vector2.ZERO)
-	var to_scale: Vector2 = to_xform.get("scale", Vector2.ONE)
-	var to_rotation: float = to_xform.get("rotation", 0.0)
-
-	var tween: Tween = cv.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(cv, "position", to_pos, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
-	tween.tween_property(cv, "scale", to_scale, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
-	tween.tween_property(cv, "rotation", to_rotation, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
-	tween.finished.connect(cv.queue_free)
-	return cv
-
-
-func _fire_spin_out_card(card_data: Dictionary, face_up: bool,
-		from_xform: Dictionary, to_xform: Dictionary, delay: float) -> CardView:
-	var cv: CardView = _CardViewScene.instantiate()
-	cv.managed_hover = true
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cv.setup(card_data, face_up)
-
-	var from_pos: Vector2 = from_xform.get("pos", Vector2.ZERO)
-	cv.position = from_pos
-	cv.scale = from_xform.get("scale", Vector2.ONE)
-	cv.rotation = from_xform.get("rotation", 0.0)
-	cv.pivot_offset = PIVOT
-	_anim_layer.add_child(cv)
-
-	var to_pos: Vector2 = to_xform.get("pos", Vector2.ZERO)
-	var to_scale: Vector2 = to_xform.get("scale", Vector2.ONE)
-
-	var spin_dur: float = _dur(SPIN_OUT_DURATION)
-	var tween: Tween = cv.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(cv, "position:x", to_pos.x, spin_dur) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
-	tween.tween_method(
-		func(t: float) -> void:
-			var linear_y: float = lerpf(from_pos.y, to_pos.y, t)
-			var arc: float = 4.0 * SPIN_OUT_JUMP_HEIGHT * t * (1.0 - t)
-			cv.position.y = linear_y - arc,
-		0.0, 1.0, spin_dur
-	).set_delay(delay)
-	tween.tween_property(cv, "rotation", TAU, spin_dur) \
-		.set_trans(Tween.TRANS_LINEAR).set_delay(delay)
-	tween.tween_property(cv, "scale", to_scale, spin_dur) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
-	tween.finished.connect(cv.queue_free)
-	return cv
-
-
 ## 全アニメーションの完了またはタイムアウトを待つ。
-## items は Node（自己廃棄型）と Tween（既存カード上）の混在可。
-## タイムアウト時は残存ノードを強制廃棄、Tween を強制停止する。
+## items は Node（自己廃棄型、finished シグナル持ち）と Tween の混在可。
 func _wait_for_animations(items: Array, max_duration: float) -> void:
 	var timer: SceneTreeTimer = _anim_layer.get_tree().create_timer(max_duration)
 	while timer.time_left > 0.0:
@@ -606,87 +520,8 @@ func _wait_for_animations(items: Array, max_duration: float) -> void:
 
 
 # ===========================================================================
-# await 型アニメーション・プリミティブ（DRAW / PLAY_CARD 用）
+# ユーティリティ
 # ===========================================================================
-
-func _spin_out_card(card_data: Dictionary, face_up: bool,
-		from_xform: Dictionary, to_xform: Dictionary) -> void:
-	var cv: CardView = _CardViewScene.instantiate()
-	cv.managed_hover = true
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cv.setup(card_data, face_up)
-
-	var from_pos: Vector2 = from_xform.get("pos", Vector2.ZERO)
-	cv.position = from_pos
-	cv.scale = from_xform.get("scale", Vector2.ONE)
-	cv.rotation = from_xform.get("rotation", 0.0)
-	cv.pivot_offset = PIVOT
-
-	_anim_layer.add_child(cv)
-
-	var to_pos: Vector2 = to_xform.get("pos", Vector2.ZERO)
-	var to_scale: Vector2 = to_xform.get("scale", Vector2.ONE)
-
-	var tween: Tween = cv.create_tween()
-	tween.set_parallel(true)
-
-	var spin_dur: float = _dur(SPIN_OUT_DURATION)
-
-	# X: スムーズ移動
-	tween.tween_property(cv, "position:x", to_pos.x, spin_dur) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-
-	# Y: 放物線アーク (直線補間 + 上向きオフセット)
-	tween.tween_method(
-		func(t: float) -> void:
-			var linear_y: float = lerpf(from_pos.y, to_pos.y, t)
-			var arc: float = 4.0 * SPIN_OUT_JUMP_HEIGHT * t * (1.0 - t)
-			cv.position.y = linear_y - arc,
-		0.0, 1.0, spin_dur
-	)
-
-	# 回転: 1回転 (TAU = 2π)
-	tween.tween_property(cv, "rotation", TAU, spin_dur) \
-		.set_trans(Tween.TRANS_LINEAR)
-
-	# スケール
-	tween.tween_property(cv, "scale", to_scale, spin_dur) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-
-	await tween.finished
-	cv.queue_free()
-
-
-func _fly_card(card_data: Dictionary, face_up: bool,
-		from_xform: Dictionary, to_xform: Dictionary,
-		duration: float) -> void:
-	var cv: CardView = _CardViewScene.instantiate()
-	cv.managed_hover = true
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cv.setup(card_data, face_up)
-
-	cv.position = from_xform.get("pos", Vector2.ZERO)
-	cv.scale = from_xform.get("scale", Vector2.ONE)
-	cv.rotation = from_xform.get("rotation", 0.0)
-
-	_anim_layer.add_child(cv)
-
-	var to_pos: Vector2 = to_xform.get("pos", Vector2.ZERO)
-	var to_scale: Vector2 = to_xform.get("scale", Vector2.ONE)
-	var to_rotation: float = to_xform.get("rotation", 0.0)
-
-	var tween: Tween = cv.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(cv, "position", to_pos, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(cv, "scale", to_scale, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(cv, "rotation", to_rotation, duration) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-
-	await tween.finished
-	cv.queue_free()
-
 
 func _dur(seconds: float) -> float:
 	var s: float = GameConfig.animation_speed
@@ -702,11 +537,6 @@ func _delay(seconds: float) -> void:
 		return
 	await _anim_layer.get_tree().create_timer(d).timeout
 
-
-
-# ===========================================================================
-# ヘルパー
-# ===========================================================================
 
 func _capture_positions(cs: ClientState) -> Dictionary:
 	var result: Dictionary = {}
