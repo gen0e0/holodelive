@@ -255,6 +255,10 @@ func _on_game_over(winner: int) -> void:
 
 	# cpu=both 時はプロセスを自動終了（ログフラッシュのため1フレーム待つ）
 	if _cpu_both:
+		if _game_screen != null:
+			_game_screen.disconnect_session()
+		session = null
+		_p0_controller = null
 		await get_tree().process_frame
 		get_tree().quit(0 if winner >= 0 else 1)
 
