@@ -100,6 +100,17 @@ func activate(choice_data: Dictionary) -> void:
 	_hand_zone.card_clicked.connect(_on_hand_card_clicked)
 
 
+func auto_resolve(choice_idx: int, value: Variant) -> void:
+	# CPU 向け: 選択状態を反映してから resolved を emit
+	if value is Array:
+		for iid in value:
+			if _active:
+				_toggle_selection(iid)
+	elif value is int and _active:
+		_toggle_selection(value)
+	resolved.emit(choice_idx, value)
+
+
 func deactivate() -> void:
 	if not _active:
 		return

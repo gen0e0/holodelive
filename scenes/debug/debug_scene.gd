@@ -99,26 +99,22 @@ func _init_and_start() -> void:
 	var get_state: Callable = func() -> GameState: return session.state
 	var get_registry: Callable = func() -> CardRegistry: return session.registry
 
-	if _cpu_both:
-		# 両プレイヤー CPU（CLIテスト用）
-		# 最小 delay で非同期化（同期だとログがフラッシュされない）
-		_p0_controller = null
-		session.set_player_controller(0, CpuPlayerController.new(
-			RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.01))
-	else:
-		_p0_controller = HumanPlayerController.new()
-		_p0_controller.actions_presented.connect(_on_actions_received)
-		_p0_controller.choice_presented.connect(_on_choice_requested)
-		session.set_player_controller(0, _p0_controller)
+	# P0: 常に HumanPlayerController（cpu=both でも UI フロー経由）
+	_p0_controller = HumanPlayerController.new()
+	_p0_controller.actions_presented.connect(_on_actions_received)
+	_p0_controller.choice_presented.connect(_on_choice_requested)
+	session.set_player_controller(0, _p0_controller)
 
 	var p1_delay: float = 0.01 if _cpu_both else 0.0
 	session.set_player_controller(1, CpuPlayerController.new(
 		RandomStrategy.new(_rng), get_state, get_registry, get_tree(), p1_delay))
 
-	# GUI モードが有効なら GameScreen を start_game 前に接続
-	if _gui_toggle.button_pressed and _p0_controller != null:
+	# GameScreen 接続: GUI トグル ON または cpu=both（統合テストでは常に UI フロー使用）
+	if _gui_toggle.button_pressed or _cpu_both:
 		_ensure_game_screen()
 		_game_screen.connect_session(session, _p0_controller)
+		if _cpu_both:
+			_game_screen._director.speed_scale = 50.0
 
 	if _max_turns > 0:
 		session.max_turns = _max_turns
@@ -199,8 +195,8 @@ func _on_actions_received(actions: Array) -> void:
 		var entry: Dictionary = _auto_queue.pop_front()
 		_schedule_auto_queue_action(entry)
 		return
-	if _cpu_toggle.button_pressed:
-		var delay: float = _get_cpu_speed()
+	if _cpu_both or _cpu_toggle.button_pressed:
+		var delay: float = 0.0 if _cpu_both else _get_cpu_speed()
 		_schedule_auto_action(delay, _auto_epoch)
 	else:
 		_input_line.call_deferred("grab_focus")
@@ -235,8 +231,8 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 		var entry: Dictionary = _auto_queue.pop_front()
 		_schedule_auto_queue_choice(entry)
 		return
-	if _cpu_toggle.button_pressed:
-		var delay: float = _get_cpu_speed()
+	if _cpu_both or _cpu_toggle.button_pressed:
+		var delay: float = 0.0 if _cpu_both else _get_cpu_speed()
 		_schedule_auto_choice(delay, _auto_epoch)
 	else:
 		_input_line.call_deferred("grab_focus")
@@ -311,7 +307,10 @@ func _schedule_auto_action(delay: float, epoch: int) -> void:
 	var idx: int = _rng.randi() % _current_actions.size()
 	var action: Dictionary = _current_actions[idx]
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
-	_p0_controller.submit_action(action)
+	if _game_screen != null:
+		_game_screen.auto_respond_action(action)
+	else:
+		_do_submit_action(action)
 
 
 func _schedule_auto_choice(delay: float, epoch: int) -> void:
@@ -329,7 +328,10 @@ func _schedule_auto_choice(delay: float, epoch: int) -> void:
 	var choice_index: int = _choice_data.get("choice_index", 0)
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
 	_waiting_choice = false
-	_p0_controller.submit_choice(choice_index, chosen_value)
+	if _game_screen != null:
+		_game_screen.auto_respond_choice(choice_index, chosen_value)
+	else:
+		_do_submit_choice(choice_index, chosen_value)
 
 
 # =============================================================================
@@ -343,7 +345,7 @@ func _handle_action_input(num: int) -> void:
 
 	var action: Dictionary = _current_actions[num - 1]
 	_log("> %d" % num)
-	_p0_controller.submit_action(action)
+	_do_submit_action(action)
 
 
 func _handle_choice_input(num: int) -> void:
@@ -357,7 +359,23 @@ func _handle_choice_input(num: int) -> void:
 	var chosen_value: Variant = valid_targets[num - 1]
 	_log("> %d" % num)
 	_waiting_choice = false
-	_p0_controller.submit_choice(choice_index, chosen_value)
+	_do_submit_choice(choice_index, chosen_value)
+
+
+## アクション送信: GameScreen 経由（UI フロー）or 直接送信
+func _do_submit_action(action: Dictionary) -> void:
+	if _game_screen != null:
+		_game_screen.auto_respond_action(action)
+	else:
+		_p0_controller.submit_action(action)
+
+
+## チョイス送信: GameScreen 経由（UI フロー）or 直接送信
+func _do_submit_choice(choice_idx: int, value: Variant) -> void:
+	if _game_screen != null:
+		_game_screen.auto_respond_choice(choice_idx, value)
+	else:
+		_p0_controller.submit_choice(choice_idx, value)
 
 
 # =============================================================================
@@ -783,7 +801,7 @@ func _schedule_auto_queue_action(entry: Dictionary) -> void:
 				return
 			GameLog.log_event("ACTION", "auto_play", {"card_id": card_id, "target": target})
 			_log("[color=magenta](Auto) play:%d:%s[/color]" % [card_id, target])
-			_p0_controller.submit_action(action)
+			_do_submit_action(action)
 		"pass":
 			var action: Dictionary = _find_pass_action()
 			if action.is_empty():
@@ -791,7 +809,7 @@ func _schedule_auto_queue_action(entry: Dictionary) -> void:
 				return
 			GameLog.log_event("ACTION", "auto_pass")
 			_log("[color=magenta](Auto) pass[/color]")
-			_p0_controller.submit_action(action)
+			_do_submit_action(action)
 		_:
 			_log("[color=red][Auto] Unexpected cmd '%s' for action[/color]" % cmd)
 
@@ -815,7 +833,7 @@ func _schedule_auto_queue_choice(entry: Dictionary) -> void:
 					GameLog.log_event("CHOICE", "auto_select", {"card_id": card_id, "iid": target})
 					_log("[color=magenta](Auto) select:%d[/color]" % card_id)
 					_waiting_choice = false
-					_p0_controller.submit_choice(choice_index, target)
+					_do_submit_choice(choice_index, target)
 					return
 		_log("[color=red][Auto] No matching target for card_id=%d in %s[/color]" % [card_id, str(valid_targets)])
 	elif cmd == "_zone":
@@ -826,7 +844,7 @@ func _schedule_auto_queue_choice(entry: Dictionary) -> void:
 				GameLog.log_event("CHOICE", "auto_zone", {"zone": zone})
 				_log("[color=magenta](Auto) zone:%s[/color]" % zone)
 				_waiting_choice = false
-				_p0_controller.submit_choice(choice_index, target)
+				_do_submit_choice(choice_index, target)
 				return
 		_log("[color=red][Auto] Zone '%s' not in valid_targets %s[/color]" % [zone, str(valid_targets)])
 	else:

@@ -394,6 +394,21 @@ func _clear_action_state() -> void:
 
 
 # ---------------------------------------------------------------------------
+# CPU 自動応答（統合テスト用）
+# ---------------------------------------------------------------------------
+
+## CPU がアクションを選択した際に呼ぶ。UI 状態をクリアしてアクションを送信する。
+func auto_respond_action(action: Dictionary) -> void:
+	_clear_action_state()
+	_send_action(action)
+
+
+## CPU がチョイスの結果を注入する。ChoiceManager 経由で active handler に送る。
+func auto_respond_choice(choice_idx: int, value: Variant) -> void:
+	_choice_manager.auto_resolve(choice_idx, value)
+
+
+# ---------------------------------------------------------------------------
 # PendingChoice 処理
 # ---------------------------------------------------------------------------
 

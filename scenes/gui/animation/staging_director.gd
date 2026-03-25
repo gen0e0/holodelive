@@ -25,6 +25,9 @@ var deck_view: DeckView
 var home_view: HomeView
 var field_layout: FieldLayout
 
+## アニメーション速度倍率。1.0=通常、50.0=50倍速（統合テスト用）。
+var speed_scale: float = 1.0
+
 ## UI を新しい ClientState で即更新するコールバック: func(cs: ClientState) -> void
 var refresh_fn: Callable
 
@@ -231,11 +234,11 @@ func _cue_draw(event: Dictionary, is_me: bool,
 			return false
 		var to_xform: Dictionary = _get_hand_center(hand)
 		await _fly_card(card_data, false,
-			from_xform, to_xform, FLY_DURATION)
+			from_xform, to_xform, _dur(FLY_DURATION))
 	else:
 		var to_xform: Dictionary = _get_hand_center(opp_hand)
 		await _fly_card({"instance_id": -9999, "hidden": true}, false,
-			from_xform, to_xform, FLY_DURATION)
+			from_xform, to_xform, _dur(FLY_DURATION))
 
 	return true
 
@@ -269,7 +272,7 @@ func _cue_play_card(event: Dictionary, is_me: bool,
 		fly_face_up = false
 
 	GameLog.log_event("ANIM", "play_card_start", {"iid": iid, "to": to_zone, "is_me": is_me})
-	await _fly_card(fly_data, fly_face_up, from_xform, to_xform, FLY_DURATION)
+	await _fly_card(fly_data, fly_face_up, from_xform, to_xform, _dur(FLY_DURATION))
 	GameLog.log_event("ANIM", "play_card_end", {"iid": iid})
 
 	return true
@@ -321,7 +324,7 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 	# 4) 全完了 or タイムアウト待ち
 	if not anim_items.is_empty():
 		GameLog.log_event("ANIM", "await_all", {"count": anim_items.size()})
-		var max_dur: float = event.get("max_animation_duration", MAX_SKILL_DURATION)
+		var max_dur: float = _dur(event.get("max_animation_duration", MAX_SKILL_DURATION))
 		await _wait_for_animations(anim_items, max_dur)
 		GameLog.log_event("ANIM", "await_done")
 
@@ -379,12 +382,13 @@ func _fire_cue_move(cue_dict: Dictionary, old_positions: Dictionary,
 
 	if dur < 0:
 		dur = SPIN_OUT_DURATION if style == "SPIN_OUT" else FLY_DURATION
+	dur = _dur(dur)
 
 	match style:
 		"SPIN_OUT":
-			return _fire_spin_out_card(card_data, face_up, from_xform, to_xform, delay)
+			return _fire_spin_out_card(card_data, face_up, from_xform, to_xform, _dur(delay))
 		_:
-			return _fire_fly_card(card_data, face_up, from_xform, to_xform, dur, delay)
+			return _fire_fly_card(card_data, face_up, from_xform, to_xform, dur, _dur(delay))
 	return null
 
 
@@ -555,20 +559,21 @@ func _fire_spin_out_card(card_data: Dictionary, face_up: bool,
 	var to_pos: Vector2 = to_xform.get("pos", Vector2.ZERO)
 	var to_scale: Vector2 = to_xform.get("scale", Vector2.ONE)
 
+	var spin_dur: float = _dur(SPIN_OUT_DURATION)
 	var tween: Tween = cv.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(cv, "position:x", to_pos.x, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "position:x", to_pos.x, spin_dur) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
 	tween.tween_method(
 		func(t: float) -> void:
 			var linear_y: float = lerpf(from_pos.y, to_pos.y, t)
 			var arc: float = 4.0 * SPIN_OUT_JUMP_HEIGHT * t * (1.0 - t)
 			cv.position.y = linear_y - arc,
-		0.0, 1.0, SPIN_OUT_DURATION
+		0.0, 1.0, spin_dur
 	).set_delay(delay)
-	tween.tween_property(cv, "rotation", TAU, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "rotation", TAU, spin_dur) \
 		.set_trans(Tween.TRANS_LINEAR).set_delay(delay)
-	tween.tween_property(cv, "scale", to_scale, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "scale", to_scale, spin_dur) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(delay)
 	tween.finished.connect(cv.queue_free)
 	return cv
@@ -628,8 +633,10 @@ func _spin_out_card(card_data: Dictionary, face_up: bool,
 	var tween: Tween = cv.create_tween()
 	tween.set_parallel(true)
 
+	var spin_dur: float = _dur(SPIN_OUT_DURATION)
+
 	# X: スムーズ移動
-	tween.tween_property(cv, "position:x", to_pos.x, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "position:x", to_pos.x, spin_dur) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 	# Y: 放物線アーク (直線補間 + 上向きオフセット)
@@ -638,15 +645,15 @@ func _spin_out_card(card_data: Dictionary, face_up: bool,
 			var linear_y: float = lerpf(from_pos.y, to_pos.y, t)
 			var arc: float = 4.0 * SPIN_OUT_JUMP_HEIGHT * t * (1.0 - t)
 			cv.position.y = linear_y - arc,
-		0.0, 1.0, SPIN_OUT_DURATION
+		0.0, 1.0, spin_dur
 	)
 
 	# 回転: 1回転 (TAU = 2π)
-	tween.tween_property(cv, "rotation", TAU, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "rotation", TAU, spin_dur) \
 		.set_trans(Tween.TRANS_LINEAR)
 
 	# スケール
-	tween.tween_property(cv, "scale", to_scale, SPIN_OUT_DURATION) \
+	tween.tween_property(cv, "scale", to_scale, spin_dur) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 	await tween.finished
@@ -684,8 +691,18 @@ func _fly_card(card_data: Dictionary, face_up: bool,
 	cv.queue_free()
 
 
+func _dur(seconds: float) -> float:
+	if speed_scale <= 0.0:
+		return 0.0
+	return seconds / speed_scale
+
+
 func _delay(seconds: float) -> void:
-	await _anim_layer.get_tree().create_timer(seconds).timeout
+	var d: float = _dur(seconds)
+	if d <= 0.0:
+		await _anim_layer.get_tree().process_frame
+		return
+	await _anim_layer.get_tree().create_timer(d).timeout
 
 
 

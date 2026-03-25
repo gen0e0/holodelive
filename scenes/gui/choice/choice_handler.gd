@@ -17,3 +17,8 @@ func activate(_choice_data: Dictionary) -> void:
 
 func deactivate() -> void:
 	pass
+
+
+## CPU 等が外部から選択結果を注入する。UI 状態を更新して resolved を emit する。
+func auto_resolve(choice_idx: int, value: Variant) -> void:
+	resolved.emit(choice_idx, value)

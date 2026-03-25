@@ -58,6 +58,15 @@ func is_active() -> bool:
 	return _active_handler != null
 
 
+## CPU 等が外部から選択結果を注入する。active handler 経由で resolved → deactivate。
+func auto_resolve(choice_idx: int, value: Variant) -> void:
+	if _active_handler != null:
+		_active_handler.auto_resolve(choice_idx, value)
+	else:
+		# ハンドラ未アクティブ（queue_response 等で即解決済み）の場合は直接 emit
+		choice_resolved.emit(choice_idx, value)
+
+
 func _on_handler_resolved(choice_idx: int, value: Variant) -> void:
 	# deactivate してから resolved を通知する
 	var handler: ChoiceHandler = _active_handler
