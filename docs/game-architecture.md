@@ -237,6 +237,41 @@ GameController
 
 ---
 
+## PlayerController（操作主体の抽象化）
+
+プレイヤーの操作を抽象化するクラス。GameSession は操作主体の種別（人間 / CPU / リモート）を一切知らず、全プレイヤーが同一フローを通る。
+
+```
+PlayerController extends RefCounted
+├── signal action_decided(action: Dictionary)
+├── signal choice_decided(choice_idx: int, value: Variant)
+├── func request_action(actions: Array) → void
+├── func request_choice(choice_data: Dictionary) → void
+├── func cancel() → void
+```
+
+### 実装バリアント
+
+| クラス | 用途 | 動作 |
+|--------|------|------|
+| HumanPlayerController | 人間操作 | request → UIシグナル発火 → UIが submit を呼ぶ → decided 発火 |
+| CpuPlayerController | CPU操作 | request → CpuStrategy で判断 → 遅延後 decided 発火 |
+
+### GameSession との関係
+
+```
+LocalGameSession._advance()
+  → _request_actions() → controllers[player].request_action(actions)
+  → _request_choice()  → controllers[player].request_choice(choice_data)
+
+PlayerController.action_decided → LocalGameSession._on_controller_action → send_action
+PlayerController.choice_decided → LocalGameSession._on_controller_choice → send_choice
+```
+
+GameScreen は HumanPlayerController の `actions_presented` / `choice_presented` シグナルを listen し、`submit_action` / `submit_choice` で結果を返す。
+
+---
+
 ## 差分履歴システム
 
 ### GameAction（プレイヤー行動の記録）

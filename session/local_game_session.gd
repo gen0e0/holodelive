@@ -8,30 +8,44 @@ var skill_registry: SkillRegistry
 var _last_log_index: int = 0
 var _client_state: ClientState
 var _action_snapshots: Array = []  # Array[ClientState]
-var _pending_interaction: Dictionary = {}  # {"type": "choice"/"actions", "data": ...}
-var _defer_interactions: bool = false  # true の場合、choice/actions を即 emit せず保留
+var _pending_interaction: Dictionary = {}  # {"type": "actions", "player": int, "data": ...}
+var _defer_interactions: bool = false  # true の場合、actions を即発行せず保留
 
-## CPU strategies keyed by player index (e.g. {1: RandomStrategy}).
-var _cpu_strategies: Dictionary = {}
-## The human player's index, used as the viewing perspective.
-var human_player: int = 0
+## PlayerController per player slot.
+var _controllers: Array = [null, null]  # [PlayerController?, PlayerController?]
+## The viewing perspective for ClientState serialization.
+var viewing_player: int = 0
 ## Shared RNG for deterministic replay. If null, uses random seed.
 var rng: RandomNumberGenerator
 
+
 ## アニメーション付きUIが接続されている場合に呼ぶ。
-## choice_requested / actions_received をアニメーション完了後まで保留する。
+## actions を即発行せずアニメーション完了後まで保留する。
 func set_defer_interactions(enabled: bool) -> void:
 	_defer_interactions = enabled
 
 
-## Register a player index as CPU-controlled with the given strategy.
-## If strategy is null, defaults to RandomStrategy sharing this session's RNG.
+## プレイヤーの操作コントローラを登録する。
+func set_player_controller(player: int, pc: PlayerController) -> void:
+	_controllers[player] = pc
+	pc.action_decided.connect(func(action: Dictionary) -> void:
+		_on_controller_action(player, action))
+	pc.choice_decided.connect(func(idx: int, value: Variant) -> void:
+		_on_controller_choice(idx, value))
+
+
+## 後方互換: CPU プレイヤーを登録する。内部で CpuPlayerController を生成する。
 func set_cpu_player(player_index: int, strategy: CpuStrategy = null) -> void:
 	if strategy == null:
-		strategy = RandomStrategy.new(rng)
-	_cpu_strategies[player_index] = strategy
-
-const MAX_CPU_DEPTH: int = 500
+		var rng_to_use: RandomNumberGenerator = rng if rng else RandomNumberGenerator.new()
+		strategy = RandomStrategy.new(rng_to_use)
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	# state/registry は Callable で遅延取得（set_cpu_player 時点で未初期化の場合に対応）
+	var cpu := CpuPlayerController.new(strategy,
+		func() -> GameState: return state,
+		func() -> CardRegistry: return registry,
+		tree, 0.0)
+	set_player_controller(player_index, cpu)
 
 
 func start_game() -> void:
@@ -77,9 +91,21 @@ func get_available_actions() -> Array:
 func is_my_turn() -> bool:
 	if controller.is_game_over() or controller.is_waiting_for_choice():
 		return false
-	if _is_cpu_player(state.current_player):
-		return false
-	return true
+	return state.current_player == viewing_player
+
+
+# =============================================================================
+# PlayerController callbacks
+# =============================================================================
+
+func _on_controller_action(player: int, action: Dictionary) -> void:
+	if state.current_player != player:
+		return  # stale response
+	send_action(action)
+
+
+func _on_controller_choice(choice_idx: int, value: Variant) -> void:
+	send_choice(choice_idx, value)
 
 
 # =============================================================================
@@ -93,40 +119,6 @@ func _is_pass_only(actions: Array) -> bool:
 		if a.get("type") != Enums.ActionType.PASS:
 			return false
 	return true
-
-
-func _is_cpu_player(player_index: int) -> bool:
-	return _cpu_strategies.has(player_index)
-
-
-func _cpu_take_action(depth: int = 0) -> void:
-	if depth > MAX_CPU_DEPTH:
-		push_warning("[LocalGameSession] CPU depth limit reached")
-		return
-	var actions: Array = controller.get_available_actions()
-	var strategy: CpuStrategy = _cpu_strategies[state.current_player]
-	var action: Dictionary = strategy.pick_action(actions, state, registry)
-	if action.is_empty():
-		return
-	var prev_turn: int = state.turn_number
-	controller.apply_action(action)
-	_flush_updates()
-	_advance_cpu(prev_turn, depth)
-
-
-func _cpu_take_choice(choice_data: Dictionary, depth: int = 0) -> void:
-	if depth > MAX_CPU_DEPTH:
-		push_warning("[LocalGameSession] CPU depth limit reached")
-		return
-	var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
-	var strategy: CpuStrategy = _cpu_strategies[pc.target_player]
-	var result: Dictionary = strategy.pick_choice(choice_data, state, registry)
-	if result.is_empty():
-		return
-	var prev_turn: int = state.turn_number
-	controller.submit_choice(result["choice_index"], result["value"])
-	_flush_updates()
-	_advance_cpu(prev_turn, depth)
 
 
 # =============================================================================
@@ -152,12 +144,12 @@ func _do_start_turn(depth: int = 0) -> void:
 		_do_start_turn(depth + 1)
 		return
 
-	_emit_actions()
+	_request_actions()
 
 
 func _on_action_logged() -> void:
 	_action_snapshots.append(
-		StateSerializer.serialize_for_player(state, human_player, registry))
+		StateSerializer.serialize_for_player(state, viewing_player, registry))
 
 
 func _flush_updates() -> void:
@@ -167,7 +159,6 @@ func _flush_updates() -> void:
 		new_actions.append(state.action_log[i])
 	_last_log_index = log_size
 
-	var viewing_player: int = human_player
 	var events: Array = EventSerializer.serialize_events(
 		new_actions, viewing_player, state, registry)
 	assert(events.size() == _action_snapshots.size(),
@@ -190,27 +181,32 @@ func _flush_updates() -> void:
 	state_updated.emit(_client_state, event_entries)
 
 
-func _emit_actions() -> void:
-	if _is_cpu_player(state.current_player):
-		_cpu_take_action()
-		return
+func _request_actions() -> void:
 	var actions: Array = controller.get_available_actions()
 	if _is_pass_only(actions):
 		send_action({"type": Enums.ActionType.PASS})
 		return
-	_emit_or_defer_actions(actions)
-
-
-func _emit_or_defer_choice(choice_data: Dictionary) -> void:
-	# 選択UIは ChoiceManager がリフレッシュ耐性を持つため、常に即発火する。
-	choice_requested.emit(choice_data)
-
-
-func _emit_or_defer_actions(actions: Array) -> void:
-	if _defer_interactions:
-		_pending_interaction = {"type": "actions", "data": actions}
+	var player: int = state.current_player
+	if _controllers[player] != null:
+		if _defer_interactions:
+			_pending_interaction = {"type": "actions", "player": player, "data": actions}
+		else:
+			_controllers[player].request_action(actions)
 	else:
-		actions_received.emit(actions)
+		# レガシーフォールバック: コントローラ未登録時はシグナルで通知
+		if _defer_interactions:
+			_pending_interaction = {"type": "actions", "data": actions}
+		else:
+			actions_received.emit(actions)
+
+
+func _request_choice(player: int, choice_data: Dictionary) -> void:
+	# choice は常に即座に発行（現行動作維持）
+	if _controllers[player] != null:
+		_controllers[player].request_choice(choice_data)
+	else:
+		# レガシーフォールバック
+		choice_requested.emit(choice_data)
 
 
 func flush_pending_interaction() -> void:
@@ -219,7 +215,11 @@ func flush_pending_interaction() -> void:
 	if pending.is_empty():
 		return
 	if pending.get("type", "") == "actions":
-		actions_received.emit(pending["data"])
+		var player: int = pending.get("player", state.current_player)
+		if _controllers[player] != null:
+			_controllers[player].request_action(pending["data"])
+		else:
+			actions_received.emit(pending["data"])
 
 
 func _advance(prev_turn: int) -> void:
@@ -231,41 +231,11 @@ func _advance(prev_turn: int) -> void:
 		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
 		if pc:
 			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
-			if _is_cpu_player(pc.target_player):
-				_cpu_take_choice(choice_data)
-			else:
-				_emit_or_defer_choice(choice_data)
+			_request_choice(pc.target_player, choice_data)
 		return
 
 	if state.turn_number != prev_turn:
 		_do_start_turn()
 		return
 
-	_emit_actions()
-
-
-## Same as _advance but carries CPU depth counter to prevent infinite recursion.
-func _advance_cpu(prev_turn: int, depth: int) -> void:
-	if controller.is_game_over():
-		game_over.emit(controller.get_winner())
-		return
-
-	if controller.is_waiting_for_choice():
-		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
-		if pc:
-			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
-			if _is_cpu_player(pc.target_player):
-				_cpu_take_choice(choice_data, depth + 1)
-			else:
-				_emit_or_defer_choice(choice_data)
-		return
-
-	if state.turn_number != prev_turn:
-		_do_start_turn()
-		return
-
-	if _is_cpu_player(state.current_player):
-		_cpu_take_action(depth + 1)
-		return
-
-	_emit_actions()
+	_request_actions()

@@ -18,6 +18,7 @@ const DESIGN_H: float = 1080.0
 const _GameStartBannerScene: PackedScene = preload("res://scenes/gui/animation/game_start_banner.tscn")
 
 var session: GameSession
+var _my_controller: HumanPlayerController
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
@@ -123,15 +124,23 @@ func _fit_content() -> void:
 	)
 
 
-func connect_session(s: GameSession) -> void:
+func connect_session(s: GameSession, my_controller: HumanPlayerController = null) -> void:
 	session = s
+	_my_controller = my_controller
 	if session is LocalGameSession:
 		(session as LocalGameSession).set_defer_interactions(true)
 	session.state_updated.connect(_on_state_updated)
-	session.actions_received.connect(_on_actions_received)
-	session.choice_requested.connect(_on_choice_requested)
 	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
+
+	if _my_controller:
+		# PlayerController 経由
+		_my_controller.actions_presented.connect(_on_actions_received)
+		_my_controller.choice_presented.connect(_on_choice_requested)
+	else:
+		# レガシー: NetworkGameSession 互換
+		session.actions_received.connect(_on_actions_received)
+		session.choice_requested.connect(_on_choice_requested)
 
 	# 現在の状態で初回描画
 	var cs: ClientState = session.get_client_state()
@@ -159,7 +168,13 @@ func disconnect_session() -> void:
 			session.game_started.disconnect(_on_game_started)
 		if session.game_over.is_connected(_on_game_over):
 			session.game_over.disconnect(_on_game_over)
-		session = null
+	if _my_controller:
+		if _my_controller.actions_presented.is_connected(_on_actions_received):
+			_my_controller.actions_presented.disconnect(_on_actions_received)
+		if _my_controller.choice_presented.is_connected(_on_choice_requested):
+			_my_controller.choice_presented.disconnect(_on_choice_requested)
+		_my_controller = null
+	session = null
 	_director.cancel_all()
 	_clear_action_state()
 	_choice_manager.cancel()
@@ -282,12 +297,10 @@ func _find_field_card_rect(instance_id: int, _cs: ClientState) -> Rect2:
 
 
 func _on_action_button_pressed(action: Dictionary) -> void:
-	if session == null:
-		return
 	_clear_action_state()
 	_choice_manager.cancel()
 	GameLog.log_event("ACTION", "send", {"type": action.get("type", -1), "iid": action.get("instance_id", -1)})
-	session.send_action(action)
+	_send_action(action)
 
 
 func _clear_action_buttons() -> void:
@@ -335,12 +348,12 @@ func _hide_target_buttons() -> void:
 
 
 func _on_stage_pressed() -> void:
-	if session == null or _selected_instance_id < 0:
+	if _selected_instance_id < 0:
 		return
 	var iid: int = _selected_instance_id
 	_clear_action_state()
 	GameLog.log_event("ACTION", "send", {"type": "PLAY_CARD", "iid": iid, "target": "stage"})
-	session.send_action({
+	_send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
 		"target": "stage",
@@ -348,12 +361,12 @@ func _on_stage_pressed() -> void:
 
 
 func _on_backstage_pressed() -> void:
-	if session == null or _selected_instance_id < 0:
+	if _selected_instance_id < 0:
 		return
 	var iid: int = _selected_instance_id
 	_clear_action_state()
 	GameLog.log_event("ACTION", "send", {"type": "PLAY_CARD", "iid": iid, "target": "backstage"})
-	session.send_action({
+	_send_action({
 		"type": Enums.ActionType.PLAY_CARD,
 		"instance_id": iid,
 		"target": "backstage",
@@ -361,11 +374,9 @@ func _on_backstage_pressed() -> void:
 
 
 func _on_pass_pressed() -> void:
-	if session == null:
-		return
 	_clear_action_state()
 	GameLog.log_event("ACTION", "send", {"type": "PASS"})
-	session.send_action({"type": Enums.ActionType.PASS})
+	_send_action({"type": Enums.ActionType.PASS})
 
 
 func _clear_action_state() -> void:
@@ -396,5 +407,22 @@ func _on_choice_requested(choice_data: Dictionary) -> void:
 
 func _on_choice_resolved(choice_idx: int, value: Variant) -> void:
 	GameLog.log_event("CHOICE", "resolved", {"idx": choice_idx, "value": value})
-	if session != null:
+	_send_choice(choice_idx, value)
+
+
+# ---------------------------------------------------------------------------
+# アクション/チョイス送信
+# ---------------------------------------------------------------------------
+
+func _send_action(action: Dictionary) -> void:
+	if _my_controller:
+		_my_controller.submit_action(action)
+	elif session != null:
+		session.send_action(action)
+
+
+func _send_choice(choice_idx: int, value: Variant) -> void:
+	if _my_controller:
+		_my_controller.submit_choice(choice_idx, value)
+	elif session != null:
 		session.send_choice(choice_idx, value)

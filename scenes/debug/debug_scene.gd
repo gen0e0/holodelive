@@ -37,6 +37,7 @@ var _choice_data: Dictionary = {}
 var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
+var _p0_controller: HumanPlayerController
 
 
 func _ready() -> void:
@@ -74,11 +75,9 @@ func _init_and_start() -> void:
 	_seed_display.text = str(_rng.seed)
 
 	session = LocalGameSession.new()
-	session.human_player = 0
+	session.viewing_player = 0
 	session.rng = _rng
 	session.state_updated.connect(_on_state_updated)
-	session.actions_received.connect(_on_actions_received)
-	session.choice_requested.connect(_on_choice_requested)
 	session.game_started.connect(_on_game_started)
 	session.game_over.connect(_on_game_over)
 
@@ -91,10 +90,21 @@ func _init_and_start() -> void:
 	_state_display.text = ""
 	_btn_send.disabled = true
 
-	# GUI モードが有効なら GameScreen を接続
+	# PlayerController を start_game 前に登録（Callable で state/registry を遅延取得）
+	_p0_controller = HumanPlayerController.new()
+	_p0_controller.actions_presented.connect(_on_actions_received)
+	_p0_controller.choice_presented.connect(_on_choice_requested)
+	session.set_player_controller(0, _p0_controller)
+	session.set_player_controller(1, CpuPlayerController.new(
+		RandomStrategy.new(_rng),
+		func() -> GameState: return session.state,
+		func() -> CardRegistry: return session.registry,
+		get_tree(), 0.0))
+
+	# GUI モードが有効なら GameScreen を start_game 前に接続
 	if _gui_toggle.button_pressed:
 		_ensure_game_screen()
-		_game_screen.connect_session(session)
+		_game_screen.connect_session(session, _p0_controller)
 
 	_log("[color=yellow]--- Game Starting (seed: %d) ---[/color]" % _rng.seed)
 	session.start_game()
@@ -167,14 +177,13 @@ func _on_actions_received(actions: Array) -> void:
 	for i in range(_current_actions.size()):
 		_log("  %d. %s" % [i + 1, DisplayHelper.format_action(_current_actions[i], cs)])
 
-	var player: int = cs.current_player if cs else 0
-	# CLI 自動行動キュー（P0 用）
-	if player == 0 and not _auto_queue.is_empty():
+	# CLI 自動行動キュー
+	if not _auto_queue.is_empty():
 		var entry: Dictionary = _auto_queue.pop_front()
 		_schedule_auto_queue_action(entry)
 		return
-	if _should_auto_respond_for_player(player):
-		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
+	if _cpu_toggle.button_pressed:
+		var delay: float = _get_cpu_speed()
 		_schedule_auto_action(delay, _auto_epoch)
 	else:
 		_input_line.call_deferred("grab_focus")
@@ -204,13 +213,13 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 		else:
 			_log("  %d. %s" % [i + 1, str(target)])
 
-	# CLI 自動行動キュー（P0 用）
-	if target_player == 0 and not _auto_queue.is_empty():
+	# CLI 自動行動キュー
+	if not _auto_queue.is_empty():
 		var entry: Dictionary = _auto_queue.pop_front()
 		_schedule_auto_queue_choice(entry)
 		return
-	if _should_auto_respond_for_player(target_player):
-		var delay: float = _get_cpu_speed() if _cpu_toggle.button_pressed else 0.0
+	if _cpu_toggle.button_pressed:
+		var delay: float = _get_cpu_speed()
 		_schedule_auto_choice(delay, _auto_epoch)
 	else:
 		_input_line.call_deferred("grab_focus")
@@ -245,7 +254,7 @@ func _on_gui_toggled(enabled: bool) -> void:
 	if enabled:
 		_ensure_game_screen()
 		if session != null:
-			_game_screen.connect_session(session)
+			_game_screen.connect_session(session, _p0_controller)
 	else:
 		if _game_screen != null and session != null:
 			_game_screen.disconnect_session()
@@ -254,13 +263,6 @@ func _on_gui_toggled(enabled: bool) -> void:
 # =============================================================================
 # CPU 自動応答
 # =============================================================================
-
-func _should_auto_respond_for_player(player: int) -> bool:
-	if _cpu_toggle.button_pressed:
-		return true
-	# トグルOFF: P1 のみ自動応答
-	return player == 1
-
 
 func _get_cpu_speed() -> float:
 	var text: String = _cpu_speed_input.text.strip_edges()
@@ -283,7 +285,7 @@ func _schedule_auto_action(delay: float, epoch: int) -> void:
 	var idx: int = _rng.randi() % _current_actions.size()
 	var action: Dictionary = _current_actions[idx]
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
-	session.send_action(action)
+	_p0_controller.submit_action(action)
 
 
 func _schedule_auto_choice(delay: float, epoch: int) -> void:
@@ -301,7 +303,7 @@ func _schedule_auto_choice(delay: float, epoch: int) -> void:
 	var choice_index: int = _choice_data.get("choice_index", 0)
 	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
 	_waiting_choice = false
-	session.send_choice(choice_index, chosen_value)
+	_p0_controller.submit_choice(choice_index, chosen_value)
 
 
 # =============================================================================
@@ -315,7 +317,7 @@ func _handle_action_input(num: int) -> void:
 
 	var action: Dictionary = _current_actions[num - 1]
 	_log("> %d" % num)
-	session.send_action(action)
+	_p0_controller.submit_action(action)
 
 
 func _handle_choice_input(num: int) -> void:
@@ -329,7 +331,7 @@ func _handle_choice_input(num: int) -> void:
 	var chosen_value: Variant = valid_targets[num - 1]
 	_log("> %d" % num)
 	_waiting_choice = false
-	session.send_choice(choice_index, chosen_value)
+	_p0_controller.submit_choice(choice_index, chosen_value)
 
 
 # =============================================================================
@@ -592,7 +594,7 @@ func _on_add_card_pressed() -> void:
 	_log("[color=cyan][ZoneEdit] Added %s (inst#%d) to P%d %s[/color]" % [
 		card_def.nickname, instance_id, p, ZONE_KEYS[zone_idx]])
 	session._flush_updates()
-	session._emit_actions()
+	session._request_actions()
 
 
 func _on_clear_zone_pressed() -> void:
@@ -613,7 +615,7 @@ func _on_clear_zone_pressed() -> void:
 
 	_log("[color=cyan][ZoneEdit] Cleared P%d %s[/color]" % [p, ZONE_KEYS[zone_idx]])
 	session._flush_updates()
-	session._emit_actions()
+	session._request_actions()
 
 
 # =============================================================================
@@ -745,7 +747,7 @@ func _schedule_auto_queue_action(entry: Dictionary) -> void:
 				return
 			GameLog.log_event("ACTION", "auto_play", {"card_id": card_id, "target": target})
 			_log("[color=magenta](Auto) play:%d:%s[/color]" % [card_id, target])
-			session.send_action(action)
+			_p0_controller.submit_action(action)
 		"pass":
 			var action: Dictionary = _find_pass_action()
 			if action.is_empty():
@@ -753,7 +755,7 @@ func _schedule_auto_queue_action(entry: Dictionary) -> void:
 				return
 			GameLog.log_event("ACTION", "auto_pass")
 			_log("[color=magenta](Auto) pass[/color]")
-			session.send_action(action)
+			_p0_controller.submit_action(action)
 		_:
 			_log("[color=red][Auto] Unexpected cmd '%s' for action[/color]" % cmd)
 
@@ -777,7 +779,7 @@ func _schedule_auto_queue_choice(entry: Dictionary) -> void:
 					GameLog.log_event("CHOICE", "auto_select", {"card_id": card_id, "iid": target})
 					_log("[color=magenta](Auto) select:%d[/color]" % card_id)
 					_waiting_choice = false
-					session.send_choice(choice_index, target)
+					_p0_controller.submit_choice(choice_index, target)
 					return
 		_log("[color=red][Auto] No matching target for card_id=%d in %s[/color]" % [card_id, str(valid_targets)])
 	elif cmd == "_zone":
@@ -788,7 +790,7 @@ func _schedule_auto_queue_choice(entry: Dictionary) -> void:
 				GameLog.log_event("CHOICE", "auto_zone", {"zone": zone})
 				_log("[color=magenta](Auto) zone:%s[/color]" % zone)
 				_waiting_choice = false
-				session.send_choice(choice_index, target)
+				_p0_controller.submit_choice(choice_index, target)
 				return
 		_log("[color=red][Auto] Zone '%s' not in valid_targets %s[/color]" % [zone, str(valid_targets)])
 	else:

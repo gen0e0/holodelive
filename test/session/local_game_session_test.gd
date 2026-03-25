@@ -149,7 +149,7 @@ func test_cpu_vs_cpu_full_game() -> void:
 func test_cpu_opponent_human_receives_actions() -> void:
 	var session := LocalGameSession.new()
 	session.set_cpu_player(1)
-	session.human_player = 0
+	session.viewing_player = 0
 
 	var action_counts: Array[int] = [0]
 	session.actions_received.connect(func(_a: Array) -> void: action_counts[0] += 1)
@@ -182,7 +182,7 @@ func test_cpu_opponent_human_receives_actions() -> void:
 func test_cpu_opponent_is_my_turn_false_during_cpu_turn() -> void:
 	var session := LocalGameSession.new()
 	session.set_cpu_player(1)
-	session.human_player = 0
+	session.viewing_player = 0
 
 	# Manually set up so we can check is_my_turn when current_player is CPU
 	var registry := CardFactory.create_test_registry(40)
