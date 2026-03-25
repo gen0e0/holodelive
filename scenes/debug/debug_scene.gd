@@ -38,6 +38,8 @@ var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
 var _p0_controller: HumanPlayerController
+var _cpu_both: bool = false  # 両プレイヤーCPU（CLIテスト用）
+var _max_turns: int = 0      # ターン制限（0=無制限）
 
 
 func _ready() -> void:
@@ -63,6 +65,9 @@ func _init_and_start() -> void:
 	var resolved_args: Array = _resolve_test_preset(user_args)
 	_zone_overrides = _parse_zone_args(resolved_args)
 	_auto_queue = _parse_auto_args(resolved_args)
+	_cpu_both = _parse_flag(resolved_args, "cpu", "") == "both"
+	var max_turns_str: String = _parse_flag(resolved_args, "max_turns", "0")
+	_max_turns = max_turns_str.to_int() if max_turns_str.is_valid_int() else 0
 	GameLog.reset()
 
 	# RNG 作成（シード指定があれば固定、なければランダム）
@@ -91,20 +96,32 @@ func _init_and_start() -> void:
 	_btn_send.disabled = true
 
 	# PlayerController を start_game 前に登録（Callable で state/registry を遅延取得）
-	_p0_controller = HumanPlayerController.new()
-	_p0_controller.actions_presented.connect(_on_actions_received)
-	_p0_controller.choice_presented.connect(_on_choice_requested)
-	session.set_player_controller(0, _p0_controller)
+	var get_state: Callable = func() -> GameState: return session.state
+	var get_registry: Callable = func() -> CardRegistry: return session.registry
+
+	if _cpu_both:
+		# 両プレイヤー CPU（CLIテスト用）
+		# 最小 delay で非同期化（同期だとログがフラッシュされない）
+		_p0_controller = null
+		session.set_player_controller(0, CpuPlayerController.new(
+			RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.01))
+	else:
+		_p0_controller = HumanPlayerController.new()
+		_p0_controller.actions_presented.connect(_on_actions_received)
+		_p0_controller.choice_presented.connect(_on_choice_requested)
+		session.set_player_controller(0, _p0_controller)
+
+	var p1_delay: float = 0.01 if _cpu_both else 0.0
 	session.set_player_controller(1, CpuPlayerController.new(
-		RandomStrategy.new(_rng),
-		func() -> GameState: return session.state,
-		func() -> CardRegistry: return session.registry,
-		get_tree(), 0.0))
+		RandomStrategy.new(_rng), get_state, get_registry, get_tree(), p1_delay))
 
 	# GUI モードが有効なら GameScreen を start_game 前に接続
-	if _gui_toggle.button_pressed:
+	if _gui_toggle.button_pressed and _p0_controller != null:
 		_ensure_game_screen()
 		_game_screen.connect_session(session, _p0_controller)
+
+	if _max_turns > 0:
+		session.max_turns = _max_turns
 
 	_log("[color=yellow]--- Game Starting (seed: %d) ---[/color]" % _rng.seed)
 	session.start_game()
@@ -230,11 +247,20 @@ func _on_game_over(winner: int) -> void:
 	var cs: ClientState = session.get_client_state()
 	_log("")
 	_log("[color=yellow]========================================[/color]")
-	_log("[color=yellow]  GAME OVER — Player %d Wins!  [/color]" % winner)
+	if winner >= 0:
+		_log("[color=yellow]  GAME OVER — Player %d Wins!  [/color]" % winner)
+	else:
+		_log("[color=yellow]  GAME OVER — Turn limit reached  [/color]")
 	if cs:
-		_log("[color=yellow]  Rounds: P0=%d  P1=%d[/color]" % [cs.round_wins[0], cs.round_wins[1]])
+		_log("[color=yellow]  Rounds: P0=%d  P1=%d  Turn: %d[/color]" % [
+			cs.round_wins[0], cs.round_wins[1], cs.turn_number])
 	_log("[color=yellow]========================================[/color]")
 	_btn_send.disabled = true
+
+	# cpu=both 時はプロセスを自動終了（ログフラッシュのため1フレーム待つ）
+	if _cpu_both:
+		await get_tree().process_frame
+		get_tree().quit(0 if winner >= 0 else 1)
 
 
 # =============================================================================
@@ -697,6 +723,16 @@ func _update_state_display(cs: ClientState) -> void:
 # =============================================================================
 # CLI 自動行動キュー
 # =============================================================================
+
+## key=value 形式の引数を探して value を返す。見つからなければ default_value。
+static func _parse_flag(args: Array, key: String, default_value: String) -> String:
+	var prefix: String = key + "="
+	for arg in args:
+		var a: String = str(arg)
+		if a.begins_with(prefix):
+			return a.substr(prefix.length()).strip_edges()
+	return default_value
+
 
 ## auto=play:3:stage,select:7,pass,select:3:stage 形式をパース。
 static func _parse_auto_args(args: Array) -> Array:

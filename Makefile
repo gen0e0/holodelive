@@ -15,9 +15,6 @@ test:
 ##   make debug
 ##   make debug test=preset_id
 ##   make debug ARGS="p0=3,7 s1=47 auto=play:3:stage"
+##   make debug test=9 cpu=both max_turns=30
 debug:
-ifdef test
-	$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- test=$(test)
-else
-	$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(ARGS)
-endif
+	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(ARGS)

@@ -32,7 +32,15 @@
 ### 実行方法
 
 ```bash
-godot res://scenes/debug/debug_scene.tscn -- [ゾーンオーバーライド...] [auto=行動キュー]
+godot res://scenes/debug/debug_scene.tscn -- [ゾーンオーバーライド...] [auto=行動キュー] [cpu=both] [max_turns=N]
+```
+
+Makefile 経由:
+```bash
+make debug                              # 通常起動
+make debug test=preset_id               # プリセット指定
+make debug ARGS="p0=3,7 s1=47"          # 引数直指定
+make debug test=9 cpu=both max_turns=30  # CPU対戦 + ターン制限
 ```
 
 ### ゾーンオーバーライド
@@ -51,7 +59,7 @@ godot res://scenes/debug/debug_scene.tscn -- [ゾーンオーバーライド...]
 godot res://scenes/debug/debug_scene.tscn -- d=3,7 p0=45,10 s1=47 b1=2g h=20
 ```
 
-プリセットも使える: `godot res://scenes/debug/debug_scene.tscn -- test=preset_id`（`scenes/debug/test_presets.json` に定義）
+プリセット: `test=preset_id`（`scenes/debug/test_presets.json` に定義）
 
 ### 自動行動キュー (`auto=`)
 
@@ -68,6 +76,30 @@ godot res://scenes/debug/debug_scene.tscn -- p0=3,7 s1=47 auto=play:3:stage,sele
 - `pass` — パス
 
 CARD_ID はカード定義の ID（int）。実行時に instance_id に自動解決される。キューが尽きると手動操作に戻る。
+
+### CPU 自動対戦（統合テスト）
+
+`cpu=both` で両プレイヤーを CPU にし、`max_turns=N` でターン制限を設定できる。ゲーム終了後にプロセスが自動終了する。
+
+```bash
+make debug cpu=both max_turns=30
+make debug test=9 cpu=both max_turns=50
+make debug ARGS="p0=9 s1=r" cpu=both max_turns=30
+```
+
+構造化ログが stdout に出力されるため、grep でイベントを検証できる:
+```bash
+make debug test=9 cpu=both max_turns=30 2>&1 | grep "SKILL_EFFECT"
+```
+
+- exit code 0: ゲームが正常終了（勝者決定）
+- exit code 1: ターン制限到達（引き分け）
+
+**機能実装時は、ユニットテストに加えて `cpu=both` による統合テストも実行し、ゲームがクラッシュせず完走することを確認すること。**
+特にスキル実装後は、そのカードを含むプリセットで統合テストを行う:
+```bash
+make debug ARGS="p0=NEW_CARD_ID s1=r" cpu=both max_turns=50
+```
 
 ### 構造化ログ (GameLog)
 

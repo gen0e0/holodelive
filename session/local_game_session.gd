@@ -17,6 +17,8 @@ var _controllers: Array = [null, null]  # [PlayerController?, PlayerController?]
 var viewing_player: int = 0
 ## Shared RNG for deterministic replay. If null, uses random seed.
 var rng: RandomNumberGenerator
+## ターン制限（0=無制限）。到達時に game_over(-1) を強制発火。
+var max_turns: int = 0
 
 
 ## アニメーション付きUIが接続されている場合に呼ぶ。
@@ -129,6 +131,12 @@ func _do_start_turn(depth: int = 0) -> void:
 	if depth > 10:
 		return
 
+	# ターン制限チェック
+	if max_turns > 0 and state.turn_number > max_turns:
+		_flush_updates()
+		game_over.emit(-1)
+		return
+
 	if controller.is_game_over():
 		_flush_updates()
 		game_over.emit(controller.get_winner())
@@ -156,7 +164,10 @@ func _flush_updates() -> void:
 	var log_size: int = state.action_log.size()
 	var new_actions: Array = []
 	for i in range(_last_log_index, log_size):
-		new_actions.append(state.action_log[i])
+		var ga: GameAction = state.action_log[i]
+		new_actions.append(ga)
+		GameLog.log_event("EVENT", Enums.ActionType.keys()[ga.type],
+			{"player": ga.player})
 	_last_log_index = log_size
 
 	var events: Array = EventSerializer.serialize_events(
