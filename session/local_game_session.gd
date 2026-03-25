@@ -166,8 +166,16 @@ func _flush_updates() -> void:
 	for i in range(_last_log_index, log_size):
 		var ga: GameAction = state.action_log[i]
 		new_actions.append(ga)
-		GameLog.log_event("SESSION", Enums.ActionType.keys()[ga.type],
-			{"player": ga.player})
+		var log_data: Dictionary = {"player": ga.player}
+		if ga.type == Enums.ActionType.PLAY_CARD:
+			var iid: int = ga.params.get("instance_id", -1)
+			var inst: CardInstance = state.instances.get(iid)
+			if inst:
+				var card_def: CardDef = registry.get_card(inst.card_id)
+				log_data["card_id"] = inst.card_id
+				log_data["name"] = card_def.nickname if card_def else "?"
+				log_data["target"] = ga.params.get("target", "?")
+		GameLog.log_event("SESSION", Enums.ActionType.keys()[ga.type], log_data)
 	_last_log_index = log_size
 
 	var events: Array = EventSerializer.serialize_events(
