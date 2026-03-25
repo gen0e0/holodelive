@@ -247,10 +247,11 @@ func _advance(prev_turn: int) -> void:
 		return
 
 	if controller.is_waiting_for_choice():
-		var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
-		if pc:
-			var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
-			_request_choice(pc.target_player, choice_data)
+		for pc in state.pending_choices:
+			if not pc.resolved and not pc.dispatched:
+				pc.dispatched = true
+				var choice_data: Dictionary = ChoiceHelper.make_choice_data(pc, state, registry)
+				_request_choice(pc.target_player, choice_data)
 		return
 
 	if state.turn_number != prev_turn:

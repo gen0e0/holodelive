@@ -438,10 +438,12 @@ func _resolve_skill_stack() -> void:
 		)
 		# 前回の選択結果があればセット
 		if not state.pending_choices.is_empty():
+			ctx.choice_results = []
 			for pc in state.pending_choices:
 				if pc.resolved and pc.stack_index == state.skill_stack.size() - 1:
-					ctx.choice_result = pc.result
-					break
+					ctx.choice_results.append(pc.result)
+			if not ctx.choice_results.is_empty():
+				ctx.choice_result = ctx.choice_results[0]
 		ctx.data = top.data
 
 		var result: SkillResult = skill_script.execute_skill(ctx, top.skill_index)
@@ -458,18 +460,20 @@ func _resolve_skill_stack() -> void:
 				{"animation_cues": ctx.animation_cues})
 
 		if result.status == SkillResult.Status.WAITING_FOR_CHOICE:
-			# 中断: PendingChoice を作成
-			var pc := PendingChoice.new()
-			pc.stack_index = state.skill_stack.size() - 1
-			pc.skill_source_instance_id = top.source_instance_id
-			pc.target_player = top.player
-			pc.choice_type = result.choice_type
-			pc.valid_targets = result.valid_targets
-			pc.select_min = result.select_min
-			pc.select_max = result.select_max
-			pc.ui_hint = result.ui_hint
+			# 中断: choices 配列から PendingChoice を生成
 			state.pending_choices.clear()
-			state.pending_choices.append(pc)
+			for choice_spec in result.choices:
+				var pc := PendingChoice.new()
+				pc.stack_index = state.skill_stack.size() - 1
+				pc.skill_source_instance_id = top.source_instance_id
+				var tp: int = choice_spec.get("target_player", -1)
+				pc.target_player = tp if tp >= 0 else top.player
+				pc.choice_type = choice_spec.get("choice_type", Enums.ChoiceType.SELECT_CARD)
+				pc.valid_targets = choice_spec.get("valid_targets", [])
+				pc.select_min = choice_spec.get("select_min", 1)
+				pc.select_max = choice_spec.get("select_max", 1)
+				pc.ui_hint = choice_spec.get("ui_hint", "")
+				state.pending_choices.append(pc)
 			top.phase += 1
 			return  # 中断
 

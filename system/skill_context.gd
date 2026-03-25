@@ -8,7 +8,8 @@ var skill_registry: SkillRegistry
 var source_instance_id: int = -1
 var player: int = 0
 var phase: int = 0
-var choice_result: Variant = null
+var choice_result: Variant = null     ## 単一選択の結果（後方互換）
+var choice_results: Array = []       ## 全 PendingChoice の結果（順序保持、同時選択用）
 var data: Dictionary = {}
 var animation_cues: Array = []  # Array[AnimationCue]
 

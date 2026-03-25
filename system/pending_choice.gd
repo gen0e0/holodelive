@@ -11,5 +11,6 @@ var select_max: int = 1   ## 最大選択枚数
 var ui_hint: String = ""  ## UI側のハンドラ選択ヒント
 var timeout: float = 30.0
 var timeout_strategy: String = "first"
+var dispatched: bool = false  ## PlayerController に送信済みか
 var resolved: bool = false
 var result: Variant = null
