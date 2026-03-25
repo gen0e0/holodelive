@@ -71,8 +71,6 @@ func _init_and_start() -> void:
 	var speed_str: String = _parse_flag(resolved_args, "speed", "")
 	if speed_str.is_valid_float() and speed_str.to_float() > 0.0:
 		GameConfig.animation_speed = speed_str.to_float()
-	elif _cpu_both:
-		GameConfig.animation_speed = 50.0  # cpu=both デフォルト高速
 	GameLog.reset()
 
 	# RNG 作成（シード指定があれば固定、なければランダム）
@@ -110,9 +108,8 @@ func _init_and_start() -> void:
 	_p0_controller.choice_presented.connect(_on_choice_requested)
 	session.set_player_controller(0, _p0_controller)
 
-	var p1_delay: float = 0.01 if _cpu_both else 0.0
 	session.set_player_controller(1, CpuPlayerController.new(
-		RandomStrategy.new(_rng), get_state, get_registry, get_tree(), p1_delay))
+		RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.0))
 
 	# GameScreen 接続: GUI トグル ON または cpu=both（統合テストでは常に UI フロー使用）
 	if _gui_toggle.button_pressed or _cpu_both:

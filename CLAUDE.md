@@ -100,7 +100,7 @@ make debug test=9 cpu=both max_turns=30 2>&1 | grep "SKILL_EFFECT"
 **機能実装時は、ユニットテストに加えて `cpu=both` による統合テストも実行し、ゲームがクラッシュせず完走することを確認すること。**
 特にスキル実装後は、そのカードを含むプリセットで統合テストを行う:
 ```bash
-make debug ARGS="p0=NEW_CARD_ID s1=r" cpu=both max_turns=50
+make debug ARGS="p0=NEW_CARD_ID s1=r" cpu=both max_turns=50 speed=50
 ```
 
 ### 構造化ログ (GameLog)
