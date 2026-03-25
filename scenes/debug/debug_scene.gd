@@ -393,7 +393,12 @@ static func _resolve_test_preset(args: Array) -> Array:
 			var id: String = a.substr(5)
 			var presets: Dictionary = _load_test_presets()
 			if presets.has(id):
-				var preset_args: Array = presets[id]
+				var preset_args: Array = presets[id].duplicate()
+				# test= 以外の引数（speed=, cpu=, max_turns= 等）を保持
+				for other_arg in args:
+					var oa: String = str(other_arg)
+					if not oa.begins_with("test="):
+						preset_args.append(oa)
 				print("[TestPreset] test=%s → %s" % [id, str(preset_args)])
 				return preset_args
 			push_warning("Test preset '%s' not found in test_presets.json" % id)
