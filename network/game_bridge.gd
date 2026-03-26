@@ -7,7 +7,9 @@ extends Node
 ## ネットワークモードでは @rpc メソッドで配信。
 
 ## クライアント側シグナル: サーバーから受信したデータを通知
-signal state_received(player: int, cs_dict: Dictionary, events: Array)
+## ローカル: client_state は ClientState オブジェクト
+## ネットワーク: client_state は Dictionary（RPC 経由）
+signal state_received(player: int, client_state: Variant, events: Array)
 signal actions_received(player: int, actions: Array)
 signal choice_requested(player: int, choice_data: Dictionary)
 signal game_started_received()
@@ -70,10 +72,13 @@ func _deliver_choice(choice_idx: int, value: Variant, player: int) -> void:
 # ===========================================================================
 
 ## 指定プレイヤーに状態更新を送信。
-func send_state_to(player: int, cs_dict: Dictionary, events: Array) -> void:
+## ローカル: client_state は ClientState をそのまま渡す。
+## ネットワーク: client_state.to_dict() を RPC で送信する。
+func send_state_to(player: int, client_state: Variant, events: Array) -> void:
 	if is_local:
-		state_received.emit(player, cs_dict, events)
+		state_received.emit(player, client_state, events)
 	else:
+		var cs_dict: Dictionary = client_state.to_dict() if client_state != null else {}
 		var nm: Node = get_node("/root/NetworkManager")
 		var peer_id: int = nm.get_peer_id_for_player(player) if nm.has_method("get_peer_id_for_player") else 1
 		_client_receive_state.rpc_id(peer_id, player, cs_dict, events)

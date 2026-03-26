@@ -69,11 +69,31 @@ func start_game() -> void:
 func receive_action(action: Dictionary, player: int) -> void:
 	if state.current_player != player:
 		return
+	var available: Array = controller.get_available_actions()
+	if not _is_valid_action(action, available):
+		push_warning("[ServerContext] Invalid action from player %d" % player)
+		return
 	_apply_action(action)
 
 
 ## 外部からチョイスを受信する（GameBridge 経由）。
 func receive_choice(choice_idx: int, value: Variant, player: int) -> void:
+	if not controller.is_waiting_for_choice():
+		return
+	var pc: PendingChoice = ChoiceHelper.get_active_pending_choice(state.pending_choices)
+	if pc == null:
+		return
+	if pc.target_player != player:
+		push_warning("[ServerContext] Choice not for player %d" % player)
+		return
+	if value is Array:
+		for v in value:
+			if not pc.valid_targets.has(v):
+				push_warning("[ServerContext] Invalid choice value: %s" % str(v))
+				return
+	elif not pc.valid_targets.has(value):
+		push_warning("[ServerContext] Invalid choice value: %s" % str(value))
+		return
 	_apply_choice(choice_idx, value)
 
 
@@ -245,12 +265,8 @@ func _flush_and_send() -> void:
 		else:
 			cs_final = StateSerializer.serialize_for_player(state, p, registry)
 
-		# GameBridge 経由で配信
-		_bridge.send_state_to(p, cs_final.to_dict() if not _bridge.is_local else {},
-			event_entries)
-
-	# ローカルモードの場合、ClientState dict は不要（直接 event_entries を渡す）
-	# → send_state_to のシグナルで受信側が処理
+		# GameBridge 経由で配信（ClientState をそのまま渡す。ネットワーク時は Bridge が dict 変換）
+		_bridge.send_state_to(p, cs_final, event_entries)
 
 
 # =============================================================================
@@ -264,3 +280,20 @@ func _is_pass_only(actions: Array) -> bool:
 		if a.get("type") != Enums.ActionType.PASS:
 			return false
 	return true
+
+
+func _is_valid_action(action: Dictionary, available: Array) -> bool:
+	var atype: int = int(action.get("type", -1))
+	for a in available:
+		if int(a["type"]) != atype:
+			continue
+		if atype == Enums.ActionType.PASS:
+			return true
+		if a.has("instance_id") and action.get("instance_id", -1) != a["instance_id"]:
+			continue
+		if a.has("target") and action.get("target", "") != a["target"]:
+			continue
+		if a.has("skill_index") and action.get("skill_index", -1) != a["skill_index"]:
+			continue
+		return true
+	return false
