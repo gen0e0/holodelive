@@ -20,10 +20,13 @@ func test_023_kurokami_self_home_opp_home() -> void:
 
 	var ctx := SkillContext.new(state, env.registry, inst_id, 0, 0, null, DiffRecorder.new())
 	var result: SkillResult = sr.get_skill(23).execute_skill(ctx, 0)
-	assert_bool(state.home.has(inst_id)).is_true()
+	# Phase 0: 選択待ち（自身はまだ場にいる）
+	assert_bool(state.home.has(inst_id)).is_false()
 	assert_int(result.status).is_equal(SkillResult.Status.WAITING_FOR_CHOICE)
 
 	ctx = SkillContext.new(state, env.registry, inst_id, 0, 1, opp_card, DiffRecorder.new())
 	result = sr.get_skill(23).execute_skill(ctx, 0)
+	# Phase 1: 自身と選択カードが同時に帰宅
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
+	assert_bool(state.home.has(inst_id)).is_true()
 	assert_bool(state.home.has(opp_card)).is_true()
