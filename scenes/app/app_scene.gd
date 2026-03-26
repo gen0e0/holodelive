@@ -7,6 +7,13 @@ var _btn_settings: Button
 
 func _ready() -> void:
 	_build_ui()
+	# CLI 引数でマルチプレイヤー自動起動
+	var args: Array = OS.get_cmdline_user_args()
+	for arg in args:
+		var a: String = str(arg)
+		if a == "--host" or a.begins_with("--join"):
+			call_deferred("_on_multi_pressed")
+			return
 
 
 # =============================================================================

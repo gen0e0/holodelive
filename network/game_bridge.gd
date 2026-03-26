@@ -27,7 +27,8 @@ var _server_context: Node  # ServerContext (親の GameRoom から設定)
 
 ## クライアントからアクションを送信する。
 func send_action(action: Dictionary, player: int) -> void:
-	if is_local:
+	if is_local or multiplayer.is_server():
+		# ローカル or ホスト自身 → 直接配信（RPC 不要）
 		_deliver_action(action, player)
 	else:
 		_server_receive_action.rpc_id(1, action)
@@ -35,7 +36,7 @@ func send_action(action: Dictionary, player: int) -> void:
 
 ## クライアントからチョイスを送信する。
 func send_choice(choice_idx: int, value: Variant, player: int) -> void:
-	if is_local:
+	if is_local or multiplayer.is_server():
 		_deliver_choice(choice_idx, value, player)
 	else:
 		_server_receive_choice.rpc_id(1, choice_idx, value)
@@ -79,9 +80,20 @@ func send_state_to(player: int, client_state: Variant, events: Array) -> void:
 		state_received.emit(player, client_state, events)
 	else:
 		var cs_dict: Dictionary = client_state.to_dict() if client_state != null else {}
+		# event_entries 内の snapshot (ClientState) を dict に変換
+		var serialized_events: Array = []
+		for entry in events:
+			if entry is Dictionary and entry.has("snapshot"):
+				var snap: Variant = entry["snapshot"]
+				serialized_events.append({
+					"event": entry.get("event", {}),
+					"snapshot": snap.to_dict() if snap != null else {},
+				})
+			else:
+				serialized_events.append(entry)
 		var nm: Node = get_node("/root/NetworkManager")
 		var peer_id: int = nm.get_peer_id_for_player(player) if nm.has_method("get_peer_id_for_player") else 1
-		_client_receive_state.rpc_id(peer_id, player, cs_dict, events)
+		_client_receive_state.rpc_id(peer_id, player, cs_dict, serialized_events)
 
 
 ## 指定プレイヤーにアクション選択肢を送信。

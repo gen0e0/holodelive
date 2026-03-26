@@ -12,6 +12,18 @@ func _ready() -> void:
 	nm.game_ready.connect(_on_game_ready)
 	nm.connection_succeeded.connect(_on_connection_succeeded)
 	nm.connection_failed.connect(_on_connection_failed)
+	# CLI 引数で自動ホスト/ジョイン
+	var args: Array = OS.get_cmdline_user_args()
+	for arg in args:
+		var a: String = str(arg)
+		if a == "--host":
+			call_deferred("_on_host_pressed")
+			return
+		if a.begins_with("--join"):
+			if a.contains("="):
+				_input_ip.text = a.substr(a.find("=") + 1)
+			call_deferred("_on_join_pressed")
+			return
 
 
 # =============================================================================

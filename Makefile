@@ -1,4 +1,4 @@
-.PHONY: test cache debug
+.PHONY: test cache debug host join
 
 GODOT_BIN ?= /usr/local/bin/godot
 
@@ -21,3 +21,12 @@ test:
 ##   make debug cpu=none test=9          # ローカル2人対戦
 debug:
 	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(if $(speed),speed=$(speed)) $(ARGS)
+
+## ネットワーク対戦テスト
+## Terminal 1: make host
+## Terminal 2: make join
+host:
+	$(GODOT_BIN) -- --host
+
+join:
+	$(GODOT_BIN) -- --join=$(if $(ip),$(ip),127.0.0.1)
