@@ -86,6 +86,9 @@ func get_available_actions() -> Array:
 				if state.backstages[p] == -1:
 					for card_id in hand:
 						actions.append({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_id, "target": "backstage"})
+				# 手札はあるが出す先がない場合はパス
+				if actions.is_empty():
+					actions.append({"type": Enums.ActionType.PASS})
 
 	return actions
 
@@ -239,13 +242,13 @@ func _trigger_live() -> void:
 	if not state.live_ready[opponent]:
 		# 相手未準備 → 自動勝利
 		_record_round_win(p)
-		_do_round_cleanup()
+		_do_round_cleanup(1 - p)  # 敗者が次ラウンドの先攻
 	else:
 		# 両者準備 → ショウダウン
 		_set_phase(Enums.Phase.SHOWDOWN)
 		var winner := _resolve_showdown()
 		_record_round_win(winner)
-		_do_round_cleanup()
+		_do_round_cleanup(1 - winner)  # 敗者が次ラウンドの先攻
 
 
 ## ショウダウン解決。ランク比較で勝者を決定。
@@ -292,7 +295,7 @@ func _record_round_win(player: int) -> void:
 
 ## ラウンドクリーンアップ。
 ## ステージのカードを除外、楽屋のカードをステージへ移動、ライブレディリセット。
-func _do_round_cleanup() -> void:
+func _do_round_cleanup(next_player: int) -> void:
 	_recorder.clear()
 	for p in range(2):
 		# ステージのカードを除外
@@ -316,6 +319,9 @@ func _do_round_cleanup() -> void:
 
 	# ラウンド番号更新
 	state.round_number += 1
+
+	# 次ラウンドの先攻プレイヤーを設定（ラウンド敗者）
+	state.current_player = next_player
 
 	# フェーズリセット
 	_set_phase(Enums.Phase.ACTION)
