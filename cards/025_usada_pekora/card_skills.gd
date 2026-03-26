@@ -10,10 +10,12 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 			return SkillResult.done()
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
 	elif ctx.phase == 1:
-		# 手札のカードをデッキ上に、デッキ上のカードを手札に
+		# 手札のカードをデッキ上に、デッキ上のカードを手札に（交換演出）
 		var chosen: int = ctx.choice_result
 		var deck_top: int = ctx.state.deck[0]
+		ctx.emit_cue(AnimationCue.find_card(chosen).move().from_my_hand().to_deck())
 		ZoneOps.move_to_deck_top(ctx.state, chosen, ctx.recorder)
+		ctx.emit_cue(AnimationCue.make_card(deck_top).move().from_deck().to_my_hand().with_delay(0.15))
 		ZoneOps.move_to_hand(ctx.state, deck_top, ctx.player, ctx.recorder)
 		ctx.data["drawn_card"] = deck_top
 		# プレイ先を選択（stage or backstage）
@@ -29,7 +31,9 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		var drawn_card: int = ctx.data.get("drawn_card", -1)
 		var target: String = ctx.choice_result
 		if target == "stage":
+			ctx.emit_cue(AnimationCue.find_card(drawn_card).move().from_my_hand().to_my_stage())
 			ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, drawn_card, ctx.recorder)
 		elif target == "backstage":
+			ctx.emit_cue(AnimationCue.find_card(drawn_card).move().from_my_hand().to_my_backstage().face_up(false))
 			ZoneOps.play_to_backstage_from_zone(ctx.state, ctx.player, drawn_card, ctx.recorder)
 		return SkillResult.done()

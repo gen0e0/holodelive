@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 var _MockDone: GDScript = load("res://test/helpers/mock_skill_done.gd")
 var _MockChoice: GDScript = load("res://test/helpers/mock_skill_with_choice.gd")
 var _MockCounter: GDScript = load("res://test/helpers/mock_counter_skill.gd")
+var _MockPlayAndTrigger: GDScript = load("res://test/helpers/mock_skill_play_and_trigger.gd")
 
 
 ## テスト用: CardDef に skills メタデータ付き、SkillRegistry にモック登録した状態を構築。
@@ -301,3 +302,52 @@ func test_no_counter_when_no_passive() -> void:
 
 	assert_bool(gc.is_waiting_for_choice()).is_false()
 	assert_int(gc.state.current_player).is_equal(1)
+
+
+# ===== done_and_trigger_play =====
+
+
+## スキル経由でプレイされたカードのプレイスキルが発動する。
+func test_done_and_trigger_play_fires_target_play_skill() -> void:
+	var icons: Array[String] = ["VOCAL"]
+	var suits: Array[String] = ["COOL"]
+	var skill_a_meta := [{"name": "Deployer", "type": Enums.SkillType.PLAY, "description": "deploy"}]
+	var skill_b_meta := [{"name": "TargetPlay", "type": Enums.SkillType.PLAY, "description": "target"}]
+
+	var card_registry := CardRegistry.new()
+	card_registry.register(CardDef.new(0, "CardA", icons, suits, skill_a_meta))
+	card_registry.register(CardDef.new(1, "CardB", icons, suits, skill_b_meta))
+	for i in range(2, 10):
+		card_registry.register(CardDef.new(i, "Dummy_%d" % i, icons, suits))
+
+	var sr := SkillRegistry.new()
+	sr.register(0, _MockPlayAndTrigger.new())
+	sr.register(1, _MockDone.new())
+
+	var gs := GameState.new()
+	var gc := GameController.new(gs, card_registry, sr)
+
+	# カードA をステージに配置（スキル発動元）
+	var inst_a := gs.create_instance(0)
+	gs.stages[0].append(inst_a)
+
+	# カードB を手札に配置（プレイ対象）
+	var inst_b := gs.create_instance(1)
+	gs.hands[0].append(inst_b)
+
+	# スキルスタックに直接積んで実行（target_iid をデータで渡す）
+	var entry := SkillStackEntry.new()
+	entry.card_id = 0
+	entry.skill_index = 0
+	entry.source_instance_id = inst_a
+	entry.player = 0
+	entry.state = Enums.SkillState.PENDING
+	entry.data = {"target_iid": inst_b}
+	gs.skill_stack.append(entry)
+
+	gc._resolve_skill_stack()
+
+	# カードB がステージに配置されている
+	assert_bool(gs.stages[0].has(inst_b)).is_true()
+	# スタック空 = カードB のプレイスキルも含めて全て解決済み
+	assert_bool(gs.skill_stack.is_empty()).is_true()
