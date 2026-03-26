@@ -37,7 +37,6 @@ var _choice_data: Dictionary = {}
 var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
-var _p0_controller: HumanPlayerController
 var _cpu_both: bool = false   # 両プレイヤーCPU（CLIテスト用）
 var _cpu_none: bool = false   # 両プレイヤー人間（ローカル2人対戦）
 var _max_turns: int = 0       # ターン制限（0=無制限）
@@ -103,29 +102,20 @@ func _init_and_start() -> void:
 	_log_display.clear()
 	_btn_send.disabled = true
 
-	# PlayerController を start_game 前に登録（Callable で state/registry を遅延取得）
-	var get_state: Callable = func() -> GameState: return ctx.state
-	var get_registry: Callable = func() -> CardRegistry: return ctx.registry
+	# Bridge シグナルでアクション/チョイスを受信（テキストログ用）
+	_game_room.bridge.actions_received.connect(_on_bridge_actions_received)
+	_game_room.bridge.choice_requested.connect(_on_bridge_choice_received)
 
-	# P0: 常に HumanPlayerController（cpu=both でも UI フロー経由）
-	_p0_controller = HumanPlayerController.new()
-	_p0_controller.actions_presented.connect(_on_actions_received)
-	_p0_controller.choice_presented.connect(_on_choice_requested)
-	ctx.set_player_controller(0, _p0_controller)
-
-	# P1: cpu=none なら HumanPlayerController、それ以外は CPU
-	if _cpu_none:
-		var p1_human := HumanPlayerController.new()
-		ctx.set_player_controller(1, p1_human)
-		_ensure_game_screens()
-		_game_screen_p0.connect_game_room(_game_room, _p0_controller, 0)
-		_game_screen_p1.connect_game_room(_game_room, p1_human, 1)
-	else:
+	# P1: CPU の場合のみコントローラ登録（cpu=none なら両方 bridge 経由）
+	if not _cpu_none:
+		var get_state: Callable = func() -> GameState: return ctx.state
+		var get_registry: Callable = func() -> CardRegistry: return ctx.registry
 		ctx.set_player_controller(1, CpuPlayerController.new(
 			RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.0))
-		_ensure_game_screens()
-		_game_screen_p0.connect_game_room(_game_room, _p0_controller, 0)
-		_game_screen_p1.connect_game_room(_game_room, null, 1)
+
+	_ensure_game_screens()
+	_game_screen_p0.connect_game_room(_game_room, 0)
+	_game_screen_p1.connect_game_room(_game_room, 1)
 
 	if _max_turns > 0:
 		ctx.max_turns = _max_turns
@@ -181,6 +171,18 @@ func _on_game_started() -> void:
 	if not _zone_overrides.is_empty():
 		_apply_zone_overrides()
 		_zone_overrides = {}
+
+
+func _on_bridge_actions_received(player: int, actions: Array) -> void:
+	if player != 0:
+		return
+	_on_actions_received(actions)
+
+
+func _on_bridge_choice_received(player: int, choice_data: Dictionary) -> void:
+	if player != 0:
+		return
+	_on_choice_requested(choice_data)
 
 
 func _on_actions_received(actions: Array) -> void:
@@ -265,7 +267,6 @@ func _on_game_over(winner: int) -> void:
 		if _game_screen_p1 != null:
 			_game_screen_p1.disconnect_game_room()
 		_game_room = null
-		_p0_controller = null
 		await get_tree().process_frame
 		get_tree().quit(0 if winner >= 0 else 1)
 
@@ -366,20 +367,20 @@ func _handle_choice_input(num: int) -> void:
 	_do_submit_choice(choice_index, chosen_value)
 
 
-## アクション送信: GameScreen 経由（UI フロー）or 直接送信
+## アクション送信: GameScreen 経由（UI フロー）or Bridge 直接送信
 func _do_submit_action(action: Dictionary) -> void:
 	if _game_screen_p0 != null:
 		_game_screen_p0.auto_respond_action(action)
 	else:
-		_p0_controller.submit_action(action)
+		_game_room.bridge.send_action(action, 0)
 
 
-## チョイス送信: GameScreen 経由（UI フロー）or 直接送信
+## チョイス送信: GameScreen 経由（UI フロー）or Bridge 直接送信
 func _do_submit_choice(choice_idx: int, value: Variant) -> void:
 	if _game_screen_p0 != null:
 		_game_screen_p0.auto_respond_choice(choice_idx, value)
 	else:
-		_p0_controller.submit_choice(choice_idx, value)
+		_game_room.bridge.send_choice(choice_idx, value, 0)
 
 
 # =============================================================================

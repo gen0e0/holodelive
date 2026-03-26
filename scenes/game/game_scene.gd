@@ -9,7 +9,6 @@ const _GameScreenScene: PackedScene = preload("res://scenes/gui/game_screen.tscn
 var _game_room: GameRoom
 var _game_screen: GameScreen
 var _my_player: int = -1
-var _p0_controller: HumanPlayerController
 
 
 func _ready() -> void:
@@ -28,18 +27,14 @@ func _ready() -> void:
 		_my_player = 0
 		_game_room.setup_host()
 
-		# ホスト: P0 に HumanPlayerController を登録
-		_p0_controller = HumanPlayerController.new()
-		_game_room.server_context.set_player_controller(0, _p0_controller)
-
 		# P1（リモート）のビューアーを登録（P0 は connect_game_room 内で登録される）
 		_game_room.server_context.add_viewer(1)
 
 		# 切断ハンドラ
 		nm.player_disconnected.connect(_on_player_disconnected)
 
-		# GameScreen 接続（コントローラ付き）
-		_game_screen.connect_game_room(_game_room, _p0_controller, 0)
+		# GameScreen 接続
+		_game_screen.connect_game_room(_game_room, 0)
 
 		# ゲスト準備完了を待って開始
 		await get_tree().create_timer(1.0).timeout
@@ -48,8 +43,8 @@ func _ready() -> void:
 		_my_player = 1
 		_game_room.setup_guest()
 
-		# ゲスト: コントローラなし（Bridge 経由で操作）
-		_game_screen.connect_game_room(_game_room, null, 1)
+		# ゲスト: Bridge 経由で操作
+		_game_screen.connect_game_room(_game_room, 1)
 
 
 # =============================================================================

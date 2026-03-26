@@ -18,7 +18,6 @@ const DESIGN_H: float = 1080.0
 const _GameStartBannerScene: PackedScene = preload("res://scenes/gui/animation/game_start_banner.tscn")
 
 var _game_room: GameRoom
-var _my_controller: HumanPlayerController
 var _my_player: int = 0
 var _cached_client_state: ClientState
 
@@ -126,29 +125,21 @@ func _fit_content() -> void:
 	)
 
 
-func connect_game_room(room: GameRoom, my_controller: HumanPlayerController = null,
-		my_player: int = 0) -> void:
+func connect_game_room(room: GameRoom, my_player: int = 0) -> void:
 	_game_room = room
-	_my_controller = my_controller
 	_my_player = my_player
 	_field_layout.my_player = my_player
 
 	# ServerContext がある場合のみ（ゲストでは不在）
 	if room.server_context != null:
-		room.server_context.set_defer_interactions(true)
 		room.server_context.add_viewer(my_player)
 
 	# Bridge シグナル接続
 	room.bridge.state_received.connect(_on_bridge_state_received)
 	room.bridge.game_started_received.connect(_on_game_started)
 	room.bridge.game_over_received.connect(_on_game_over)
-
-	if _my_controller:
-		_my_controller.actions_presented.connect(_on_actions_received)
-		_my_controller.choice_presented.connect(_on_choice_requested)
-	else:
-		room.bridge.actions_received.connect(_on_bridge_actions_received)
-		room.bridge.choice_requested.connect(_on_bridge_choice_received)
+	room.bridge.actions_received.connect(_on_bridge_actions_received)
+	room.bridge.choice_requested.connect(_on_bridge_choice_received)
 
 	# 初回描画
 	if room.server_context != null and room.server_context.state != null:
@@ -162,7 +153,6 @@ func disconnect_game_room() -> void:
 	if _game_room == null:
 		return
 	if _game_room.server_context != null:
-		_game_room.server_context.set_defer_interactions(false)
 		_game_room.server_context.remove_viewer(_my_player)
 	if _game_room.bridge.state_received.is_connected(_on_bridge_state_received):
 		_game_room.bridge.state_received.disconnect(_on_bridge_state_received)
@@ -174,12 +164,6 @@ func disconnect_game_room() -> void:
 		_game_room.bridge.actions_received.disconnect(_on_bridge_actions_received)
 	if _game_room.bridge.choice_requested.is_connected(_on_bridge_choice_received):
 		_game_room.bridge.choice_requested.disconnect(_on_bridge_choice_received)
-	if _my_controller:
-		if _my_controller.actions_presented.is_connected(_on_actions_received):
-			_my_controller.actions_presented.disconnect(_on_actions_received)
-		if _my_controller.choice_presented.is_connected(_on_choice_requested):
-			_my_controller.choice_presented.disconnect(_on_choice_requested)
-		_my_controller = null
 	_game_room = null
 	_cached_client_state = null
 	_director.cancel_all()
@@ -479,14 +463,10 @@ func _on_choice_resolved(choice_idx: int, value: Variant) -> void:
 # ---------------------------------------------------------------------------
 
 func _send_action(action: Dictionary) -> void:
-	if _my_controller:
-		_my_controller.submit_action(action)
-	elif _game_room != null:
+	if _game_room != null:
 		_game_room.bridge.send_action(action, _my_player)
 
 
 func _send_choice(choice_idx: int, value: Variant) -> void:
-	if _my_controller:
-		_my_controller.submit_choice(choice_idx, value)
-	elif _game_room != null:
+	if _game_room != null:
 		_game_room.bridge.send_choice(choice_idx, value, _my_player)
