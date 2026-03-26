@@ -91,7 +91,8 @@ func activate(choice_data: Dictionary) -> void:
 	_swap_button.pressed.connect(_on_swap_pressed)
 	_ui_parent.add_child(_swap_button)
 
-	_confirm_button = OverlayButton.create("決定", Rect2(btn_x, 280, 140, 60))
+	_confirm_button = OverlayButton.create("決定", Rect2(1440, 620, 220, 140))
+	_confirm_button.add_theme_font_size_override("font_size", 36)
 	_confirm_button.visible = false
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_ui_parent.add_child(_confirm_button)

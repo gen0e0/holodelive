@@ -116,10 +116,9 @@ func _setup_buttons() -> void:
 	_btn_backstage.pressed.connect(_on_backstage_pressed)
 	_overlay.add_child(_btn_backstage)
 
-	# パスボタン（ステージと楽屋の間）
-	var pass_x: float = stage_rect.position.x + stage_rect.size.x / 2.0 - 100
-	var pass_y: float = stage_rect.end.y + 10
-	_btn_pass = OverlayButton.create("パス", Rect2(pass_x, pass_y, 200, 60))
+	# パスボタン
+	_btn_pass = OverlayButton.create("パス", Rect2(1440, 620, 220, 140))
+	_btn_pass.add_theme_font_size_override("font_size", 36)
 	_btn_pass.pressed.connect(_on_pass_pressed)
 	_overlay.add_child(_btn_pass)
 
