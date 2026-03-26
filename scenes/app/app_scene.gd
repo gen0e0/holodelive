@@ -2,6 +2,7 @@ extends Control
 
 var _btn_single: Button
 var _btn_multi: Button
+var _btn_debug: Button
 var _btn_settings: Button
 
 
@@ -43,14 +44,6 @@ func _build_ui() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
-	# Subtitle
-	var subtitle := Label.new()
-	subtitle.text = "Turn-Based Card Game"
-	subtitle.add_theme_font_size_override("font_size", 16)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
-	vbox.add_child(subtitle)
-
 	# Spacer
 	var spacer := Control.new()
 	spacer.custom_minimum_size.y = 40
@@ -58,7 +51,7 @@ func _build_ui() -> void:
 
 	# Single Player button
 	_btn_single = Button.new()
-	_btn_single.text = "Single Player"
+	_btn_single.text = "シングルプレイヤー"
 	_btn_single.custom_minimum_size.y = 50
 	_btn_single.add_theme_font_size_override("font_size", 20)
 	_btn_single.pressed.connect(_on_single_pressed)
@@ -66,7 +59,7 @@ func _build_ui() -> void:
 
 	# Multiplayer button
 	_btn_multi = Button.new()
-	_btn_multi.text = "Multiplayer"
+	_btn_multi.text = "マルチプレイヤー"
 	_btn_multi.custom_minimum_size.y = 50
 	_btn_multi.add_theme_font_size_override("font_size", 20)
 	_btn_multi.pressed.connect(_on_multi_pressed)
@@ -76,6 +69,19 @@ func _build_ui() -> void:
 	var spacer2 := Control.new()
 	spacer2.custom_minimum_size.y = 20
 	vbox.add_child(spacer2)
+
+	# Debug Play button
+	_btn_debug = Button.new()
+	_btn_debug.text = "デバッグプレイ"
+	_btn_debug.custom_minimum_size.y = 50
+	_btn_debug.add_theme_font_size_override("font_size", 20)
+	_btn_debug.pressed.connect(_on_debug_pressed)
+	vbox.add_child(_btn_debug)
+
+	# Spacer
+	var spacer3 := Control.new()
+	spacer3.custom_minimum_size.y = 20
+	vbox.add_child(spacer3)
 
 	# Settings button
 	_btn_settings = Button.new()
@@ -91,6 +97,10 @@ func _build_ui() -> void:
 # =============================================================================
 
 func _on_single_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/single/single_scene.tscn")
+
+
+func _on_debug_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/debug/debug_scene.tscn")
 
 
