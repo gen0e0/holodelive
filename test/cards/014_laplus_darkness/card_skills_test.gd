@@ -27,7 +27,7 @@ func test_014_laplus_find_holox() -> void:
 	assert_bool(state.stages[0].has(lui)).is_true()
 
 
-func test_014_laplus_not_found_all_home() -> void:
+func test_014_laplus_not_found_deck_shuffled() -> void:
 	var env: Dictionary = H.create_test_env([
 		H.make_card_def(14, "ラプラス", ["OTAKU", "KUSOGAKI"], ["COOL"], [H.play_skill()]),
 		H.make_card_def(99, "OTHER", [], ["HOT"], []),
@@ -43,9 +43,10 @@ func test_014_laplus_not_found_all_home() -> void:
 	var ctx := SkillContext.new(state, env.registry, inst_id, 0, 0, null, DiffRecorder.new())
 	var result: SkillResult = sr.get_skill(14).execute_skill(ctx, 0)
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
-	assert_bool(state.home.has(c1)).is_true()
-	assert_bool(state.home.has(c2)).is_true()
-	assert_int(state.deck.size()).is_equal(0)
+	# 見つからなかった場合、カードはデッキに残りシャッフルされる
+	assert_int(state.deck.size()).is_equal(2)
+	assert_bool(state.deck.has(c1)).is_true()
+	assert_bool(state.deck.has(c2)).is_true()
 
 
 func test_014_laplus_skip_non_holox_before_hit() -> void:
@@ -65,5 +66,6 @@ func test_014_laplus_skip_non_holox_before_hit() -> void:
 	var ctx := SkillContext.new(state, env.registry, inst_id, 0, 0, null, DiffRecorder.new())
 	var result: SkillResult = sr.get_skill(14).execute_skill(ctx, 0)
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
-	assert_bool(state.home.has(other)).is_true()
+	# めくったカードはデッキに残りシャッフルされる（homeではない）
+	assert_bool(state.deck.has(other)).is_true()
 	assert_bool(state.stages[0].has(iroha)).is_true()

@@ -35,6 +35,7 @@ func _skill_1(ctx: SkillContext) -> SkillResult:
 	if was_on_stage:
 		ctx.emit_cue(AnimationCue.make_card(bottom_id).move().from_deck().to_my_stage().with_delay(0.1))
 		ZoneOps.play_to_stage_from_zone(ctx.state, player, bottom_id, ctx.recorder)
+		return SkillResult.done_and_trigger_play(bottom_id, player)
 	else:
 		ctx.emit_cue(AnimationCue.make_card(bottom_id).move().from_deck().to_my_backstage().face_up(false).with_delay(0.1))
 		ZoneOps.play_to_backstage_from_zone(ctx.state, player, bottom_id, ctx.recorder)

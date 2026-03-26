@@ -487,6 +487,12 @@ func _resolve_skill_stack() -> void:
 		top.state = Enums.SkillState.RESOLVED
 		state.skill_stack.pop_back()
 
+		# スキル経由でプレイされたカードのプレイスキルを発動
+		if result.trigger_play_skill_instance_id >= 0:
+			_try_trigger_play_skill(
+				result.trigger_play_skill_instance_id,
+				result.trigger_play_skill_player)
+
 		# スキル解決後、新規入場カードの入場時パッシブをチェック
 		_check_new_field_entries(pre_snap)
 

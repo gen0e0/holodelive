@@ -9,6 +9,8 @@ enum Status { DONE, WAITING_FOR_CHOICE }
 
 var status: Status = Status.DONE
 var choices: Array = []  ## Array[Dictionary] — 各要素が1つの choice spec
+var trigger_play_skill_instance_id: int = -1  ## プレイスキル発動対象の instance_id（-1 = なし）
+var trigger_play_skill_player: int = -1       ## プレイスキル発動対象の所有プレイヤー
 
 ## 後方互換プロパティ: choices[0] の各フィールドへのショートカット
 var choice_type: Enums.ChoiceType:
@@ -28,6 +30,15 @@ var target_player: int:
 static func done() -> SkillResult:
 	var r := SkillResult.new()
 	r.status = Status.DONE
+	return r
+
+
+## スキル完了後、配置したカードのプレイスキルを発動する。
+static func done_and_trigger_play(instance_id: int, player: int) -> SkillResult:
+	var r := SkillResult.new()
+	r.status = Status.DONE
+	r.trigger_play_skill_instance_id = instance_id
+	r.trigger_play_skill_player = player
 	return r
 
 
