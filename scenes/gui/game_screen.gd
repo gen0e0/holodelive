@@ -133,9 +133,10 @@ func connect_game_room(room: GameRoom, my_controller: HumanPlayerController = nu
 	_my_player = my_player
 	_field_layout.my_player = my_player
 
-	# ServerContext: defer + viewer 登録
-	room.server_context.set_defer_interactions(true)
-	room.server_context.add_viewer(my_player)
+	# ServerContext がある場合のみ（ゲストでは不在）
+	if room.server_context != null:
+		room.server_context.set_defer_interactions(true)
+		room.server_context.add_viewer(my_player)
 
 	# Bridge シグナル接続
 	room.bridge.state_received.connect(_on_bridge_state_received)
@@ -150,7 +151,7 @@ func connect_game_room(room: GameRoom, my_controller: HumanPlayerController = nu
 		room.bridge.choice_requested.connect(_on_bridge_choice_received)
 
 	# 初回描画
-	if room.server_context.state != null:
+	if room.server_context != null and room.server_context.state != null:
 		var cs: ClientState = StateSerializer.serialize_for_player(
 			room.server_context.state, my_player, room.server_context.registry)
 		_cached_client_state = cs
@@ -160,8 +161,9 @@ func connect_game_room(room: GameRoom, my_controller: HumanPlayerController = nu
 func disconnect_game_room() -> void:
 	if _game_room == null:
 		return
-	_game_room.server_context.set_defer_interactions(false)
-	_game_room.server_context.remove_viewer(_my_player)
+	if _game_room.server_context != null:
+		_game_room.server_context.set_defer_interactions(false)
+		_game_room.server_context.remove_viewer(_my_player)
 	if _game_room.bridge.state_received.is_connected(_on_bridge_state_received):
 		_game_room.bridge.state_received.disconnect(_on_bridge_state_received)
 	if _game_room.bridge.game_started_received.is_connected(_on_game_started):
@@ -192,8 +194,26 @@ func _get_client_state_for_choice() -> ClientState:
 func _on_bridge_state_received(player: int, client_state: Variant, event_entries: Array) -> void:
 	if player != _my_player:
 		return
-	_cached_client_state = client_state as ClientState
-	_on_state_updated(_cached_client_state, event_entries)
+	# ネットワーク RPC 経由では Dictionary が届く → ClientState に復元
+	if client_state is Dictionary:
+		_cached_client_state = ClientState.from_dict(client_state)
+	else:
+		_cached_client_state = client_state as ClientState
+	# event_entries 内の snapshot も復元
+	var restored: Array = []
+	for entry in event_entries:
+		if entry is Dictionary and entry.has("snapshot"):
+			var snap: Variant = entry.get("snapshot")
+			if snap is Dictionary:
+				restored.append({
+					"event": entry.get("event", {}),
+					"snapshot": ClientState.from_dict(snap),
+				})
+			else:
+				restored.append(entry)
+		else:
+			restored.append(entry)
+	_on_state_updated(_cached_client_state, restored)
 
 
 func _on_bridge_actions_received(player: int, actions: Array) -> void:
@@ -214,7 +234,7 @@ func _on_state_updated(client_state: ClientState, event_entries: Array) -> void:
 
 
 func _on_state_processed() -> void:
-	if _game_room != null:
+	if _game_room != null and _game_room.server_context != null:
 		_game_room.server_context.flush_pending_interaction()
 
 
