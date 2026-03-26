@@ -122,10 +122,11 @@ func _ready() -> void:
 		_suit_panel.add_theme_stylebox_override("panel", style.duplicate())
 	_badge_container = _create_badge_container()
 	_card_body.add_child(_badge_container)
-	_guest_mask = _create_guest_mask()
-	add_child(_guest_mask)
 	_selectable_glow = _create_selectable_glow()
 	add_child(_selectable_glow)
+	move_child(_selectable_glow, 0)  # カードの背面に配置
+	_guest_mask = _create_guest_mask()
+	add_child(_guest_mask)
 	_update_display()
 
 
@@ -347,19 +348,19 @@ func _stop_glow_pulse() -> void:
 func _create_selectable_glow() -> Panel:
 	var glow := Panel.new()
 	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
-	glow.offset_left = -4.0
-	glow.offset_top = -4.0
-	glow.offset_right = 4.0
-	glow.offset_bottom = 4.0
+	glow.offset_left = -8.0
+	glow.offset_top = -8.0
+	glow.offset_right = 8.0
+	glow.offset_bottom = 8.0
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glow.visible = false
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0, 0, 0, 0)
 	style.border_color = Color(1.0, 0.85, 0.2, 0.9)
-	style.border_width_left = 4
-	style.border_width_top = 4
-	style.border_width_right = 4
-	style.border_width_bottom = 4
+	style.border_width_left = 12
+	style.border_width_top = 12
+	style.border_width_right = 12
+	style.border_width_bottom = 12
 	style.corner_radius_top_left = 18
 	style.corner_radius_top_right = 18
 	style.corner_radius_bottom_left = 18
