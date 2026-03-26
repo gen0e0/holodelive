@@ -75,7 +75,7 @@ func _ready() -> void:
 	_choice_manager.register(FieldCardSelector.new(
 		_card_layer, _home_view, _my_hand, _choice_manager,
 		_get_client_state_for_choice, _overlay))
-	_choice_manager.register(ZoneSelector.new(_overlay, _my_hand))
+	_choice_manager.register(ZoneSelector.new(_overlay, _my_hand, _field_layout))
 	_choice_manager.choice_resolved.connect(_on_choice_resolved)
 	_setup_rank_labels()
 	_setup_win_stars()
@@ -104,18 +104,22 @@ func _setup_buttons() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_overlay)
 
-	# ステージ全体を覆うボタン (MyStage1-3: x=24-948, y=80-500)
-	_btn_stage = OverlayButton.create("ステージにプレイ", Rect2(24, 80, 924, 420))
+	# ステージ全体を覆うボタン（FieldLayout の MyStage3〜MyStage1 の範囲）
+	var stage_rect: Rect2 = _get_my_stage_rect()
+	_btn_stage = OverlayButton.create("ステージにプレイ", stage_rect)
 	_btn_stage.pressed.connect(_on_stage_pressed)
 	_overlay.add_child(_btn_stage)
 
-	# 楽屋全体を覆うボタン (MyBackstage: x=648-948, y=530-950)
-	_btn_backstage = OverlayButton.create("楽屋にプレイ", Rect2(648, 530, 300, 420))
+	# 楽屋を覆うボタン（FieldLayout の MyBackstage の範囲）
+	var bs_rect: Rect2 = _get_my_backstage_rect()
+	_btn_backstage = OverlayButton.create("楽屋にプレイ", bs_rect)
 	_btn_backstage.pressed.connect(_on_backstage_pressed)
 	_overlay.add_child(_btn_backstage)
 
-	# パスボタン（カードが出せない時のみ表示）
-	_btn_pass = OverlayButton.create("パス", Rect2(360, 430, 200, 60))
+	# パスボタン（ステージと楽屋の間）
+	var pass_x: float = stage_rect.position.x + stage_rect.size.x / 2.0 - 100
+	var pass_y: float = stage_rect.end.y + 10
+	_btn_pass = OverlayButton.create("パス", Rect2(pass_x, pass_y, 200, 60))
 	_btn_pass.pressed.connect(_on_pass_pressed)
 	_overlay.add_child(_btn_pass)
 
@@ -438,6 +442,34 @@ func _clear_action_state() -> void:
 		_btn_backstage.visible = false
 	if _btn_pass != null:
 		_btn_pass.visible = false
+
+
+# ---------------------------------------------------------------------------
+# レイアウト計算
+# ---------------------------------------------------------------------------
+
+func _get_my_stage_rect() -> Rect2:
+	var s3: SlotMarker = _field_layout.get_stage_slot(_field_layout.my_player, 2)
+	var s1: SlotMarker = _field_layout.get_stage_slot(_field_layout.my_player, 0)
+	if s3 and s1:
+		var left_top: Vector2 = _to_content_local(s3, Vector2.ZERO)
+		var right_bottom: Vector2 = _to_content_local(s1, s1.size)
+		return Rect2(left_top, right_bottom - left_top)
+	return Rect2(84, 80, 864, 392)
+
+
+func _get_my_backstage_rect() -> Rect2:
+	var bs: SlotMarker = _field_layout.get_backstage_slot(_field_layout.my_player)
+	if bs:
+		var pos: Vector2 = _to_content_local(bs, Vector2.ZERO)
+		var end: Vector2 = _to_content_local(bs, bs.size)
+		return Rect2(pos, end - pos)
+	return Rect2(668, 500, 280, 392)
+
+
+func _to_content_local(node: Control, offset: Vector2) -> Vector2:
+	var global_pos: Vector2 = node.global_position + offset * node.get_global_transform().get_scale()
+	return _content.get_global_transform().affine_inverse() * global_pos
 
 
 # ---------------------------------------------------------------------------

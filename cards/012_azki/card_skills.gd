@@ -37,7 +37,8 @@ func _skill_1(ctx: SkillContext) -> SkillResult:
 			zones.append("backstage")
 		if zones.is_empty():
 			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_ZONE, zones)
+		return SkillResult.waiting(Enums.ChoiceType.SELECT_ZONE, zones,
+			1, 1, "play_preview:%d" % chosen)
 	else:
 		var chosen: int = ctx.data.get("chosen_card", -1)
 		var target: String = ctx.choice_result
