@@ -86,6 +86,9 @@ func get_available_actions() -> Array:
 				if state.backstages[p] == -1:
 					for card_id in hand:
 						actions.append({"type": Enums.ActionType.PLAY_CARD, "instance_id": card_id, "target": "backstage"})
+				# 手札はあるが出す先がない場合はパス
+				if actions.is_empty():
+					actions.append({"type": Enums.ActionType.PASS})
 
 	return actions
 
