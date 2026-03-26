@@ -328,10 +328,19 @@ func _schedule_auto_choice(delay: float, epoch: int) -> void:
 	var valid_targets: Array = _choice_data.get("valid_targets", [])
 	if valid_targets.is_empty():
 		return
-	var idx: int = _rng.randi() % valid_targets.size()
-	var chosen_value: Variant = valid_targets[idx]
+	var select_max: int = _choice_data.get("select_max", 1)
+	var chosen_value: Variant
+	if select_max > 1:
+		# マルチ選択: select_max 枚をランダムに選択
+		var shuffled: Array = valid_targets.duplicate()
+		shuffled.shuffle()
+		var count: int = mini(select_max, shuffled.size())
+		chosen_value = shuffled.slice(0, count)
+	else:
+		var idx: int = _rng.randi() % valid_targets.size()
+		chosen_value = valid_targets[idx]
 	var choice_index: int = _choice_data.get("choice_index", 0)
-	_log("[color=gray](CPU) > %d[/color]" % [idx + 1])
+	_log("[color=gray](CPU) > %s[/color]" % str(chosen_value))
 	_waiting_choice = false
 	if _game_screen_p0 != null:
 		_game_screen_p0.auto_respond_choice(choice_index, chosen_value)

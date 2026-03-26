@@ -193,6 +193,13 @@ func _request_actions() -> void:
 
 
 func _request_choice(player: int, choice_data: Dictionary) -> void:
+	# RANDOM_RESULT はプレイヤー入力不要 → サーバー側で自動解決
+	if choice_data.get("choice_type", -1) == Enums.ChoiceType.RANDOM_RESULT:
+		var targets: Array = choice_data.get("valid_targets", [])
+		if not targets.is_empty():
+			var value: Variant = targets[rng.randi() % targets.size()]
+			_apply_choice(choice_data.get("choice_index", 0), value)
+		return
 	if _controllers[player] != null:
 		_controllers[player].request_choice(choice_data)
 	else:

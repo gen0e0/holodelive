@@ -313,6 +313,11 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 			var tween: Tween = _fire_cue_flip(cue_dict)
 			if tween != null:
 				anim_nodes.append(tween)
+		elif cue_action == "shuffle":
+			GameLog.log_event("ANIM", "shuffle_start", {})
+			var node: Node = _fire_cue_shuffle(cue_dict)
+			if node != null:
+				anim_nodes.append(node)
 
 	# 4) 全完了 or タイムアウト待ち
 	if not anim_nodes.is_empty():
@@ -340,6 +345,8 @@ func _hide_cue_source(cue_dict: Dictionary, old_positions: Dictionary,
 		var from_player: int = cue_dict.get("from_player", -1)
 		if from_player >= 0 and cs != null and from_player == cs.my_player:
 			hand.hide_card(iid)
+		elif from_player >= 0 and cs != null and from_player != cs.my_player:
+			opp_hand.hide_card(iid)
 	elif from_zone == "stage" or from_zone == "backstage":
 		card_layer.hide_card(iid)
 
@@ -432,6 +439,8 @@ func _resolve_to(cue_dict: Dictionary, cs: ClientState) -> Dictionary:
 func _resolve_zone_xform(zone: String, player: int, iid: int,
 		cs: ClientState, old_positions: Dictionary) -> Dictionary:
 	match zone:
+		"center":
+			return {"pos": Vector2(810, 340), "scale": Vector2(0.6, 0.6), "rotation": 0.0}
 		"deck":
 			return deck_view.get_card_content_transform()
 		"home":
@@ -485,6 +494,65 @@ func _find_field_slot_xform(iid: int, cs: ClientState, is_stage: bool, filter_pl
 				var slot: SlotMarker = field_layout.get_backstage_slot(p)
 				return card_layer.get_slot_content_transform(slot)
 	return {}
+
+
+# ===========================================================================
+# シャッフル演出
+# ===========================================================================
+
+## 裏向きカード2枚を画面中央で上下にバウンスさせるシャッフル演出。
+## 自己破棄型 Node を返す。
+func _fire_cue_shuffle(cue_dict: Dictionary) -> Node:
+	var center_pos := Vector2(810, 340)
+	var card_scale := Vector2(0.6, 0.6)
+	var bounce_dist: float = 80.0
+	var bounce_count: int = cue_dict.get("bounce_count", 3)
+	var delay_sec: float = cue_dict.get("delay", 0.0)
+
+	# コンテナ（自己破棄型）
+	var container := Node2D.new()
+	_anim_layer.add_child(container)
+
+	# 裏向きカード2枚を生成
+	var _CardViewScene: PackedScene = preload("res://scenes/gui/components/card_view.tscn")
+	var cv_top: CardView = _CardViewScene.instantiate()
+	cv_top.managed_hover = true
+	cv_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cv_top.setup({}, false)  # 裏向き
+	cv_top.scale = card_scale
+	cv_top.position = center_pos + Vector2(-20, -10)
+	cv_top.rotation_degrees = -5.0
+	container.add_child(cv_top)
+
+	var cv_bottom: CardView = _CardViewScene.instantiate()
+	cv_bottom.managed_hover = true
+	cv_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cv_bottom.setup({}, false)
+	cv_bottom.scale = card_scale
+	cv_bottom.position = center_pos + Vector2(20, 10)
+	cv_bottom.rotation_degrees = 5.0
+	container.add_child(cv_bottom)
+
+	# バウンスアニメーション
+	var tw: Tween = container.create_tween()
+	if delay_sec > 0.0:
+		tw.tween_interval(_dur(delay_sec))
+	for i in range(bounce_count):
+		# 上のカードを上に、下のカードを下に
+		tw.tween_property(cv_top, "position:y", center_pos.y - bounce_dist - 10, _dur(0.15)) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(cv_bottom, "position:y", center_pos.y + bounce_dist + 10, _dur(0.15)) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		# 戻す
+		tw.tween_property(cv_top, "position:y", center_pos.y - 10, _dur(0.15)) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.parallel().tween_property(cv_bottom, "position:y", center_pos.y + 10, _dur(0.15)) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# フェードアウト
+	tw.tween_property(container, "modulate:a", 0.0, _dur(0.2))
+	tw.finished.connect(func() -> void: container.queue_free())
+
+	return container
 
 
 # ===========================================================================

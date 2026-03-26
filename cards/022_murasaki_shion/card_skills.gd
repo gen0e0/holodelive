@@ -16,6 +16,18 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		ctx.data["my_count"] = my_count
 		ctx.data["opp_count"] = opp_count
 		ctx.data["all_cards"] = all_cards
+
+		# 演出: 全手札を画面中央に裏向きで集める
+		var delay: float = 0.0
+		for id in ctx.state.hands[ctx.player]:
+			ctx.emit_cue(AnimationCue.find_card(id).move().from_my_hand().to_center()
+				.face_up(false).with_delay(delay))
+			delay += 0.05
+		for id in ctx.state.hands[opp]:
+			ctx.emit_cue(AnimationCue.find_card(id).move().from_op_hand().to_center()
+				.face_up(false).with_delay(delay))
+			delay += 0.05
+
 		return SkillResult.waiting(Enums.ChoiceType.RANDOM_RESULT, all_cards.duplicate())
 	else:
 		var all_cards: Array = ctx.data.get("all_cards", [])
@@ -30,13 +42,25 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 			all_cards = rotated
 		ctx.state.hands[ctx.player].clear()
 		ctx.state.hands[opp].clear()
+
+		# 演出1: シャッフル（裏向きカード2枚が上下にバウンス）
+		ctx.emit_cue(AnimationCue.new().shuffle())
+
+		# 演出2: 中央から裏向きで手札へ配り直す（シャッフル後に開始）
+		var delay: float = 1.2  # シャッフル演出の長さ分待つ
 		for i in range(saved_my_count):
 			if i < all_cards.size():
 				ctx.state.hands[ctx.player].append(all_cards[i])
 				ctx.recorder.record_card_move(all_cards[i], "hand", -1, "hand", i)
+				ctx.emit_cue(AnimationCue.find_card(all_cards[i]).move()
+					.from_center().to_my_hand().face_up(false).with_delay(delay))
+				delay += 0.05
 		for i in range(saved_opp_count):
 			var idx: int = saved_my_count + i
 			if idx < all_cards.size():
 				ctx.state.hands[opp].append(all_cards[idx])
 				ctx.recorder.record_card_move(all_cards[idx], "hand", -1, "hand", i)
+				ctx.emit_cue(AnimationCue.find_card(all_cards[idx]).move()
+					.from_center().to_op_hand().face_up(false).with_delay(delay))
+				delay += 0.05
 		return SkillResult.done()

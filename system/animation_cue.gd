@@ -61,6 +61,11 @@ func flip(p_to_face_down: bool) -> AnimationCue:
 	return self
 
 
+func shuffle() -> AnimationCue:
+	action = "shuffle"
+	return self
+
+
 # =========================================================================
 # from ゾーン指定
 # =========================================================================
@@ -132,6 +137,14 @@ func to_my_backstage() -> AnimationCue:
 
 func to_op_backstage() -> AnimationCue:
 	to_zone = "op_backstage"
+	return self
+
+func to_center() -> AnimationCue:
+	to_zone = "center"
+	return self
+
+func from_center() -> AnimationCue:
+	from_zone = "center"
 	return self
 
 
