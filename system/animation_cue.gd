@@ -22,6 +22,10 @@ var anim_duration: float = -1.0       # -1=デフォルト
 # flip 用
 var to_face_down: bool = false
 
+# cutin 用
+var cutin_skill_name: String = ""
+var cutin_nickname: String = ""
+
 
 # =========================================================================
 # ファクトリ
@@ -64,6 +68,15 @@ func flip(p_to_face_down: bool) -> AnimationCue:
 func shuffle() -> AnimationCue:
 	action = "shuffle"
 	return self
+
+
+## サブスキル発動前のカットイン演出。
+static func cutin(skill_name: String, nickname: String) -> AnimationCue:
+	var c := AnimationCue.new()
+	c.action = "cutin"
+	c.cutin_skill_name = skill_name
+	c.cutin_nickname = nickname
+	return c
 
 
 # =========================================================================

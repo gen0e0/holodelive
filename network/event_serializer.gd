@@ -98,6 +98,9 @@ static func _serialize_cue(
 	}
 	if cue.action == "flip":
 		d["to_face_down"] = cue.to_face_down
+	if cue.action == "cutin":
+		d["cutin_skill_name"] = cue.cutin_skill_name
+		d["cutin_nickname"] = cue.cutin_nickname
 	return d
 
 

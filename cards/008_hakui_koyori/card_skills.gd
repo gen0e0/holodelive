@@ -16,6 +16,7 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		if ctx.skill_registry:
 			var skill: BaseCardSkill = ctx.skill_registry.get_skill(inst.card_id)
 			if skill:
+				_emit_sub_cutin(ctx, inst.card_id)
 				var sub_ctx := SkillContext.new(ctx.state, ctx.registry, chosen, ctx.player, 0, null, ctx.recorder, ctx.skill_registry)
 				var sub_result: SkillResult = skill.execute_skill(sub_ctx, 0)
 				for cue in sub_ctx.animation_cues:
