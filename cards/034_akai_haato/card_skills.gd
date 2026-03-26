@@ -13,10 +13,18 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		ctx.data["chosen_card"] = chosen
 		# 自身の位置を特定
 		var my_zone: Dictionary = ctx.state.find_zone(ctx.source_instance_id)
+		var zone_name: String = my_zone.get("zone", "")
+
+		# 演出: 自身→自宅、選択カード→自身の位置（同時）
+		ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_home())
+		if zone_name == "stage":
+			ctx.emit_cue(AnimationCue.find_card(chosen).move().from_home().to_my_stage())
+		elif zone_name == "backstage":
+			ctx.emit_cue(AnimationCue.find_card(chosen).move().from_home().to_my_backstage())
+
 		# 選んだカードを自宅から除去して自身の位置に配置
 		ctx.state.home.erase(chosen)
 		# 自身を自宅へ
-		var zone_name: String = my_zone.get("zone", "")
 		if zone_name == "stage":
 			var idx: int = ctx.state.stages[ctx.player].find(ctx.source_instance_id)
 			ctx.state.stages[ctx.player].erase(ctx.source_instance_id)

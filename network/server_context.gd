@@ -200,10 +200,11 @@ func _request_choice(player: int, choice_data: Dictionary) -> void:
 			var value: Variant = targets[rng.randi() % targets.size()]
 			_apply_choice(choice_data.get("choice_index", 0), value)
 		return
+	# 常に Bridge 経由で通知（UI 表示のため）
+	_bridge.send_choice_to(player, choice_data)
+	# コントローラがあれば自動応答も行う（CPU プレイヤー）
 	if _controllers[player] != null:
 		_controllers[player].request_choice(choice_data)
-	else:
-		_bridge.send_choice_to(player, choice_data)
 
 
 func flush_pending_interaction() -> void:
