@@ -205,7 +205,8 @@ func _update_confirm_button() -> void:
 func _show_confirm_button() -> void:
 	if _confirm_button != null:
 		return
-	_confirm_button = OverlayButton.create("決定", Rect2(420, 430, 200, 60))
+	_confirm_button = OverlayButton.create("決定", Rect2(1440, 620, 220, 140))
+	_confirm_button.add_theme_font_size_override("font_size", 36)
 	_confirm_button.visible = true
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_ui_parent.add_child(_confirm_button)

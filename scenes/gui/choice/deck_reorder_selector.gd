@@ -110,7 +110,8 @@ func activate(choice_data: Dictionary) -> void:
 	# 決定ボタン
 	var btn_x: float = SLOT_X + SLOT_W + 30
 	var btn_y: float = _frame_positions[0].y + (SLOT_H * count + (count - 1) * 16) / 2.0 - 30
-	_confirm_button = OverlayButton.create("決定", Rect2(btn_x, btn_y, 140, 60))
+	_confirm_button = OverlayButton.create("決定", Rect2(1440, 620, 220, 140))
+	_confirm_button.add_theme_font_size_override("font_size", 36)
 	_confirm_button.visible = true
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_ui_parent.add_child(_confirm_button)

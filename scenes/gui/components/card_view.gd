@@ -427,6 +427,7 @@ func _create_guest_mask() -> Panel:
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.offset_top = -108
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lbl.add_theme_font_size_override("font_size", GUEST_LABEL_FONT_SIZE)
 	lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.85))

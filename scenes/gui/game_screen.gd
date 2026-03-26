@@ -115,7 +115,8 @@ func _setup_buttons() -> void:
 	_overlay.add_child(_btn_backstage)
 
 	# パスボタン（カードが出せない時のみ表示）
-	_btn_pass = OverlayButton.create("パス", Rect2(360, 430, 200, 60))
+	_btn_pass = OverlayButton.create("パス", Rect2(1440, 620, 220, 140))
+	_btn_pass.add_theme_font_size_override("font_size", 36)
 	_btn_pass.pressed.connect(_on_pass_pressed)
 	_overlay.add_child(_btn_pass)
 
