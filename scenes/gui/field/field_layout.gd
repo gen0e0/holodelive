@@ -15,6 +15,9 @@ extends Control
 @onready var _deck_slot: SlotMarker = $Deck
 @onready var _home_slot: SlotMarker = $Home
 
+## この画面の視点プレイヤー。my_player のカードが左側（My）に配置される。
+var my_player: int = 0
+
 ## トークン管理: "player:type" → TurnFlagToken
 var _active_tokens: Dictionary = {}
 
@@ -113,13 +116,13 @@ func play_consume_animation(key: String) -> void:
 # --- スロット参照取得 API ---
 
 func get_stage_slot(player: int, index: int) -> SlotMarker:
-	var slots: Array[SlotMarker] = _my_stage_slots if player == 0 else _opp_stage_slots
+	var slots: Array[SlotMarker] = _my_stage_slots if player == my_player else _opp_stage_slots
 	if index >= 0 and index < slots.size():
 		return slots[index]
 	return null
 
 
 func get_backstage_slot(player: int) -> SlotMarker:
-	if player == 0:
+	if player == my_player:
 		return _my_backstage_slot
 	return _opp_backstage_slot

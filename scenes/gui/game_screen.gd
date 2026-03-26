@@ -130,6 +130,7 @@ func connect_session(s: GameSession, my_controller: HumanPlayerController = null
 	session = s
 	_my_controller = my_controller
 	_my_player = my_player
+	_field_layout.my_player = my_player
 
 	if session is LocalGameSession:
 		var local: LocalGameSession = session as LocalGameSession
