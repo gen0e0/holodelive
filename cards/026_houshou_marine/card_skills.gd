@@ -12,6 +12,7 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 	elif ctx.phase == 1:
 		# 相手の場カードを相手の手札に戻す
 		var chosen: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(chosen).move().to_op_hand())
 		ZoneOps.move_to_hand(ctx.state, chosen, opp, ctx.recorder)
 		# 自分の手札から楽屋にプレイ
 		if ctx.state.backstages[ctx.player] != -1:
@@ -22,6 +23,7 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.SELECT_CARD, hand.duplicate())
 	else:
 		var card_to_play: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.find_card(card_to_play).move().from_my_hand().to_my_backstage().face_up(false))
 		ZoneOps.play_to_backstage_from_zone(ctx.state, ctx.player, card_to_play, ctx.recorder)
 		return SkillResult.done()
 

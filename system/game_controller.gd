@@ -440,7 +440,8 @@ func _resolve_skill_stack() -> void:
 			top.player,
 			top.phase,
 			null,
-			_recorder
+			_recorder,
+			skill_registry
 		)
 		# 前回の選択結果があればセット
 		if not state.pending_choices.is_empty():

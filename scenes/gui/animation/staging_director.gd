@@ -291,12 +291,25 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 		await cutin.play()
 		GameLog.log_event("ANIM", "cutin_end", {"skill": skill_name})
 
-	# 2) find_card + move の移動元カードを一括非表示
+	# 2) cutin キューを先に処理（await で完了を待つ）
+	for cue_dict in cues:
+		if cue_dict.get("action", "") == "cutin":
+			var sn: String = cue_dict.get("cutin_skill_name", "")
+			var nn: String = cue_dict.get("cutin_nickname", "")
+			if not sn.is_empty():
+				GameLog.log_event("ANIM", "cutin_start", {"skill": sn, "nickname": nn})
+				var cutin: SkillCutIn = _SkillCutInScene.instantiate()
+				cutin.setup(sn, nn, is_me)
+				_anim_layer.add_child(cutin)
+				await cutin.play()
+				GameLog.log_event("ANIM", "cutin_end", {"skill": sn})
+
+	# 3) find_card + move の移動元カードを一括非表示
 	for cue_dict in cues:
 		if cue_dict.get("action", "") == "move" and cue_dict.get("source", "") == "find":
 			_hide_cue_source(cue_dict, old_positions, cs)
 
-	# 3) 全キューを fire-and-forget で同時発火
+	# 4) 全キューを fire-and-forget で同時発火
 	var anim_nodes: Array = []  # Node（自己廃棄型）と Tween の混在
 	for cue_dict in cues:
 		var cue_action: String = cue_dict.get("action", "")
@@ -323,7 +336,7 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 			if node != null:
 				anim_nodes.append(node)
 
-	# 4) 全完了 or タイムアウト待ち
+	# 5) 全完了 or タイムアウト待ち
 	if not anim_nodes.is_empty():
 		GameLog.log_event("ANIM", "await_all", {"count": anim_nodes.size()})
 		var max_dur: float = _dur(event.get("max_animation_duration", MAX_SKILL_DURATION))

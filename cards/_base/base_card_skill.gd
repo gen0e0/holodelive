@@ -24,3 +24,12 @@ func _can_counter(_ctx: SkillContext) -> bool:
 ## false（デフォルト）の場合、場に出た時に一度だけトリガーされる。
 func _is_continuous_passive() -> bool:
 	return false
+
+
+## サブスキル委譲時、対象カードのプレイスキルのカットイン演出キューを emit する。
+func _emit_sub_cutin(ctx: SkillContext, card_id: int) -> void:
+	var card_def: CardDef = ctx.registry.get_card(card_id)
+	if card_def and not card_def.skills.is_empty():
+		var skill_name: String = card_def.skills[0].get("name", "")
+		if not skill_name.is_empty():
+			ctx.emit_cue(AnimationCue.cutin(skill_name, card_def.nickname))

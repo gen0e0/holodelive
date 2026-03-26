@@ -16,8 +16,11 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		if ctx.skill_registry:
 			var skill: BaseCardSkill = ctx.skill_registry.get_skill(inst.card_id)
 			if skill:
+				_emit_sub_cutin(ctx, inst.card_id)
 				var sub_ctx := SkillContext.new(ctx.state, ctx.registry, chosen, ctx.player, 0, null, ctx.recorder, ctx.skill_registry)
 				var sub_result: SkillResult = skill.execute_skill(sub_ctx, 0)
+				for cue in sub_ctx.animation_cues:
+					ctx.emit_cue(cue)
 				if sub_result.status == SkillResult.Status.WAITING_FOR_CHOICE:
 					ctx.data["sub_skill_card_id"] = inst.card_id
 					ctx.data["sub_phase"] = 1
@@ -34,6 +37,8 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 				var sub_ctx := SkillContext.new(ctx.state, ctx.registry, target_card, ctx.player, sub_phase, ctx.choice_result, ctx.recorder, ctx.skill_registry)
 				sub_ctx.data = ctx.data
 				var sub_result: SkillResult = skill.execute_skill(sub_ctx, 0)
+				for cue in sub_ctx.animation_cues:
+					ctx.emit_cue(cue)
 				if sub_result.status == SkillResult.Status.WAITING_FOR_CHOICE:
 					ctx.data["sub_phase"] = sub_phase + 1
 					return sub_result
