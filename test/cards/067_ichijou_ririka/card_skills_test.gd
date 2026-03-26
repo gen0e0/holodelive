@@ -33,6 +33,8 @@ func test_067_ririka_find_alcohol() -> void:
 	result = sr.get_skill(67).execute_skill(ctx, 0)
 	assert_int(result.status).is_equal(SkillResult.Status.DONE)
 	assert_bool(state.stages[0].has(alcohol_card)).is_true()
+	# プレイスキル発動がチェーンされる
+	assert_int(result.trigger_play_skill_instance_id).is_equal(alcohol_card)
 
 
 func test_067_ririka_no_alcohol() -> void:
