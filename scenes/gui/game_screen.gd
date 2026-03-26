@@ -44,6 +44,7 @@ var _btn_pass: OverlayButton
 var _action_buttons: Array = []  # ACTION フェーズ用の動的ボタン
 var _my_rank_label: RankLabel
 var _opp_rank_label: RankLabel
+var _win_stars_bar: WinStarsBar
 
 
 func _ready() -> void:
@@ -75,6 +76,7 @@ func _ready() -> void:
 	_choice_manager.register(ZoneSelector.new(_overlay))
 	_choice_manager.choice_resolved.connect(_on_choice_resolved)
 	_setup_rank_labels()
+	_setup_win_stars()
 
 
 func _setup_rank_labels() -> void:
@@ -85,6 +87,13 @@ func _setup_rank_labels() -> void:
 	_opp_rank_label = RankLabel.new()
 	_opp_rank_label.position = Vector2(1264, 44)
 	_content.add_child(_opp_rank_label)
+
+
+func _setup_win_stars() -> void:
+	_win_stars_bar = WinStarsBar.new()
+	_win_stars_bar.position = Vector2(0, 4)
+	_win_stars_bar.size = Vector2(DESIGN_W, 32)
+	_content.add_child(_win_stars_bar)
 
 
 func _setup_buttons() -> void:
@@ -254,6 +263,9 @@ func _refresh(cs: ClientState) -> void:
 	_my_hand.sync_cards(cs.my_hand, true)
 	_opp_hand.sync_hidden(cs.opponent_hand_count)
 	_update_rank_labels(cs)
+	if _win_stars_bar != null:
+		var my_p: int = cs.my_player
+		_win_stars_bar.update_wins(cs.round_wins[my_p], cs.round_wins[1 - my_p])
 
 
 func _update_rank_labels(cs: ClientState) -> void:
