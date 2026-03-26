@@ -13,11 +13,13 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		return SkillResult.waiting(Enums.ChoiceType.RANDOM_RESULT, opp_hand.duplicate())
 	elif ctx.phase == 1:
 		var first_id: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.make_card(first_id).move().from_op_hand().to_my_hand())
 		ZoneOps.move_to_hand(ctx.state, first_id, ctx.player, ctx.recorder)
 		if opp_hand.size() <= 1:
 			return SkillResult.done()
 		return SkillResult.waiting(Enums.ChoiceType.RANDOM_RESULT, opp_hand.duplicate())
 	else:
 		var second_id: int = ctx.choice_result
+		ctx.emit_cue(AnimationCue.make_card(second_id).move().from_op_hand().to_my_hand())
 		ZoneOps.move_to_hand(ctx.state, second_id, ctx.player, ctx.recorder)
 		return SkillResult.done()
