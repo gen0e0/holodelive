@@ -68,6 +68,7 @@ func _ready() -> void:
 	_home_view.card_hovered.connect(_on_card_hovered)
 	_home_view.card_unhovered.connect(_on_card_unhovered)
 	_setup_buttons()
+	_choice_manager.register(DeckReorderSelector.new(_overlay, _deck_view))
 	_choice_manager.register(DeckReturnSelector.new(
 		_my_hand, _get_client_state_for_choice, _overlay))
 	_choice_manager.register(FieldCardSelector.new(
