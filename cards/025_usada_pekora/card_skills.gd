@@ -33,6 +33,7 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 		if target == "stage":
 			ctx.emit_cue(AnimationCue.find_card(drawn_card).move().from_my_hand().to_my_stage())
 			ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, drawn_card, ctx.recorder)
+			return SkillResult.done_and_trigger_play(drawn_card, ctx.player)
 		elif target == "backstage":
 			ctx.emit_cue(AnimationCue.find_card(drawn_card).move().from_my_hand().to_my_backstage().face_up(false))
 			ZoneOps.play_to_backstage_from_zone(ctx.state, ctx.player, drawn_card, ctx.recorder)
