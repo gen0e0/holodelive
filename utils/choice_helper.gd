@@ -25,7 +25,7 @@ static func make_choice_data(
 			else:
 				details.append({})
 
-	return {
+	var data: Dictionary = {
 		"choice_index": state.pending_choices.find(pc),
 		"target_player": pc.target_player,
 		"choice_type": int(pc.choice_type),
@@ -36,3 +36,10 @@ static func make_choice_data(
 		"timeout": pc.timeout,
 		"ui_hint": pc.ui_hint,
 	}
+	# play_preview:INSTANCE_ID 形式の場合、プレビュー用カード情報を付与
+	if pc.ui_hint.begins_with("play_preview:"):
+		var iid_str: String = pc.ui_hint.substr("play_preview:".length())
+		if iid_str.is_valid_int():
+			var iid: int = iid_str.to_int()
+			data["preview_card"] = StateSerializer._card_dict(iid, state, registry)
+	return data

@@ -74,7 +74,7 @@ func _ready() -> void:
 	_choice_manager.register(FieldCardSelector.new(
 		_card_layer, _home_view, _my_hand, _choice_manager,
 		_get_client_state_for_choice, _overlay))
-	_choice_manager.register(ZoneSelector.new(_overlay))
+	_choice_manager.register(ZoneSelector.new(_overlay, _my_hand))
 	_choice_manager.choice_resolved.connect(_on_choice_resolved)
 	_setup_rank_labels()
 	_setup_win_stars()
@@ -463,7 +463,15 @@ func _on_choice_requested(choice_data: Dictionary) -> void:
 		"type": choice_data.get("choice_type", -1),
 		"targets": choice_data.get("valid_targets", []),
 	})
+	# アニメーション処理中なら完了を待ってから UI を表示
+	if _director.is_processing():
+		await _wait_for_director()
 	_choice_manager.handle_choice(choice_data)
+
+
+func _wait_for_director() -> void:
+	while _director.is_processing():
+		await _content.get_tree().process_frame
 
 
 func _on_choice_resolved(choice_idx: int, value: Variant) -> void:

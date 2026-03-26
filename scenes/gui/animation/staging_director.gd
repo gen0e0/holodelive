@@ -44,6 +44,10 @@ func _init(anim_layer: Control) -> void:
 	_anim_layer = anim_layer
 
 
+func is_processing() -> bool:
+	return _processing
+
+
 # ===========================================================================
 # 公開 API
 # ===========================================================================
@@ -315,7 +319,7 @@ func _cue_skill_effect(event: Dictionary, is_me: bool,
 				anim_nodes.append(tween)
 		elif cue_action == "shuffle":
 			GameLog.log_event("ANIM", "shuffle_start", {})
-			var node: Node = _fire_cue_shuffle(cue_dict)
+			var node: Node = _fire_cue_shuffle(cue_dict, cs)
 			if node != null:
 				anim_nodes.append(node)
 
@@ -502,9 +506,17 @@ func _find_field_slot_xform(iid: int, cs: ClientState, is_stage: bool, filter_pl
 
 ## 裏向きカード2枚を画面中央で上下にバウンスさせるシャッフル演出。
 ## 自己破棄型 Node を返す。
-func _fire_cue_shuffle(cue_dict: Dictionary) -> Node:
+func _fire_cue_shuffle(cue_dict: Dictionary, cs: ClientState = null) -> Node:
 	var center_pos := Vector2(810, 340)
 	var card_scale := Vector2(0.6, 0.6)
+	# to_zone が指定されていればその位置でシャッフル
+	var to_zone: String = cue_dict.get("to_zone", "")
+	if to_zone != "" and cs != null:
+		var to_player: int = cue_dict.get("to_player", -1)
+		var xf: Dictionary = _resolve_zone_xform(to_zone, to_player, -1, cs, {})
+		if not xf.is_empty():
+			center_pos = xf.get("pos", center_pos)
+			card_scale = xf.get("scale", card_scale)
 	var bounce_dist: float = 80.0
 	var bounce_count: int = cue_dict.get("bounce_count", 3)
 	var delay_sec: float = cue_dict.get("delay", 0.0)

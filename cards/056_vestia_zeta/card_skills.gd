@@ -6,8 +6,11 @@ extends BaseCardSkill
 func _skill_0(ctx: SkillContext) -> SkillResult:
 	var opp: int = 1 - ctx.player
 	if ctx.phase == 0:
-		# 自身を相手手札に
+		# 自身を相手手札へ飛ばす
+		ctx.emit_cue(AnimationCue.find_card(ctx.source_instance_id).move().to_op_hand())
 		ZoneOps.move_to_hand(ctx.state, ctx.source_instance_id, opp, ctx.recorder)
+		# シャッフル演出（相手手札の位置で）
+		ctx.emit_cue(AnimationCue.make_card(ctx.source_instance_id).shuffle().to_op_hand().with_delay(0.4))
 		# 相手手札が空なら終了
 		if ctx.state.hands[opp].is_empty():
 			return SkillResult.done()
@@ -24,14 +27,19 @@ func _skill_0(ctx: SkillContext) -> SkillResult:
 			zones.append("backstage")
 		if zones.is_empty():
 			# 場に出せない → 帰宅
+			ctx.emit_cue(AnimationCue.find_card(stolen).move().from_op_hand().to_home())
 			ZoneOps.move_to_home(ctx.state, stolen, ctx.recorder)
 			return SkillResult.done()
-		return SkillResult.waiting(Enums.ChoiceType.SELECT_ZONE, zones)
+		return SkillResult.waiting(Enums.ChoiceType.SELECT_ZONE, zones,
+			1, 1, "play_preview:%d" % stolen)
 	else:
 		var stolen: int = ctx.data.get("stolen_card", -1)
 		var target: String = ctx.choice_result
 		if target == "stage":
+			ctx.emit_cue(AnimationCue.find_card(stolen).move().from_op_hand().to_my_stage())
 			ZoneOps.play_to_stage_from_zone(ctx.state, ctx.player, stolen, ctx.recorder)
+			return SkillResult.done_and_trigger_play(stolen, ctx.player)
 		elif target == "backstage":
+			ctx.emit_cue(AnimationCue.find_card(stolen).move().from_op_hand().to_my_backstage().face_up(false))
 			ZoneOps.play_to_backstage_from_zone(ctx.state, ctx.player, stolen, ctx.recorder)
 		return SkillResult.done()
