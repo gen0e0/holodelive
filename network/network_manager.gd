@@ -1,5 +1,8 @@
 extends Node
 
+## ネットワーク接続管理。ENet ピア管理と peer_id ↔ player_index マッピングのみ。
+## ゲームロジックは GameRoom (ServerContext + GameBridge) が担当する。
+
 signal player_connected(peer_id: int)
 signal player_disconnected(peer_id: int)
 signal connection_failed()
@@ -9,9 +12,6 @@ signal game_ready()
 var peer: ENetMultiplayerPeer = null
 var is_host: bool = false
 var _peer_to_player: Dictionary = {}  # {peer_id: int -> player_index: int}
-
-var _server: GameServer = null
-var _client: GameClient = null
 
 
 func host_game(port: int = 7000) -> Error:
@@ -29,15 +29,6 @@ func host_game(port: int = 7000) -> Error:
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-
-	# Create server + client for host
-	_server = GameServer.new()
-	_server.name = "GameServer"
-	add_child(_server)
-
-	_client = GameClient.new()
-	_client.name = "GameClient"
-	add_child(_client)
 
 	print("[NetworkManager] Hosting on port %d" % port)
 	return OK
@@ -57,22 +48,11 @@ func join_game(address: String, port: int = 7000) -> Error:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
-	_client = GameClient.new()
-	_client.name = "GameClient"
-	add_child(_client)
-
 	print("[NetworkManager] Joining %s:%d" % [address, port])
 	return OK
 
 
 func disconnect_game() -> void:
-	if _server:
-		_server.queue_free()
-		_server = null
-	if _client:
-		_client.queue_free()
-		_client = null
-
 	if peer:
 		peer.close()
 		peer = null
@@ -107,14 +87,6 @@ func get_peer_id_for_player(player_index: int) -> int:
 	return -1
 
 
-func get_server() -> GameServer:
-	return _server
-
-
-func get_client() -> GameClient:
-	return _client
-
-
 # =============================================================================
 # Internal callbacks
 # =============================================================================
@@ -131,15 +103,8 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	print("[NetworkManager] Peer disconnected: %d" % peer_id)
-	var player_index: int = _peer_to_player.get(peer_id, -1)
 	_peer_to_player.erase(peer_id)
 	player_disconnected.emit(peer_id)
-
-	# Hand off to CPU if the game is in progress
-	if _server and player_index >= 0:
-		print("[NetworkManager] Handing player %d to CPU" % player_index)
-		_server.set_cpu_player(player_index)
-		_server.check_cpu_needs_action()
 
 
 func _on_connected_to_server() -> void:

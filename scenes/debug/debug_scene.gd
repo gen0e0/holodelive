@@ -1,7 +1,9 @@
 extends Control
 
-# --- セッション ---
-var session: LocalGameSession
+const _GameRoomScene: PackedScene = preload("res://scenes/game/game_room.tscn")
+
+# --- ゲームルーム ---
+var _game_room: GameRoom
 
 # --- UI ノード ---
 @onready var _btn_restart: Button = %BtnRestart
@@ -35,7 +37,6 @@ var _choice_data: Dictionary = {}
 var _auto_epoch: int = 0
 var _zone_overrides: Dictionary = {}  # e.g. {"h0": [6, 3], "s1": [40]}
 var _auto_queue: Array = []  # CLI自動行動キュー Array[Dictionary]
-var _p0_controller: HumanPlayerController
 var _cpu_both: bool = false   # 両プレイヤーCPU（CLIテスト用）
 var _cpu_none: bool = false   # 両プレイヤー人間（ローカル2人対戦）
 var _max_turns: int = 0       # ターン制限（0=無制限）
@@ -82,10 +83,16 @@ func _init_and_start() -> void:
 		_rng.randomize()
 	_seed_display.text = str(_rng.seed)
 
-	session = LocalGameSession.new()
-	session.rng = _rng
-	session.game_started.connect(_on_game_started)
-	session.game_over.connect(_on_game_over)
+	# GameRoom インスタンス化
+	if _game_room != null:
+		_game_room.queue_free()
+	_game_room = _GameRoomScene.instantiate()
+	add_child(_game_room)
+	_game_room.setup_local(_rng)
+
+	var ctx: ServerContext = _game_room.server_context
+	_game_room.bridge.game_started_received.connect(_on_game_started)
+	_game_room.bridge.game_over_received.connect(_on_game_over)
 
 	_current_actions = []
 	_waiting_choice = false
@@ -95,43 +102,34 @@ func _init_and_start() -> void:
 	_log_display.clear()
 	_btn_send.disabled = true
 
-	# PlayerController を start_game 前に登録（Callable で state/registry を遅延取得）
-	var get_state: Callable = func() -> GameState: return session.state
-	var get_registry: Callable = func() -> CardRegistry: return session.registry
+	# Bridge シグナルでアクション/チョイスを受信（テキストログ用）
+	_game_room.bridge.actions_received.connect(_on_bridge_actions_received)
+	_game_room.bridge.choice_requested.connect(_on_bridge_choice_received)
 
-	# P0: 常に HumanPlayerController（cpu=both でも UI フロー経由）
-	_p0_controller = HumanPlayerController.new()
-	_p0_controller.actions_presented.connect(_on_actions_received)
-	_p0_controller.choice_presented.connect(_on_choice_requested)
-	session.set_player_controller(0, _p0_controller)
-
-	# P1: cpu=none なら HumanPlayerController、それ以外は CPU
-	if _cpu_none:
-		var p1_human := HumanPlayerController.new()
-		session.set_player_controller(1, p1_human)
-		_ensure_game_screens()
-		_game_screen_p0.connect_session(session, _p0_controller, 0)
-		_game_screen_p1.connect_session(session, p1_human, 1)
-	else:
-		session.set_player_controller(1, CpuPlayerController.new(
+	# P1: CPU の場合のみコントローラ登録（cpu=none なら両方 bridge 経由）
+	if not _cpu_none:
+		var get_state: Callable = func() -> GameState: return ctx.state
+		var get_registry: Callable = func() -> CardRegistry: return ctx.registry
+		ctx.set_player_controller(1, CpuPlayerController.new(
 			RandomStrategy.new(_rng), get_state, get_registry, get_tree(), 0.0))
-		_ensure_game_screens()
-		_game_screen_p0.connect_session(session, _p0_controller, 0)
-		_game_screen_p1.connect_session(session, null, 1)
+
+	_ensure_game_screens()
+	_game_screen_p0.connect_game_room(_game_room, 0)
+	_game_screen_p1.connect_game_room(_game_room, 1)
 
 	if _max_turns > 0:
-		session.max_turns = _max_turns
+		ctx.max_turns = _max_turns
 
 	_log("[color=yellow]--- Game Starting (seed: %d) ---[/color]" % _rng.seed)
-	session.start_game()
+	ctx.start_game()
 
 
 func _on_restart_pressed() -> void:
-	if session != null:
+	if _game_room != null:
 		if _game_screen_p0 != null:
-			_game_screen_p0.disconnect_session()
+			_game_screen_p0.disconnect_game_room()
 		if _game_screen_p1 != null:
-			_game_screen_p1.disconnect_session()
+			_game_screen_p1.disconnect_game_room()
 	_init_and_start()
 
 
@@ -175,13 +173,25 @@ func _on_game_started() -> void:
 		_zone_overrides = {}
 
 
+func _on_bridge_actions_received(player: int, actions: Array) -> void:
+	if player != 0:
+		return
+	_on_actions_received(actions)
+
+
+func _on_bridge_choice_received(player: int, choice_data: Dictionary) -> void:
+	if player != 0:
+		return
+	_on_choice_requested(choice_data)
+
+
 func _on_actions_received(actions: Array) -> void:
 	_auto_epoch += 1
 	_current_actions = actions
 	_waiting_choice = false
 	_btn_send.disabled = false
 
-	var cs: ClientState = session.get_client_state()
+	var cs: ClientState = _get_client_state()
 	var phase_name: String = DisplayHelper.get_phase_name(cs.phase) if cs else "?"
 	_log("[color=green]Available actions (%s):[/color]" % phase_name)
 	for i in range(_current_actions.size()):
@@ -237,7 +247,7 @@ func _on_choice_requested(choice_data_arg: Dictionary) -> void:
 
 func _on_game_over(winner: int) -> void:
 	_auto_epoch += 1
-	var cs: ClientState = session.get_client_state()
+	var cs: ClientState = _get_client_state()
 	_log("")
 	_log("[color=yellow]========================================[/color]")
 	if winner >= 0:
@@ -253,11 +263,10 @@ func _on_game_over(winner: int) -> void:
 	# cpu=both 時はプロセスを自動終了（ログフラッシュのため1フレーム待つ）
 	if _cpu_both:
 		if _game_screen_p0 != null:
-			_game_screen_p0.disconnect_session()
+			_game_screen_p0.disconnect_game_room()
 		if _game_screen_p1 != null:
-			_game_screen_p1.disconnect_session()
-		session = null
-		_p0_controller = null
+			_game_screen_p1.disconnect_game_room()
+		_game_room = null
 		await get_tree().process_frame
 		get_tree().quit(0 if winner >= 0 else 1)
 
@@ -358,20 +367,20 @@ func _handle_choice_input(num: int) -> void:
 	_do_submit_choice(choice_index, chosen_value)
 
 
-## アクション送信: GameScreen 経由（UI フロー）or 直接送信
+## アクション送信: GameScreen 経由（UI フロー）or Bridge 直接送信
 func _do_submit_action(action: Dictionary) -> void:
 	if _game_screen_p0 != null:
 		_game_screen_p0.auto_respond_action(action)
 	else:
-		_p0_controller.submit_action(action)
+		_game_room.bridge.send_action(action, 0)
 
 
-## チョイス送信: GameScreen 経由（UI フロー）or 直接送信
+## チョイス送信: GameScreen 経由（UI フロー）or Bridge 直接送信
 func _do_submit_choice(choice_idx: int, value: Variant) -> void:
 	if _game_screen_p0 != null:
 		_game_screen_p0.auto_respond_choice(choice_idx, value)
 	else:
-		_p0_controller.submit_choice(choice_idx, value)
+		_game_room.bridge.send_choice(choice_idx, value, 0)
 
 
 # =============================================================================
@@ -448,10 +457,11 @@ static func _parse_zone_args(args: Array) -> Dictionary:
 	return result
 
 
-## _zone_overrides に基づいて session.state のゾーンを上書きする。
+## _zone_overrides に基づいてゲーム状態のゾーンを上書きする。
 ## デッキにある同一 card_id のインスタンスを優先移動し、なければ新規生成。
 func _apply_zone_overrides() -> void:
-	var state: GameState = session.state
+	var ctx: ServerContext = _game_room.server_context
+	var state: GameState = ctx.state
 	_log("[color=cyan][ZoneOverride] Applying overrides...[/color]")
 
 	# デッキ先頭指定は先に処理（他のゾーン配置でデッキから抜かれる前に順序を確保）
@@ -511,7 +521,7 @@ func _apply_zone_overrides() -> void:
 				"h":
 					state.home.append(instance_id)
 
-			var card_def: CardDef = session.registry.get_card(actual_card_id)
+			var card_def: CardDef = ctx.registry.get_card(actual_card_id)
 			var card_name: String = card_def.nickname if card_def else "???"
 			var guest_label: String = " [guest]" if guest else ""
 			var zone_name: String = {"p": "Hand", "s": "Stage", "b": "Backstage", "h": "Home"}[zone_char]
@@ -545,7 +555,7 @@ func _apply_deck_override(state: GameState, entries: Array) -> void:
 			# デッキにない場合は新規生成して先頭に挿入
 			var iid: int = state.create_instance(card_id)
 			state.deck.insert(0, iid)
-		var card_def: CardDef = session.registry.get_card(card_id)
+		var card_def: CardDef = _game_room.server_context.registry.get_card(card_id)
 		var card_name: String = card_def.nickname if card_def else "???"
 		_log("[color=cyan][ZoneOverride] #%d %s → Deck top[/color]" % [card_id, card_name])
 
@@ -598,10 +608,10 @@ const ZONE_KEYS: Array[String] = ["Hand", "Stage", "Backstage"]
 
 func _on_card_id_text_changed(new_text: String) -> void:
 	var text: String = new_text.strip_edges()
-	if session == null or not text.is_valid_int():
+	if _game_room == null or not text.is_valid_int():
 		_card_preview.text = ""
 		return
-	var card_def: CardDef = session.registry.get_card(text.to_int())
+	var card_def: CardDef = _game_room.server_context.registry.get_card(text.to_int())
 	_card_preview.text = card_def.nickname if card_def else ""
 
 
@@ -610,16 +620,17 @@ func _on_card_id_submitted(_text: String) -> void:
 
 
 func _on_add_card_pressed() -> void:
-	if session == null:
-		_log("[color=red]No active session.[/color]")
+	if _game_room == null:
+		_log("[color=red]No active game.[/color]")
 		return
 	var text: String = _card_id_input.text.strip_edges()
 	if not text.is_valid_int():
 		_log("[color=red]Invalid card ID.[/color]")
 		return
+	var ctx: ServerContext = _game_room.server_context
 	var card_id: int = text.to_int()
-	var state: GameState = session.state
-	var card_def: CardDef = session.registry.get_card(card_id)
+	var state: GameState = ctx.state
+	var card_def: CardDef = ctx.registry.get_card(card_id)
 	if card_def == null:
 		_log("[color=red]Card ID %d not found in registry.[/color]" % card_id)
 		return
@@ -638,17 +649,18 @@ func _on_add_card_pressed() -> void:
 
 	_log("[color=cyan][ZoneEdit] Added %s (inst#%d) to P%d %s[/color]" % [
 		card_def.nickname, instance_id, p, ZONE_KEYS[zone_idx]])
-	session._flush_updates()
-	session._request_actions()
+	ctx._flush_and_send()
+	ctx._request_actions()
 
 
 func _on_clear_zone_pressed() -> void:
-	if session == null:
-		_log("[color=red]No active session.[/color]")
+	if _game_room == null:
+		_log("[color=red]No active game.[/color]")
 		return
+	var ctx: ServerContext = _game_room.server_context
 	var p: int = _player_select.selected
 	var zone_idx: int = _zone_select.selected
-	var state: GameState = session.state
+	var state: GameState = ctx.state
 
 	match zone_idx:
 		0:  # Hand
@@ -659,8 +671,8 @@ func _on_clear_zone_pressed() -> void:
 			state.backstages[p] = -1
 
 	_log("[color=cyan][ZoneEdit] Cleared P%d %s[/color]" % [p, ZONE_KEYS[zone_idx]])
-	session._flush_updates()
-	session._request_actions()
+	ctx._flush_and_send()
+	ctx._request_actions()
 
 
 # =============================================================================
@@ -750,7 +762,7 @@ func _schedule_auto_queue_choice(entry: Dictionary) -> void:
 		# valid_targets から card_id に一致する instance_id を探す
 		for target in valid_targets:
 			if target is int and target >= 0:
-				var inst: CardInstance = session.state.instances.get(target)
+				var inst: CardInstance = _game_room.server_context.state.instances.get(target)
 				if inst != null and inst.card_id == card_id:
 					# ゾーン指定があれば次の SELECT_ZONE 用にキューに挿入
 					if entry.has("zone"):
@@ -783,7 +795,7 @@ func _find_play_action(card_id: int, target: String) -> Dictionary:
 		if a.get("target", "") != target:
 			continue
 		var iid: int = a.get("instance_id", -1)
-		var inst: CardInstance = session.state.instances.get(iid)
+		var inst: CardInstance = _game_room.server_context.state.instances.get(iid)
 		if inst != null and inst.card_id == card_id:
 			return a
 	return {}
@@ -794,6 +806,17 @@ func _find_pass_action() -> Dictionary:
 		if a.get("type") == Enums.ActionType.PASS:
 			return a
 	return {}
+
+
+# =============================================================================
+# ヘルパー
+# =============================================================================
+
+func _get_client_state() -> ClientState:
+	if _game_room == null:
+		return null
+	var ctx: ServerContext = _game_room.server_context
+	return StateSerializer.serialize_for_player(ctx.state, 0, ctx.registry)
 
 
 # =============================================================================

@@ -2,7 +2,7 @@ class_name GameScreen
 extends Control
 
 ## GUI ルートコンポーネント。
-## GameSession のシグナルを受けて TopBar / FieldLayout / CardLayer を更新する。
+## GameRoom の GameBridge シグナルを受けて TopBar / FieldLayout / CardLayer を更新する。
 ## 内部は 1920x1080 固定座標で描画し、親サイズに合わせてスケーリングする。
 ##
 ## tscn から使用する場合、以下のノード構成が必要:
@@ -17,9 +17,9 @@ const DESIGN_W: float = 1920.0
 const DESIGN_H: float = 1080.0
 const _GameStartBannerScene: PackedScene = preload("res://scenes/gui/animation/game_start_banner.tscn")
 
-var session: GameSession
-var _my_controller: HumanPlayerController
+var _game_room: GameRoom
 var _my_player: int = 0
+var _cached_client_state: ClientState
 
 var _current_actions: Array = []
 var _selected_instance_id: int = -1
@@ -125,85 +125,101 @@ func _fit_content() -> void:
 	)
 
 
-func connect_session(s: GameSession, my_controller: HumanPlayerController = null,
-		my_player: int = 0) -> void:
-	session = s
-	_my_controller = my_controller
+func connect_game_room(room: GameRoom, my_player: int = 0) -> void:
+	_game_room = room
 	_my_player = my_player
 	_field_layout.my_player = my_player
 
-	if session is LocalGameSession:
-		var local: LocalGameSession = session as LocalGameSession
-		local.set_defer_interactions(true)
-		local.add_viewer(my_player, _on_state_updated)
-	else:
-		session.state_updated.connect(_on_state_updated)
+	# ServerContext がある場合のみ（ゲストでは不在）
+	if room.server_context != null:
+		room.server_context.add_viewer(my_player)
 
-	session.game_started.connect(_on_game_started)
-	session.game_over.connect(_on_game_over)
-
-	if _my_controller:
-		_my_controller.actions_presented.connect(_on_actions_received)
-		_my_controller.choice_presented.connect(_on_choice_requested)
-	else:
-		session.actions_received.connect(_on_actions_received)
-		session.choice_requested.connect(_on_choice_requested)
+	# Bridge シグナル接続
+	room.bridge.state_received.connect(_on_bridge_state_received)
+	room.bridge.game_started_received.connect(_on_game_started)
+	room.bridge.game_over_received.connect(_on_game_over)
+	room.bridge.actions_received.connect(_on_bridge_actions_received)
+	room.bridge.choice_requested.connect(_on_bridge_choice_received)
 
 	# 初回描画
-	if session is LocalGameSession:
-		var local: LocalGameSession = session as LocalGameSession
-		if local.state != null:
-			var cs: ClientState = StateSerializer.serialize_for_player(
-				local.state, my_player, local.registry)
-			_director.initialize(cs)
-	else:
-		var cs: ClientState = session.get_client_state()
-		if cs != null:
-			_director.initialize(cs)
+	if room.server_context != null and room.server_context.state != null:
+		var cs: ClientState = StateSerializer.serialize_for_player(
+			room.server_context.state, my_player, room.server_context.registry)
+		_cached_client_state = cs
+		_director.initialize(cs)
 
 
-func _get_client_state_for_choice() -> ClientState:
-	if session != null:
-		return session.get_client_state()
-	return null
-
-
-func disconnect_session() -> void:
-	if session != null:
-		if session is LocalGameSession:
-			var local: LocalGameSession = session as LocalGameSession
-			local.set_defer_interactions(false)
-			local.remove_viewer(_on_state_updated)
-		else:
-			if session.state_updated.is_connected(_on_state_updated):
-				session.state_updated.disconnect(_on_state_updated)
-		if session.actions_received.is_connected(_on_actions_received):
-			session.actions_received.disconnect(_on_actions_received)
-		if session.choice_requested.is_connected(_on_choice_requested):
-			session.choice_requested.disconnect(_on_choice_requested)
-		if session.game_started.is_connected(_on_game_started):
-			session.game_started.disconnect(_on_game_started)
-		if session.game_over.is_connected(_on_game_over):
-			session.game_over.disconnect(_on_game_over)
-	if _my_controller:
-		if _my_controller.actions_presented.is_connected(_on_actions_received):
-			_my_controller.actions_presented.disconnect(_on_actions_received)
-		if _my_controller.choice_presented.is_connected(_on_choice_requested):
-			_my_controller.choice_presented.disconnect(_on_choice_requested)
-		_my_controller = null
-	session = null
+func disconnect_game_room() -> void:
+	if _game_room == null:
+		return
+	if _game_room.server_context != null:
+		_game_room.server_context.remove_viewer(_my_player)
+	if _game_room.bridge.state_received.is_connected(_on_bridge_state_received):
+		_game_room.bridge.state_received.disconnect(_on_bridge_state_received)
+	if _game_room.bridge.game_started_received.is_connected(_on_game_started):
+		_game_room.bridge.game_started_received.disconnect(_on_game_started)
+	if _game_room.bridge.game_over_received.is_connected(_on_game_over):
+		_game_room.bridge.game_over_received.disconnect(_on_game_over)
+	if _game_room.bridge.actions_received.is_connected(_on_bridge_actions_received):
+		_game_room.bridge.actions_received.disconnect(_on_bridge_actions_received)
+	if _game_room.bridge.choice_requested.is_connected(_on_bridge_choice_received):
+		_game_room.bridge.choice_requested.disconnect(_on_bridge_choice_received)
+	_game_room = null
+	_cached_client_state = null
 	_director.cancel_all()
 	_clear_action_state()
 	_choice_manager.cancel()
 
 
+func _get_client_state_for_choice() -> ClientState:
+	return _cached_client_state
+
+
+func _on_bridge_state_received(player: int, client_state: Variant, event_entries: Array) -> void:
+	if player != _my_player:
+		return
+	# ネットワーク RPC 経由では Dictionary が届く → ClientState に復元
+	if client_state is Dictionary:
+		_cached_client_state = ClientState.from_dict(client_state)
+	else:
+		_cached_client_state = client_state as ClientState
+	# event_entries 内の snapshot も復元
+	var restored: Array = []
+	for entry in event_entries:
+		if entry is Dictionary and entry.has("snapshot"):
+			var snap: Variant = entry.get("snapshot")
+			if snap is Dictionary:
+				restored.append({
+					"event": entry.get("event", {}),
+					"snapshot": ClientState.from_dict(snap),
+				})
+			else:
+				restored.append(entry)
+		else:
+			restored.append(entry)
+	_on_state_updated(_cached_client_state, restored)
+
+
+func _on_bridge_actions_received(player: int, actions: Array) -> void:
+	if player != _my_player:
+		return
+	_on_actions_received(actions)
+
+
+func _on_bridge_choice_received(player: int, choice_data: Dictionary) -> void:
+	if player != _my_player:
+		return
+	_on_choice_requested(choice_data)
+
+
 func _on_state_updated(client_state: ClientState, event_entries: Array) -> void:
+	_cached_client_state = client_state
 	_director.enqueue_state_update(client_state, event_entries)
 
 
 func _on_state_processed() -> void:
-	if session != null:
-		session.flush_pending_interaction()
+	if _game_room != null and _game_room.server_context != null:
+		_game_room.server_context.flush_pending_interaction()
 
 
 func _on_game_started() -> void:
@@ -281,7 +297,7 @@ func _handle_actions_received(actions: Array) -> void:
 
 func _show_action_phase_buttons() -> void:
 	_clear_action_buttons()
-	var cs: ClientState = session.get_client_state()
+	var cs: ClientState = _cached_client_state
 	if cs == null:
 		return
 
@@ -447,14 +463,10 @@ func _on_choice_resolved(choice_idx: int, value: Variant) -> void:
 # ---------------------------------------------------------------------------
 
 func _send_action(action: Dictionary) -> void:
-	if _my_controller:
-		_my_controller.submit_action(action)
-	elif session != null:
-		session.send_action(action)
+	if _game_room != null:
+		_game_room.bridge.send_action(action, _my_player)
 
 
 func _send_choice(choice_idx: int, value: Variant) -> void:
-	if _my_controller:
-		_my_controller.submit_choice(choice_idx, value)
-	elif session != null:
-		session.send_choice(choice_idx, value)
+	if _game_room != null:
+		_game_room.bridge.send_choice(choice_idx, value, _my_player)

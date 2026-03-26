@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/game/game_room.gd" id="1_room"]
+[ext_resource type="Script" path="res://network/server_context.gd" id="2_server"]
+[ext_resource type="Script" path="res://network/game_bridge.gd" id="3_bridge"]
+
+[node name="GameRoom" type="Node"]
+script = ExtResource("1_room")
+
+[node name="ServerContext" type="Node" parent="."]
+script = ExtResource("2_server")
+
+[node name="GameBridge" type="Node" parent="."]
+script = ExtResource("3_bridge")
