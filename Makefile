@@ -1,6 +1,7 @@
-.PHONY: test cache debug host join
+.PHONY: test cache debug host join create-sprites
 
 GODOT_BIN ?= /usr/local/bin/godot
+ASEPRITE_BIN ?= /Applications/Aseprite.app/Contents/MacOS/aseprite
 
 ## Godot クラスキャッシュ再構築
 cache:
@@ -30,3 +31,28 @@ host:
 
 join:
 	$(GODOT_BIN) -- --join=$(if $(ip),$(ip),127.0.0.1)
+
+## Aseprite → SpriteSheet 変換
+## artwork/sd/*.aseprite → cards/NNN_***/sd.json + sd.png
+## 使い方:
+##   make create-sprites              # 全ファイル変換
+create-sprites:
+	@for f in artwork/sd/*.aseprite; do \
+		id=$$(basename "$$f" .aseprite | grep -oE '^[0-9]+'); \
+		dir=$$(ls -d --color=never cards/$${id}_* 2>/dev/null | head -1); \
+		if [ -z "$$dir" ]; then \
+			echo "WARN: No card dir for ID $$id, skipping $$f"; \
+			continue; \
+		fi; \
+		echo "Export: $$f -> $$dir/sd.*"; \
+		$(ASEPRITE_BIN) -b \
+			--all-layers \
+			--split-layers \
+			"$$f" \
+			--sheet "$$dir/sd.png" \
+			--data "$$dir/sd.json" \
+			--format json-hash \
+			--filename-format "{title} ({group}/{layer})"; \
+	done
+	@echo "Rebuilding Godot cache..."
+	@$(GODOT_BIN) --headless --editor --quit
