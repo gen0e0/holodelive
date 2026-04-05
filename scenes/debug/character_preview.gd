@@ -6,6 +6,9 @@ extends Control
 var _registry: CardRegistry
 var _id_input: LineEdit
 var _btn_update: Button
+var _btn_idle: Button
+var _btn_talk: Button
+var _btn_wave: Button
 var _expression_options: OptionButton
 var _sd_character: SDCharacter
 var _info_label: RichTextLabel
@@ -90,6 +93,24 @@ func _build_ui() -> void:
 
 	left.add_child(HSeparator.new())
 
+	# アニメーション
+	_btn_idle = Button.new()
+	_btn_idle.text = "Idle"
+	_btn_idle.pressed.connect(_on_idle_pressed)
+	left.add_child(_btn_idle)
+
+	_btn_talk = Button.new()
+	_btn_talk.text = "Talk"
+	_btn_talk.pressed.connect(_on_talk_pressed)
+	left.add_child(_btn_talk)
+
+	_btn_wave = Button.new()
+	_btn_wave.text = "Wave"
+	_btn_wave.pressed.connect(_on_wave_pressed)
+	left.add_child(_btn_wave)
+
+	left.add_child(HSeparator.new())
+
 	# 情報表示
 	_info_label = RichTextLabel.new()
 	_info_label.bbcode_enabled = true
@@ -166,6 +187,11 @@ func _show_character(card_id: int) -> void:
 	_drag_offset = Vector2.ZERO
 	_center_character()
 
+	# デフォルトでIdle開始
+	_sd_character.play_idle()
+	_btn_idle.text = "Stop"
+	_btn_talk.text = "Talk"
+
 
 func _on_update_pressed() -> void:
 	var text: String = _id_input.text.strip_edges()
@@ -183,6 +209,32 @@ func _on_text_submitted(_text: String) -> void:
 func _on_expression_selected(index: int) -> void:
 	var expr_name: String = _expression_options.get_item_text(index)
 	_sd_character.set_expression(expr_name)
+
+
+func _on_idle_pressed() -> void:
+	_sd_character.stop_animation()
+	_btn_talk.text = "Talk"
+	if _btn_idle.text == "Idle":
+		_sd_character.play_idle()
+		_btn_idle.text = "Stop"
+	else:
+		_btn_idle.text = "Idle"
+
+
+func _on_talk_pressed() -> void:
+	_sd_character.stop_animation()
+	_btn_idle.text = "Idle"
+	if _btn_talk.text == "Talk":
+		_sd_character.play_talking()
+		_btn_talk.text = "Stop"
+	else:
+		_btn_talk.text = "Talk"
+
+
+func _on_wave_pressed() -> void:
+	_sd_character.play_emote_wave()
+	_btn_idle.text = "Stop"
+	_btn_talk.text = "Talk"
 
 
 func _on_zoom_input(event: InputEvent) -> void:
