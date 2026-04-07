@@ -9,6 +9,7 @@ var _btn_update: Button
 var _btn_idle: Button
 var _btn_talk: Button
 var _btn_wave: Button
+var _btn_damage: Button
 var _expression_options: OptionButton
 var _sd_character: SDCharacter
 var _info_label: RichTextLabel
@@ -108,6 +109,11 @@ func _build_ui() -> void:
 	_btn_wave.text = "手を振る"
 	_btn_wave.pressed.connect(_on_wave_pressed)
 	left.add_child(_btn_wave)
+
+	_btn_damage = Button.new()
+	_btn_damage.text = "ダメージ"
+	_btn_damage.pressed.connect(_on_damage_pressed)
+	left.add_child(_btn_damage)
 
 	left.add_child(HSeparator.new())
 
@@ -234,6 +240,12 @@ func _on_talk_pressed() -> void:
 func _on_wave_pressed() -> void:
 	_sd_character.play_emote_wave()
 	_btn_idle.text = "停止"
+	_btn_talk.text = "会話"
+
+
+func _on_damage_pressed() -> void:
+	_sd_character.play_expression_anim("damage")
+	_btn_idle.text = "待機"
 	_btn_talk.text = "会話"
 
 

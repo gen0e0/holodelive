@@ -87,7 +87,7 @@ func test_round_cleanup_triggers_modifier_cleanup() -> void:
 	ctrl.state.instances[3].modifiers.append(mod)
 
 	# ラウンドクリーンアップ実行
-	ctrl._do_round_cleanup()
+	ctrl._do_round_cleanup(0)
 
 	# ステージカードが離脱したので Modifier がクリーンアップされている
 	assert_int(ctrl.state.instances[3].modifiers.size()).is_equal(0)

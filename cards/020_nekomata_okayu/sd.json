@@ -63,7 +63,7 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (スキル@/口_閉じ@)": {
+   "020_猫又おかゆ (ダメージ@/口_閉じ@)": {
     "frame": { "x": 0, "y": 1920, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
@@ -71,7 +71,7 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (スキル@/口_開き@)": {
+   "020_猫又おかゆ (ダメージ@/口_開き@)": {
     "frame": { "x": 0, "y": 2160, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
@@ -79,7 +79,7 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (スキル@/目_閉じ@)": {
+   "020_猫又おかゆ (ダメージ@/目_閉じ@)": {
     "frame": { "x": 0, "y": 2400, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
@@ -87,7 +87,7 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (スキル@/目_開き@)": {
+   "020_猫又おかゆ (ダメージ@/目_開き@)": {
     "frame": { "x": 0, "y": 2640, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
@@ -95,7 +95,7 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (頭@/アクセサリ@)": {
+   "020_猫又おかゆ (スキル@/口_閉じ@)": {
     "frame": { "x": 0, "y": 2880, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
@@ -103,8 +103,40 @@
     "sourceSize": { "w": 240, "h": 240 },
     "duration": 100
    },
-   "020_猫又おかゆ (/[参考]中心点_首の付け根)": {
+   "020_猫又おかゆ (スキル@/口_開き@)": {
     "frame": { "x": 0, "y": 3120, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "020_猫又おかゆ (スキル@/目_閉じ@)": {
+    "frame": { "x": 0, "y": 3360, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "020_猫又おかゆ (スキル@/目_開き@)": {
+    "frame": { "x": 0, "y": 3600, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "020_猫又おかゆ (頭@/アクセサリ@)": {
+    "frame": { "x": 0, "y": 3840, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "020_猫又おかゆ (/[参考]中心点_首の付け根)": {
+    "frame": { "x": 0, "y": 4080, "w": 240, "h": 240 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
@@ -117,7 +149,7 @@
   "version": "1.3.16.1-arm64",
   "image": "sd.png",
   "format": "RGBA8888",
-  "size": { "w": 240, "h": 3360 },
+  "size": { "w": 240, "h": 4320 },
   "scale": "1"
  }
 }

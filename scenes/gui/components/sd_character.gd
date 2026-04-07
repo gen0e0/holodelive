@@ -22,6 +22,7 @@ const LAYER_MAP: Dictionary = {
 const EXPRESSION_GROUP_MAP: Dictionary = {
 	"通常": "normal",
 	"スキル": "skill",
+	"ダメージ": "damage",
 	"ウィンク": "wink",
 	"勝利": "victory",
 	"負け": "lose",
@@ -92,8 +93,12 @@ const TALK_OPEN_MIN: float = 0.08
 const TALK_OPEN_MAX: float = 0.2
 const TALK_CLOSE_MIN: float = 0.03
 const TALK_CLOSE_MAX: float = 0.1
+const EXPR_ANIM_OPEN_MIN: float = 0.1
+const EXPR_ANIM_OPEN_MAX: float = 0.25
+const EXPR_ANIM_CLOSE_MIN: float = 0.05
+const EXPR_ANIM_CLOSE_MAX: float = 0.15
 
-var _anim_state: String = "none"  # "none" | "idle" | "talking"
+var _anim_state: String = "none"  # "none" | "idle" | "talking" | "expression"
 var _breathing_time: float = 0.0
 var _blink_timer: float = 0.0
 var _is_blinking: bool = false
@@ -101,6 +106,10 @@ var _blink_tween: Tween = null
 var _talk_timer: float = 0.0
 var _mouth_is_open: bool = false
 var _emote_tween: Tween = null
+var _expr_eyes_timer: float = 0.0
+var _expr_mouth_timer: float = 0.0
+var _expr_eyes_is_open: bool = true
+var _expr_mouth_is_open: bool = false
 
 # スプライトシートデータ
 var _spritesheet_texture: Texture2D = null
@@ -189,8 +198,21 @@ func play_talking() -> void:
 	_start_animation("talking")
 
 
+func play_expression_anim(expression_name: String) -> void:
+	"""表情を切り替え、目と口の2パターンアニメーションを行う。"""
+	set_expression(expression_name)
+	_anim_state = "expression"
+	_breathing_time = 0.0
+	_expr_eyes_is_open = true
+	_expr_mouth_is_open = false
+	_expr_eyes_timer = randf_range(EXPR_ANIM_OPEN_MIN, EXPR_ANIM_OPEN_MAX)
+	_expr_mouth_timer = randf_range(EXPR_ANIM_CLOSE_MIN, EXPR_ANIM_CLOSE_MAX)
+	set_process(true)
+
+
 func play_emote_wave() -> void:
 	"""手を振るエモーション。完了後にidleに戻る。"""
+	set_expression("skill")
 	_start_animation("idle")
 	_kill_emote_tween()
 
@@ -273,6 +295,9 @@ func stop_animation() -> void:
 	_is_blinking = false
 	_mouth_is_open = false
 	_kill_emote_tween()
+	# 表情をnormalに戻す
+	if _expression_frames.has("normal"):
+		set_expression("normal")
 	_restore_eyes_open()
 	_restore_mouth_closed()
 
@@ -291,11 +316,16 @@ func _process(delta: float) -> void:
 	if _anim_state == "none":
 		return
 
-	# 呼吸: sin波で上下（idle / talking 共通）
+	# 呼吸: sin波で上下（全状態共通）
 	_breathing_time += delta
 	_head_node.position.y = head_offset.y + sin(_breathing_time * TAU / BREATH_PERIOD) * BREATH_AMPLITUDE
 
-	# 瞬き（idle / talking 共通）
+	# 表情アニメーション（expression のみ）
+	if _anim_state == "expression":
+		_update_expression_anim(delta)
+		return
+
+	# 瞬き（idle / talking）
 	if not _is_blinking:
 		_blink_timer -= delta
 		if _blink_timer <= 0.0:
@@ -367,6 +397,35 @@ func _has_blink_texture() -> bool:
 
 func _schedule_next_blink() -> void:
 	_blink_timer = randf_range(BLINK_INTERVAL_MIN, BLINK_INTERVAL_MAX)
+
+
+func _update_expression_anim(delta: float) -> void:
+	"""表情アニメーション: 目と口を独立してランダムに切り替える。"""
+	var parts: Dictionary = _expression_frames.get(_current_expression, {})
+
+	# 目の切り替え
+	if parts.has("eyes_open") and parts.has("eyes_closed"):
+		_expr_eyes_timer -= delta
+		if _expr_eyes_timer <= 0.0:
+			_expr_eyes_is_open = not _expr_eyes_is_open
+			if _expr_eyes_is_open:
+				_set_atlas(_eyes_sprite, parts["eyes_open"])
+				_expr_eyes_timer = randf_range(EXPR_ANIM_OPEN_MIN, EXPR_ANIM_OPEN_MAX)
+			else:
+				_set_atlas(_eyes_sprite, parts["eyes_closed"])
+				_expr_eyes_timer = randf_range(EXPR_ANIM_CLOSE_MIN, EXPR_ANIM_CLOSE_MAX)
+
+	# 口の切り替え
+	if parts.has("mouth_open") and parts.has("mouth_closed"):
+		_expr_mouth_timer -= delta
+		if _expr_mouth_timer <= 0.0:
+			_expr_mouth_is_open = not _expr_mouth_is_open
+			if _expr_mouth_is_open:
+				_set_atlas(_mouth_sprite, parts["mouth_open"])
+				_expr_mouth_timer = randf_range(EXPR_ANIM_OPEN_MIN, EXPR_ANIM_OPEN_MAX)
+			else:
+				_set_atlas(_mouth_sprite, parts["mouth_closed"])
+				_expr_mouth_timer = randf_range(EXPR_ANIM_CLOSE_MIN, EXPR_ANIM_CLOSE_MAX)
 
 
 func _toggle_mouth() -> void:

@@ -3,6 +3,7 @@ extends Control
 var _btn_single: Button
 var _btn_multi: Button
 var _btn_debug: Button
+var _btn_character: Button
 var _btn_settings: Button
 
 
@@ -78,6 +79,14 @@ func _build_ui() -> void:
 	_btn_debug.pressed.connect(_on_debug_pressed)
 	vbox.add_child(_btn_debug)
 
+	# Character Preview button
+	_btn_character = Button.new()
+	_btn_character.text = "キャラクタープレビュー"
+	_btn_character.custom_minimum_size.y = 50
+	_btn_character.add_theme_font_size_override("font_size", 20)
+	_btn_character.pressed.connect(_on_character_pressed)
+	vbox.add_child(_btn_character)
+
 	# Spacer
 	var spacer3 := Control.new()
 	spacer3.custom_minimum_size.y = 20
@@ -106,6 +115,10 @@ func _on_debug_pressed() -> void:
 
 func _on_multi_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/lobby/lobby_scene.tscn")
+
+
+func _on_character_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/debug/character_preview.tscn")
 
 
 func _on_settings_pressed() -> void:
