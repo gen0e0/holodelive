@@ -7,7 +7,9 @@
 reports/
 
 # Build output
-builds/
+builds/*
+!builds/.gitkeep
+!builds/.gdignore
 
 # Claude Code local settings
 .claude/settings.local.json
