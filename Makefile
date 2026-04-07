@@ -1,4 +1,4 @@
-.PHONY: test cache debug host join create-sprites export-win
+.PHONY: test cache debug host join create-sprites create-card-images export-win
 
 GODOT_BIN ?= /usr/local/bin/godot
 ASEPRITE_BIN ?= /Applications/Aseprite.app/Contents/MacOS/aseprite
@@ -56,6 +56,25 @@ create-sprites:
 	done
 	@echo "Rebuilding Godot cache..."
 	@$(GODOT_BIN) --headless --editor --quit
+
+## カード画像圧縮
+## artwork/cards/NNN_YYYY.png → cards/NNN_YYYY/img_card.png (リサイズ+圧縮)
+## 使い方:
+##   make create-card-images
+##   make create-card-images CARD_WIDTH=610   # 幅を指定（高さは比率維持）
+CARD_WIDTH ?= 610
+create-card-images:
+	@for f in artwork/cards/*.png; do \
+		id=$$(basename "$$f" .png | grep -oE '^[0-9]+'); \
+		dir=$$(ls -d --color=never cards/$${id}_* 2>/dev/null | head -1); \
+		if [ -z "$$dir" ]; then \
+			echo "WARN: No card dir for ID $$id, skipping $$f"; \
+			continue; \
+		fi; \
+		echo "Convert: $$f -> $$dir/img_card.png (width=$(CARD_WIDTH))"; \
+		magick "$$f" -resize $(CARD_WIDTH)x -strip -quality 95 "$$dir/img_card.png"; \
+	done
+	@echo "Done. Card images resized to width=$(CARD_WIDTH)."
 
 ## Windows exe エクスポート
 ## 使い方:

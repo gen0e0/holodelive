@@ -68,9 +68,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_so4tv")
 layout_mode = 0
 offset_left = -180.0
 offset_top = -80.0
-offset_right = 1040.0
-offset_bottom = 1485.0
-scale = Vector2(0.5, 0.5)
+offset_right = 430.0
+offset_bottom = 703.0
 mouse_filter = 2
 texture = ExtResource("2_vda0c")
 
