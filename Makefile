@@ -1,42 +1,32 @@
-.PHONY: test cache debug host join create-sprites create-card-images export-win
+.PHONY: help test cache debug host join create-sprites create-card-images export-win
+.DEFAULT_GOAL := help
 
 GODOT_BIN ?= /usr/local/bin/godot
 ASEPRITE_BIN ?= /Applications/Aseprite.app/Contents/MacOS/aseprite
 
-## Godot クラスキャッシュ再構築
-cache:
+help: ## ヘルプ表示
+	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | \
+		sed 's/:.*## /\t/' | \
+		while IFS=$$'\t' read -r target desc; do \
+			printf "  \033[36m%-24s\033[0m %s\n" "$$target" "$$desc"; \
+		done
+
+cache: ## Godot クラスキャッシュ再構築
 	$(GODOT_BIN) --headless --editor --quit
 
-## 全テスト実行
-test:
+test: ## 全テスト実行
 	GODOT_BIN=$(GODOT_BIN) ./addons/gdUnit4/runtest.sh -a test/
 
-## デバッグシーン起動
-## 使い方:
-##   make debug
-##   make debug test=preset_id
-##   make debug ARGS="p0=3,7 s1=47 auto=play:3:stage"
-##   make debug test=9 cpu=both max_turns=30
-##   make debug test=9 speed=3            # 3倍速
-##   make debug cpu=both max_turns=30 speed=100
-##   make debug cpu=none test=9          # ローカル2人対戦
-debug:
+debug: ## デバッグシーン起動 (test=ID cpu=both max_turns=N speed=N)
 	-$(GODOT_BIN) res://scenes/debug/debug_scene.tscn -- $(if $(test),test=$(test)) $(if $(cpu),cpu=$(cpu)) $(if $(max_turns),max_turns=$(max_turns)) $(if $(speed),speed=$(speed)) $(ARGS)
 
-## ネットワーク対戦テスト
-## Terminal 1: make host
-## Terminal 2: make join
-host:
+host: ## マルチプレイ ホスト起動
 	$(GODOT_BIN) -- --host
 
-join:
+join: ## マルチプレイ クライアント接続 (ip=ADDR)
 	$(GODOT_BIN) -- --join=$(if $(ip),$(ip),127.0.0.1)
 
-## Aseprite → SpriteSheet 変換
-## artwork/sd/*.aseprite → cards/NNN_***/sd.json + sd.png
-## 使い方:
-##   make create-sprites              # 全ファイル変換
-create-sprites:
+create-sprites: ## Aseprite → SpriteSheet 変換
 	@for f in artwork/sd/*.aseprite; do \
 		id=$$(basename "$$f" .aseprite | grep -oE '^[0-9]+'); \
 		dir=$$(ls -d --color=never cards/$${id}_* 2>/dev/null | head -1); \
@@ -57,13 +47,8 @@ create-sprites:
 	@echo "Rebuilding Godot cache..."
 	@$(GODOT_BIN) --headless --editor --quit
 
-## カード画像圧縮
-## artwork/cards/NNN_YYYY.png → cards/NNN_YYYY/img_card.png (リサイズ+圧縮)
-## 使い方:
-##   make create-card-images
-##   make create-card-images CARD_WIDTH=610   # 幅を指定（高さは比率維持）
 CARD_WIDTH ?= 610
-create-card-images:
+create-card-images: ## カード画像圧縮 (CARD_WIDTH=610)
 	@for f in artwork/cards/*.png; do \
 		id=$$(basename "$$f" .png | grep -oE '^[0-9]+'); \
 		dir=$$(ls -d --color=never cards/$${id}_* 2>/dev/null | head -1); \
@@ -76,10 +61,6 @@ create-card-images:
 	done
 	@echo "Done. Card images resized to width=$(CARD_WIDTH)."
 
-## Windows exe エクスポート
-## 使い方:
-##   make export-win
-##   make export-win OUT=builds/custom_name.exe
-export-win:
+export-win: ## Windows exe エクスポート (OUT=path)
 	@mkdir -p builds
 	$(GODOT_BIN) --headless --export-release "Windows Desktop" $(if $(OUT),$(OUT),builds/holodelive.exe)
