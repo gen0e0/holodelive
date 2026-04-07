@@ -21,6 +21,7 @@ const LAYER_MAP: Dictionary = {
 
 const EXPRESSION_GROUP_MAP: Dictionary = {
 	"通常": "normal",
+	"スキル": "skill",
 	"ウィンク": "wink",
 	"勝利": "victory",
 	"負け": "lose",

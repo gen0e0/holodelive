@@ -1,4 +1,4 @@
-.PHONY: test cache debug host join create-sprites
+.PHONY: test cache debug host join create-sprites export-win
 
 GODOT_BIN ?= /usr/local/bin/godot
 ASEPRITE_BIN ?= /Applications/Aseprite.app/Contents/MacOS/aseprite
@@ -56,3 +56,11 @@ create-sprites:
 	done
 	@echo "Rebuilding Godot cache..."
 	@$(GODOT_BIN) --headless --editor --quit
+
+## Windows exe エクスポート
+## 使い方:
+##   make export-win
+##   make export-win OUT=builds/custom_name.exe
+export-win:
+	@mkdir -p builds
+	$(GODOT_BIN) --headless --export-release "Windows Desktop" $(if $(OUT),$(OUT),builds/holodelive.exe)

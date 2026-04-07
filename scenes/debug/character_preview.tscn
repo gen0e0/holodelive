@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://d3jlfamy7jeax"]
 
-[ext_resource type="Script" path="res://scenes/debug/character_preview.gd" id="1"]
+[ext_resource type="Script" uid="uid://ctqfs0xt4f6l0" path="res://scenes/debug/character_preview.gd" id="1"]
 
 [node name="CharacterPreview" type="Control"]
 layout_mode = 3

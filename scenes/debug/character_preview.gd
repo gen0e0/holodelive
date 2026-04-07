@@ -54,7 +54,7 @@ func _build_ui() -> void:
 	hsplit.add_child(left)
 
 	var title := Label.new()
-	title.text = "SD Character Preview"
+	title.text = "SDキャラクター プレビュー"
 	title.add_theme_font_size_override("font_size", 18)
 	left.add_child(title)
 
@@ -65,7 +65,7 @@ func _build_ui() -> void:
 	left.add_child(id_row)
 
 	var id_label := Label.new()
-	id_label.text = "Card ID:"
+	id_label.text = "カードID:"
 	id_row.add_child(id_label)
 
 	_id_input = LineEdit.new()
@@ -76,7 +76,7 @@ func _build_ui() -> void:
 	id_row.add_child(_id_input)
 
 	_btn_update = Button.new()
-	_btn_update.text = "Update"
+	_btn_update.text = "表示"
 	_btn_update.pressed.connect(_on_update_pressed)
 	left.add_child(_btn_update)
 
@@ -84,7 +84,7 @@ func _build_ui() -> void:
 
 	# 表情切り替え
 	var expr_label := Label.new()
-	expr_label.text = "Expression:"
+	expr_label.text = "表情:"
 	left.add_child(expr_label)
 
 	_expression_options = OptionButton.new()
@@ -95,17 +95,17 @@ func _build_ui() -> void:
 
 	# アニメーション
 	_btn_idle = Button.new()
-	_btn_idle.text = "Idle"
+	_btn_idle.text = "待機"
 	_btn_idle.pressed.connect(_on_idle_pressed)
 	left.add_child(_btn_idle)
 
 	_btn_talk = Button.new()
-	_btn_talk.text = "Talk"
+	_btn_talk.text = "会話"
 	_btn_talk.pressed.connect(_on_talk_pressed)
 	left.add_child(_btn_talk)
 
 	_btn_wave = Button.new()
-	_btn_wave.text = "Wave"
+	_btn_wave.text = "手を振る"
 	_btn_wave.pressed.connect(_on_wave_pressed)
 	left.add_child(_btn_wave)
 
@@ -160,7 +160,7 @@ func _show_character(card_id: int) -> void:
 	var card_def: CardDef = _registry.get_card(card_id)
 	if card_def == null:
 		_info_label.clear()
-		_info_label.append_text("[color=red]Card ID %d not found[/color]" % card_id)
+		_info_label.append_text("[color=red]カードID %d が見つかりません[/color]" % card_id)
 		return
 
 	_sd_character.setup(card_def.card_id, card_def.dir_path)
@@ -179,9 +179,9 @@ func _show_character(card_id: int) -> void:
 	_info_label.clear()
 	var lines: Array[String] = []
 	lines.append("[b]#%03d %s[/b]" % [card_def.card_id, card_def.nickname])
-	lines.append("Dir: %s" % card_def.dir_path)
+	lines.append("パス: %s" % card_def.dir_path)
 	lines.append("")
-	lines.append("[color=gray]Expressions: %s[/color]" % ", ".join(expressions))
+	lines.append("[color=gray]表情: %s[/color]" % ", ".join(expressions))
 	_info_label.append_text("\n".join(lines))
 
 	_drag_offset = Vector2.ZERO
@@ -189,15 +189,15 @@ func _show_character(card_id: int) -> void:
 
 	# デフォルトでIdle開始
 	_sd_character.play_idle()
-	_btn_idle.text = "Stop"
-	_btn_talk.text = "Talk"
+	_btn_idle.text = "停止"
+	_btn_talk.text = "会話"
 
 
 func _on_update_pressed() -> void:
 	var text: String = _id_input.text.strip_edges()
 	if not text.is_valid_int():
 		_info_label.clear()
-		_info_label.append_text("[color=red]Invalid ID[/color]")
+		_info_label.append_text("[color=red]無効なIDです[/color]")
 		return
 	_show_character(text.to_int())
 
@@ -213,28 +213,28 @@ func _on_expression_selected(index: int) -> void:
 
 func _on_idle_pressed() -> void:
 	_sd_character.stop_animation()
-	_btn_talk.text = "Talk"
-	if _btn_idle.text == "Idle":
+	_btn_talk.text = "会話"
+	if _btn_idle.text == "待機":
 		_sd_character.play_idle()
-		_btn_idle.text = "Stop"
+		_btn_idle.text = "停止"
 	else:
-		_btn_idle.text = "Idle"
+		_btn_idle.text = "待機"
 
 
 func _on_talk_pressed() -> void:
 	_sd_character.stop_animation()
-	_btn_idle.text = "Idle"
-	if _btn_talk.text == "Talk":
+	_btn_idle.text = "待機"
+	if _btn_talk.text == "会話":
 		_sd_character.play_talking()
-		_btn_talk.text = "Stop"
+		_btn_talk.text = "停止"
 	else:
-		_btn_talk.text = "Talk"
+		_btn_talk.text = "会話"
 
 
 func _on_wave_pressed() -> void:
 	_sd_character.play_emote_wave()
-	_btn_idle.text = "Stop"
-	_btn_talk.text = "Talk"
+	_btn_idle.text = "停止"
+	_btn_talk.text = "会話"
 
 
 func _on_zoom_input(event: InputEvent) -> void:
