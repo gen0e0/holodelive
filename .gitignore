@@ -6,6 +6,9 @@
 # Test reports
 reports/
 
+# Build output
+builds/
+
 # Claude Code local settings
 .claude/settings.local.json
 .mcp.json
