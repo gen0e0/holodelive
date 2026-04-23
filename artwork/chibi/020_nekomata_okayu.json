@@ -1,0 +1,339 @@
+{ "frames": {
+   "000_sample (hair_back@髪_背景).aseprite": {
+    "frame": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (upper_leg@大腿).aseprite": {
+    "frame": { "x": 0, "y": 240, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (lower_leg@下腿).aseprite": {
+    "frame": { "x": 0, "y": 480, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (foot@足).aseprite": {
+    "frame": { "x": 0, "y": 720, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (upper_leg@大腿).aseprite": {
+    "frame": { "x": 0, "y": 960, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (lower_leg@下腿).aseprite": {
+    "frame": { "x": 0, "y": 1200, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (foot@足).aseprite": {
+    "frame": { "x": 0, "y": 1440, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (upper_arm@上腕).aseprite": {
+    "frame": { "x": 0, "y": 1680, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (lower_arm@前腕).aseprite": {
+    "frame": { "x": 0, "y": 1920, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (hand@手).aseprite": {
+    "frame": { "x": 0, "y": 2160, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (upper_arm@上腕).aseprite": {
+    "frame": { "x": 0, "y": 2400, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (lower_arm@前腕).aseprite": {
+    "frame": { "x": 0, "y": 2640, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (hand@手).aseprite": {
+    "frame": { "x": 0, "y": 2880, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (torso@胴体).aseprite": {
+    "frame": { "x": 0, "y": 3120, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (face_base@顔_輪郭).aseprite": {
+    "frame": { "x": 0, "y": 3360, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (hair_front@髪_前景).aseprite": {
+    "frame": { "x": 0, "y": 3600, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (mouse_closed@口_閉じ).aseprite": {
+    "frame": { "x": 0, "y": 3840, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (mouth_opened@口_開き).aseprite": {
+    "frame": { "x": 0, "y": 4080, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (eyes_closed@目_閉じ).aseprite": {
+    "frame": { "x": 0, "y": 4320, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (eyes_opened@目_開き).aseprite": {
+    "frame": { "x": 0, "y": 4560, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (accessory@装飾品).aseprite": {
+    "frame": { "x": 0, "y": 4800, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#116,192@右足首).aseprite": {
+    "frame": { "x": 0, "y": 5040, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#124,192@左足首).aseprite": {
+    "frame": { "x": 0, "y": 5280, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#114,180@右膝).aseprite": {
+    "frame": { "x": 0, "y": 5520, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#126,180@左膝).aseprite": {
+    "frame": { "x": 0, "y": 5760, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#112,160@右股関節).aseprite": {
+    "frame": { "x": 0, "y": 6000, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#128,160@左股関節).aseprite": {
+    "frame": { "x": 0, "y": 6240, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#120,148@丹田).aseprite": {
+    "frame": { "x": 0, "y": 6480, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#64,128@右手首).aseprite": {
+    "frame": { "x": 0, "y": 6720, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#176,128@左手首).aseprite": {
+    "frame": { "x": 0, "y": 6960, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#88,128@右肘).aseprite": {
+    "frame": { "x": 0, "y": 7200, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#152,128@左肘).aseprite": {
+    "frame": { "x": 0, "y": 7440, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#112,128@右肩).aseprite": {
+    "frame": { "x": 0, "y": 7680, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#128,128@左肩).aseprite": {
+    "frame": { "x": 0, "y": 7920, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   },
+   "000_sample (#120,120@首の付け根).aseprite": {
+    "frame": { "x": 0, "y": 8160, "w": 240, "h": 240 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 240, "h": 240 },
+    "sourceSize": { "w": 240, "h": 240 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.16.1-arm64",
+  "image": "020_nekomata_okayu.png",
+  "format": "RGBA8888",
+  "size": { "w": 240, "h": 8400 },
+  "scale": "1",
+  "frameTags": [
+  ],
+  "layers": [
+   { "name": "hair_back@髪_背景", "opacity": 255, "blendMode": "normal" },
+   { "name": "leg_r@右足" },
+   { "name": "upper_leg@大腿", "group": "leg_r@右足", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower_leg@下腿", "group": "leg_r@右足", "opacity": 255, "blendMode": "normal" },
+   { "name": "foot@足", "group": "leg_r@右足", "opacity": 255, "blendMode": "normal" },
+   { "name": "leg_l@左足" },
+   { "name": "upper_leg@大腿", "group": "leg_l@左足", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower_leg@下腿", "group": "leg_l@左足", "opacity": 255, "blendMode": "normal" },
+   { "name": "foot@足", "group": "leg_l@左足", "opacity": 255, "blendMode": "normal" },
+   { "name": "arm_r@右腕" },
+   { "name": "upper_arm@上腕", "group": "arm_r@右腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower_arm@前腕", "group": "arm_r@右腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "hand@手", "group": "arm_r@右腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "arm_l@左腕" },
+   { "name": "upper_arm@上腕", "group": "arm_l@左腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "lower_arm@前腕", "group": "arm_l@左腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "hand@手", "group": "arm_l@左腕", "opacity": 255, "blendMode": "normal" },
+   { "name": "torso@胴体", "opacity": 255, "blendMode": "normal" },
+   { "name": "face_base@顔_輪郭", "opacity": 255, "blendMode": "normal" },
+   { "name": "hair_front@髪_前景", "opacity": 255, "blendMode": "normal" },
+   { "name": "expressions@表情" },
+   { "name": "normal@通常", "group": "expressions@表情" },
+   { "name": "mouse_closed@口_閉じ", "group": "normal@通常", "opacity": 255, "blendMode": "normal" },
+   { "name": "mouth_opened@口_開き", "group": "normal@通常", "opacity": 255, "blendMode": "normal" },
+   { "name": "eyes_closed@目_閉じ", "group": "normal@通常", "opacity": 255, "blendMode": "normal" },
+   { "name": "eyes_opened@目_開き", "group": "normal@通常", "opacity": 255, "blendMode": "normal" },
+   { "name": "accessory@装飾品", "group": "normal@通常", "opacity": 255, "blendMode": "normal" },
+   { "name": "#pivot@中心点" },
+   { "name": "#116,192@右足首", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#124,192@左足首", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#114,180@右膝", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#126,180@左膝", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#112,160@右股関節", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#128,160@左股関節", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#120,148@丹田", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#64,128@右手首", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#176,128@左手首", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#88,128@右肘", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#152,128@左肘", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#112,128@右肩", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#128,128@左肩", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" },
+   { "name": "#120,120@首の付け根", "group": "#pivot@中心点", "opacity": 255, "blendMode": "normal" }
+  ],
+  "slices": [
+  ]
+ }
+}

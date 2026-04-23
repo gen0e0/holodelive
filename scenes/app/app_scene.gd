@@ -4,6 +4,7 @@ var _btn_single: Button
 var _btn_multi: Button
 var _btn_debug: Button
 var _btn_character: Button
+var _btn_chibi: Button
 var _btn_settings: Button
 
 
@@ -87,6 +88,14 @@ func _build_ui() -> void:
 	_btn_character.pressed.connect(_on_character_pressed)
 	vbox.add_child(_btn_character)
 
+	# Chibi Preview button
+	_btn_chibi = Button.new()
+	_btn_chibi.text = "Chibiプレビュー"
+	_btn_chibi.custom_minimum_size.y = 50
+	_btn_chibi.add_theme_font_size_override("font_size", 20)
+	_btn_chibi.pressed.connect(_on_chibi_pressed)
+	vbox.add_child(_btn_chibi)
+
 	# Spacer
 	var spacer3 := Control.new()
 	spacer3.custom_minimum_size.y = 20
@@ -119,6 +128,10 @@ func _on_multi_pressed() -> void:
 
 func _on_character_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/debug/character_preview.tscn")
+
+
+func _on_chibi_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/debug/chibi_preview.tscn")
 
 
 func _on_settings_pressed() -> void:
